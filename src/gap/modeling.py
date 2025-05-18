@@ -103,13 +103,13 @@ def fit_gap_model(
     }
 
 
-def calculate_gap(
+def calculate_efficiency_model_gap(
     speed: float,
     elevation_gain: float,
-    gap_model: Dict
+    efficiency_gap_model: Dict
 ) -> float:
     """
-    Calculate Gradient Adjusted Pace (GAP) using the fitted model.
+    Calculate Gradient Adjusted Pace (GAP) using the fitted efficiency model.
     
     Args:
         speed: Current speed in km/h
@@ -120,38 +120,82 @@ def calculate_gap(
         GAP in km/h
     """
     # Find closest bucket center
-    bucket_idx = np.argmin(np.abs(gap_model['bucket_centers'] - elevation_gain))
+    bucket_idx = np.argmin(np.abs(efficiency_gap_model['bucket_centers'] - elevation_gain))
     
     # Get efficiency factor for this gradient
-    efficiency_factor = gap_model['bucket_means'][bucket_idx]
+    efficiency_factor = efficiency_gap_model['bucket_means'][bucket_idx]
     
     # Calculate GAP
-    gap = speed / efficiency_factor
+    gap = speed * efficiency_factor
     
     return gap
 
 
-def plot_efficiency_model_gap_curve(
-    gap_model: Dict,
-    show_std: bool = True,
-    smoothing_parameter: int = 3,
-) -> Tuple[plt.Figure, Dict]:
+def plot_gap_curves(
+    gap_curves: Dict
+) -> plt.Figure:
     """
-    Plot a smooth curve by connecting the centroids from the fitted model.
+    Plot multiple GAP curves on the same figure.
     
     Args:
-        gap_model: Dictionary containing the fitted GAP model
-        show_std: Whether to show standard deviation bounds
+        gap_curves: Dictionary of GAP curves, where each curve is a dictionary containing:
+            - bin_centers: Array of elevation gain values
+            - means: Array of mean speed adjusters
+            - stds: Array of standard deviations
+            - color: Color for the curve and its standard deviation bounds
+            
+    Returns:
+        Figure object with the plotted curves
+    """
+    fig = plt.figure(figsize=(12, 6))
+    
+    for gap_curve_name, gap_curve in gap_curves.items():
+        plt.plot(
+            gap_curve['bin_centers'], 
+            gap_curve['means'], 
+            gap_curve['color'], 
+            linewidth=2, 
+            label=f'{gap_curve_name} GAP curve'
+        )
+        plt.fill_between(
+            gap_curve['bin_centers'], 
+            gap_curve['means'] - gap_curve['stds'],
+            gap_curve['means'] + gap_curve['stds'],
+            alpha=0.2, 
+            color=gap_curve['color'], 
+            label='±1 std'
+        )
+
+    plt.xlabel('Elevation Gain (m/km)')
+    plt.ylabel('Speed Adjuster (GAP/speed)')
+    plt.title('GAP Curve(s) and standard deviation(s)')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+
+    return fig
+
+
+def get_efficiency_model_gap_curve(
+    gap_model: Dict,
+    smoothing_parameter: int = 3,
+) -> Dict:
+    """
+    Create a smooth curve by connecting the centroids from the fitted model.
+    
+    Args:
+        gap_model: Dictionary containing the fitted GAP model with:
+            - bucket_centers: Array of gradient values
+            - bucket_means: Array of mean normalized efficiencies
+            - bucket_stds: Array of standard deviations
+            - bucket_counts: Array of sample counts
         smoothing_parameter: Size of the rolling window for smoothing (must be odd number)
         
     Returns:
-        Tuple containing:
-            - Figure object
-            - Dictionary with curve data:
-                - centers: Array of gradient values
-                - means: Array of mean normalized efficiencies
-                - stds: Array of standard deviations
-                - counts: Array of sample counts
+        Dictionary with curve data:
+            - bin_centers: Array of gradient values
+            - means: Array of mean normalized efficiencies
+            - stds: Array of standard deviations
+            - counts: Array of sample counts
     """
     # Create the plot
     fig = plt.figure(figsize=(12, 6))
@@ -185,51 +229,26 @@ def plot_efficiency_model_gap_curve(
             np.mean(padded_stds[i:i+smoothing_parameter])
             for i in range(len(stds))
         ])
-        
-        # Plot the smoothed curve
-        plt.plot(centers, smoothed_means, 'purple', linewidth=2, label='Smoothed curve')
-        
-        if show_std:
-            plt.fill_between(centers, 
-                           smoothed_means - smoothed_stds,
-                           smoothed_means + smoothed_stds,
-                           alpha=0.2, color='purple', label='±1 std')
-    else:
-        # Plot the raw curve
-        plt.plot(centers, means, 'purple', linewidth=2, label='Centroid curve')
-        
-        if show_std:
-            plt.fill_between(centers, 
-                           means - stds,
-                           means + stds,
-                           alpha=0.2, color='purple', label='±1 std')
-    
-    # Add labels and title
-    plt.xlabel('Elevation Gain (m/km)')
-    plt.ylabel('Speed Adjuster (speed/GAP)')
-    plt.title('Efficiency model GAP curve')
-    plt.grid(True, alpha=0.3)
-    plt.legend()
     
     # Create curve data dictionary
     curve_data = {
-        'centers': centers,
+        'bin_centers': centers,
         'means': smoothed_means if smoothing_parameter > 1 else means,
         'stds': smoothed_stds if smoothing_parameter > 1 else stds,
         'counts': counts
     }
     
-    return fig, curve_data
+    return curve_data
 
 
-def plot_xgboost_gap_curve(
+def get_xgboost_gap_curve(
     model,
     X: np.ndarray,
     bin_width: float = 1.0,
     heartrate_range: Tuple[float, float] = None,
-) -> Tuple[plt.Figure, Dict]:
+) -> Dict:
     """
-    Plot the GAP curve for the XGBoost model.
+    Create the GAP curve for the XGBoost model.
     
     Args:
         model: Trained XGBoost model
@@ -238,13 +257,11 @@ def plot_xgboost_gap_curve(
         heartrate_range: Optional tuple of (min_hr, max_hr) to filter data points
         
     Returns:
-        Tuple containing:
-            - Figure object
-            - Dictionary with curve data:
-                - bin_centers: Array of elevation gain values
-                - means: Array of mean speed adjusters
-                - stds: Array of standard deviations
-                - counts: Array of point counts per bin
+        Dictionary with curve data:
+            - bin_centers: Array of elevation gain values
+            - means: Array of mean speed adjusters
+            - stds: Array of standard deviations
+            - counts: Array of point counts per bin
     """
     # Filter data points by heart rate if range is provided
     if heartrate_range is not None:
@@ -285,26 +302,6 @@ def plot_xgboost_gap_curve(
     std_speed_adjusters = np.array(std_speed_adjusters)
     bin_counts = np.array(bin_counts)
     
-    # Create the plot
-    fig = plt.figure(figsize=(12, 6))
-    
-    # Plot the average curve with standard deviation
-    plt.plot(bin_centers, avg_speed_adjusters, 'purple', linewidth=2, label='XGBoost GAP curve')
-    plt.fill_between(bin_centers, 
-                    avg_speed_adjusters - std_speed_adjusters,
-                    avg_speed_adjusters + std_speed_adjusters,
-                    alpha=0.2, color='purple', label='±1 std')
-    
-    # Add labels and title
-    plt.xlabel('Elevation Gain (m/km)')
-    plt.ylabel('Speed Adjuster (GAP/speed)')
-    title = 'XGBoost GAP Curve'
-    if heartrate_range is not None:
-        title += f' (HR: {heartrate_range[0]:.0f}-{heartrate_range[1]:.0f} bpm)'
-    plt.title(title)
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    
     # Create curve data dictionary
     curve_data = {
         'bin_centers': bin_centers,
@@ -313,4 +310,4 @@ def plot_xgboost_gap_curve(
         'counts': bin_counts
     }
     
-    return fig, curve_data
+    return curve_data

@@ -13,7 +13,7 @@ def get_activity_streams(
     verbose: bool = True
 ) -> List[Dict]:
     """
-    Get streams for provided activities.
+    Get streams for provided activities from Strava API.
     
     Args:
         client: Strava API client
@@ -22,7 +22,11 @@ def get_activity_streams(
         verbose: Whether to print progress information
         
     Returns:
-        List of activity stream dictionaries
+        List of activity stream dictionaries, each containing:
+            - time: Array of timestamps in seconds
+            - distance: Array of distances in meters
+            - altitude: Array of altitudes in meters
+            - heartrate: Array of heart rates in bpm
     """
     streams = []
     
@@ -62,13 +66,17 @@ def filter_outliers(
     Filter out unrealistic values from downsampled data.
     
     Args:
-        speed: Array of speeds
-        elevation_gain: Array of elevation gains
-        heartrate: Array of heart rates
-        sport_types: Array of sport types
+        speed: Array of speeds in km/h
+        elevation_gain: Array of elevation gains in m/km
+        heartrate: Array of heart rates in bpm
+        sport_types: Array of sport type strings
         
     Returns:
-        Tuple of filtered arrays (speed, elevation_gain, heartrate, sport_types)
+        Tuple containing:
+            - speed: Filtered array of speeds in km/h
+            - elevation_gain: Filtered array of elevation gains in m/km
+            - heartrate: Filtered array of heart rates in bpm
+            - sport_types: Filtered array of sport type strings
     """
     # Create mask for realistic values
     mask = (
@@ -89,17 +97,17 @@ def process_streams(
     Process activity streams into arrays for speed, elevation gain, heart rate, and sport type.
     
     Args:
-        streams: List of activity streams
+        streams: List of activity stream dictionaries from get_activity_streams
         activity_sport_types: List of sport types for each activity
         split_min_time: Minimum time in seconds for each split
         verbose: Whether to print progress information
         
     Returns:
-        Tuple of (speeds, elevation_gains, heartrates, sport_types) where:
-            - speeds is a concatenated array of speed values
-            - elevation_gains is a concatenated array of elevation gain values
-            - heartrates is a concatenated array of heart rate values
-            - sport_types is a concatenated array of sport type strings
+        Tuple containing:
+            - speeds: Array of speeds in km/h
+            - elevation_gains: Array of elevation gains in m/km
+            - heartrates: Array of heart rates in bpm
+            - sport_types: Array of sport type strings
     """
     speeds = []
     elevation_gains = []
@@ -160,10 +168,19 @@ def process_single_stream(
     Process a single activity stream into arrays of time, distance, speed, elevation gain, and heartrate.
     
     Args:
-        stream: Activity stream dictionary
+        stream: Activity stream dictionary containing:
+            - time: Array of timestamps in seconds
+            - distance: Array of distances in meters
+            - altitude: Array of altitudes in meters
+            - heartrate: Array of heart rates in bpm
         
     Returns:
-        Tuple of (time, distance, speed, elevation_gain, heartrate) arrays
+        Tuple containing:
+            - time: Array of timestamps in seconds
+            - distance: Array of distances in meters
+            - speed: Array of speeds in km/h
+            - elevation_gain: Array of elevation gains in m/km
+            - heartrate: Array of heart rates in bpm
     """
     if not stream:
         return None
@@ -204,15 +221,18 @@ def downsample_stream_data(
     Downsample stream data into fixed time splits, excluding splits with both positive and negative elevation changes.
     
     Args:
-        time: Array of timestamps
-        distance: Array of distances
-        speed: Array of speeds
-        elevation_gain: Array of elevation gains
-        heartrate: Array of heart rates
+        time: Array of timestamps in seconds
+        distance: Array of distances in meters
+        speed: Array of speeds in km/h
+        elevation_gain: Array of elevation gains in m/km
+        heartrate: Array of heart rates in bpm
         split_min_time: Minimum time in seconds for each split
         
     Returns:
-        Tuple of downsampled arrays (speed, elevation_gain, heartrate)
+        Tuple containing:
+            - speed: Array of average speeds in km/h for each split
+            - elevation_gain: Array of average elevation gains in m/km for each split
+            - heartrate: Array of average heart rates in bpm for each split
     """
     # Cut first 15 minutes to avoid warm-up bias
     idx_cut = (time < 60 * 15).sum()
@@ -262,25 +282,26 @@ def prepare_ml_calibration_dataset(
     speeds: np.ndarray,
     elevation_gains: np.ndarray,
     heartrates: np.ndarray,
+    flat_elevation_gain_range: Tuple[float, float] = 10.0,
     hr_tolerance: float = 3.0,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Prepare dataset X and y for the second calibration method by matching each point
-    to points with similar heart rate but flat elevation.
+    Prepare dataset for machine learning model calibration by matching points with similar heart rates.
     
     Args:
         speeds: Array of speeds in km/h
         elevation_gains: Array of elevation gains in m/km
         heartrates: Array of heart rates in bpm
-        hr_tolerance: Maximum heart rate difference to consider points as similar (in bpm)
+        flat_elevation_gain_range: Tuple of (min, max) elevation gain in m/km to consider as flat
+        hr_tolerance: Maximum difference in heart rate to consider points as similar
         
     Returns:
-        Tuple of (X, y) where:
-            - X is a 2D array of [speed, elevation_gain, heartrate] for all points
-            - y is the array of speeds from matching flat points with similar heart rate
+        Tuple containing:
+            - X: Array of shape (n_samples, 3) with [speed, elevation_gain, heartrate]
+            - y: Array of average speeds from matching flat points
     """
     # Find points with nearly flat elevation
-    flat_mask = np.abs(elevation_gains) < 10
+    flat_mask = (elevation_gains > flat_elevation_gain_range[0]) * (elevation_gains < flat_elevation_gain_range[1])
     
     # Initialize lists to store matched points
     X_list = []
