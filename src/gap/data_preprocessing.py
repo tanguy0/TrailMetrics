@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 from stravalib import Client
-from datetime import datetime, timedelta
 import time
 from typing import List, Dict, Tuple
 
