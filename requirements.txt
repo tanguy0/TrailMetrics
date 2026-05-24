@@ -12,6 +12,9 @@ matplotlib>=3.5.0
 # Strava API client
 stravalib>=0.10.0
 
+# Streamlit app
+streamlit>=1.30.0
+
 # Jupyter notebook support (optional, for development)
 jupyter>=1.0.0
 ipykernel>=6.0.0
