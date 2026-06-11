@@ -1,0 +1,7 @@
+[theme]
+# Trail / Earthy — forest green on warm stone.
+primaryColor = "#2E6F40"
+backgroundColor = "#FBF8F3"
+secondaryBackgroundColor = "#F0EADF"
+textColor = "#2B2B2B"
+font = "sans serif"

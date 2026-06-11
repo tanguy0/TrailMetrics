@@ -29,13 +29,17 @@ TrailMetrics/
 │   │       └── strava_client.py   # StravaClient(ActivityStreamSource)
 │   ├── usecases/                  # orchestrate domain + infrastructure to fulfill one task
 │   │   ├── base.py                # UseCase ABC
-│   │   └── simulate_personalized_gap_model.py
+│   │   ├── fetch_athlete_history.py        # fetch max history once (cached by the app)
+│   │   └── simulate_personalized_gap_model.py  # runs on pre-fetched streams (or fetches)
 │   └── utils.py                   # tiny time-format helpers
+├── .streamlit/
+│   └── config.toml                # Trail/Earthy UI theme
 ├── app/
-│   ├── Home.py                    # Streamlit home page (entry script)
+│   ├── Home.py                    # landing page: Strava connect + one-shot data load
 │   ├── _helpers.py                # shared UI helpers (sys.path, PNG download button)
-│   └── pages/                     # one file per analysis; auto-listed in the sidebar
-│       └── 1_Personalized_GAP_Simulator.py
+│   └── pages/                     # auto-listed in the sidebar
+│       ├── 1_Personalized_GAP_Simulator.py  # analysis; unlocks once data is loaded
+│       └── 2_How_it_works.py      # explanations
 └── notebook/                      # exploratory notebooks (kept for research/iteration)
     └── gap/
         ├── full-flow.ipynb        # end-to-end personalized GAP flow
@@ -75,14 +79,35 @@ export STRAVA_CLIENT_SECRET=...
 streamlit run app/Home.py
 ```
 
-You land on a home page. Each analysis lives in its own file under `app/pages/`
-and shows up automatically in the sidebar. Today there's one analysis:
+The flow is **load once, analyse many**:
 
-- **Personalized GAP Simulator** &mdash; Strava OAuth, date range, both GAP models,
-  intensity-stratified panels, and PNG download buttons under every figure.
+1. On the **Home** page: enter your name, provide Strava credentials, authorize,
+   then click **Load my data**. The app fetches the maximum history available
+   (all run types) and caches the raw streams in the Streamlit session, then
+   reports the date range fetched (oldest → most recent session).
+2. Each analysis lives in its own file under `app/pages/` and shows up
+   automatically in the sidebar. Analyses are **locked until data is loaded**.
+   Their inputs — date range, session types, model parameters — are filters
+   applied to the in-memory data, so you can tweak and re-run without
+   re-fetching from Strava.
+
+Today there's one analysis:
+
+- **Personalized GAP Simulator** &mdash; date range + session-type filters, both
+  GAP models, intensity-stratified panels, and download buttons under every figure.
+
+A separate **How it works** page holds the usage explanations.
 
 To add a new analysis, drop a `app/pages/<N>_<Name>.py` file in the folder. Use
-`add_repo_root_to_path()` from `app/_helpers.py` to keep `from src...` imports working.
+`add_repo_root_to_path()` from `app/_helpers.py` to keep `from src...` imports
+working, gate on `"athlete_streams" in st.session_state`, and pass
+`streams=st.session_state["athlete_streams"]` into your usecase input.
+
+### Theme
+
+Colors live in one place — [`src/domain/gap/theme.py`](src/domain/gap/theme.py)
+for the plots and [`.streamlit/config.toml`](.streamlit/config.toml) for the UI
+chrome — so the app and figures stay coherent (Trail / Earthy palette).
 
 ## Running the notebooks
 
@@ -98,4 +123,4 @@ The notebooks expect the same `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` env va
 2. If new domain logic is needed, add it under `src/domain/<topic>/`.
 3. If a new external dependency is needed, add a port under `src/domain/ports/` and an adapter under `src/infrastructure/`.
 4. Create a new file under `src/usecases/` with a class inheriting `UseCase` and implementing `.execute(params)`.
-5. Wire it into `app/streamlit_app.py` (and, eventually, an `api/` route).
+5. Wire it into a new `app/pages/<N>_<Name>.py` page (and, eventually, an `api/` route).

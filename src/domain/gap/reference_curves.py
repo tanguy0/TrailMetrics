@@ -2,6 +2,7 @@
 
 import numpy as np
 
+from src.domain.gap import theme
 from src.domain.models.gap import GapCurve
 
 
@@ -15,7 +16,8 @@ def balanced_runner() -> GapCurve:
         means=np.array([1.7, 1.5, 1.3, 1.1, 0.9, 0.85, 0.9, 1, 1.2, 1.45, 1.8, 2.3, 2.75, 3.15, 3.55]),
         stds=np.zeros(15),
         counts=np.ones(15, dtype=int),
-        color="red",
+        color=theme.BALANCED_RUNNER,
+        linestyle="--",
     )
 
 
@@ -29,5 +31,6 @@ def kilian_jornet() -> GapCurve:
         means=np.array([1.6, 1.35, 1.15, 1, 0.87, 0.85, 0.9, 1, 1.1, 1.3, 1.5, 1.7, 1.9, 2.15, 2.4]),
         stds=np.zeros(15),
         counts=np.ones(15, dtype=int),
-        color="blue",
+        color=theme.KILIAN,
+        linestyle="--",
     )

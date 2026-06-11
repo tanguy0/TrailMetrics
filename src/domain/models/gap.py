@@ -31,4 +31,5 @@ class GapCurve:
     stds: np.ndarray
     counts: np.ndarray
     color: Optional[str] = None
+    linestyle: str = "-"
     extra: dict = field(default_factory=dict)

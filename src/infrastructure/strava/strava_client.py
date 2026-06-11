@@ -1,6 +1,6 @@
 import time as time_module
 from datetime import datetime
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import numpy as np
 from stravalib import Client
@@ -31,7 +31,13 @@ class StravaClient(ActivityStreamSource):
         results = []
         for act in self.client.get_activities(after=from_date, before=to_date):
             if act.has_heartrate and act.sport_type in sport_types:
-                results.append({"id": act.id, "sport_type": act.sport_type})
+                results.append(
+                    {
+                        "id": act.id,
+                        "sport_type": act.sport_type,
+                        "start_date": act.start_date,
+                    }
+                )
         return results
 
     def fetch_streams(
@@ -41,20 +47,32 @@ class StravaClient(ActivityStreamSource):
         to_date: Optional[datetime] = None,
         max_activities: Optional[int] = None,
         verbose: bool = True,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> List[ActivityStream]:
         activities = self.list_activities(sport_types, from_date=from_date, to_date=to_date)
         if max_activities is not None:
             activities = activities[:max_activities]
 
+        total = len(activities)
         streams: List[ActivityStream] = []
-        for act in activities:
+        for i, act in enumerate(activities):
             try:
                 stream = self._fetch_raw_stream(act["id"], resolution="high")
-                streams.append(self._to_activity_stream(act["id"], act["sport_type"], stream))
+                streams.append(
+                    self._to_activity_stream(
+                        act["id"],
+                        act["sport_type"],
+                        stream,
+                        start_date=act.get("start_date"),
+                    )
+                )
             except Exception as e:
                 if verbose:
                     print(f"Error getting streams for activity {act['id']}: {e}")
                 continue
+            finally:
+                if progress_callback is not None:
+                    progress_callback(i + 1, total)
             time_module.sleep(self.throttle_seconds)
         return streams
 
@@ -72,7 +90,12 @@ class StravaClient(ActivityStreamSource):
         )
 
     @staticmethod
-    def _to_activity_stream(activity_id: int, sport_type: str, raw: dict) -> ActivityStream:
+    def _to_activity_stream(
+        activity_id: int,
+        sport_type: str,
+        raw: dict,
+        start_date: Optional[datetime] = None,
+    ) -> ActivityStream:
         return ActivityStream(
             activity_id=activity_id,
             sport_type=sport_type,
@@ -80,4 +103,5 @@ class StravaClient(ActivityStreamSource):
             distance=np.array(raw["distance"].data),
             altitude=np.array(raw["altitude"].data),
             heartrate=np.array(raw["heartrate"].data),
+            start_date=start_date,
         )
