@@ -45,6 +45,17 @@ runner_name = st.text_input("Your name", value=st.session_state.get("runner_name
 if runner_name:
     st.session_state["runner_name"] = runner_name
 
+runner_weight = st.number_input(
+    "Your weight (kg)",
+    min_value=30.0,
+    max_value=200.0,
+    value=st.session_state.get("runner_weight_kg"),
+    step=0.5,
+    help="Used to estimate running power on the Race Comparator. Leave empty to skip.",
+)
+if runner_weight:
+    st.session_state["runner_weight_kg"] = runner_weight
+
 # --- 2. Strava credentials -------------------------------------------------
 st.header("2. Strava credentials")
 col_id, col_secret = st.columns(2)
