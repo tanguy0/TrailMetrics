@@ -10,6 +10,7 @@ from typing import List, Optional
 
 from src.domain.models.activity import ActivityStream
 from src.domain.races.metrics import RaceMetrics, RaceSeries, compute_race
+from src.domain.races.smoothing import SmoothingParams
 from src.usecases.base import UseCase
 
 # Mirrors the selector cap on the Race Comparator page.
@@ -22,10 +23,11 @@ class CompareRacesInput:
     # Optional display labels, aligned with ``streams``. Falls back to the
     # activity id when missing.
     labels: Optional[List[str]] = None
-    smoothing_window: int = 30
     # Runner weight (kg); enables the power metrics. Power stays unavailable
     # when omitted.
     mass_kg: Optional[float] = None
+    # Per-signal smoothing config; falls back to defaults when omitted.
+    smoothing: Optional[SmoothingParams] = None
 
 
 @dataclass
@@ -55,8 +57,8 @@ class CompareRaces(UseCase):
             race_metrics, race_series = compute_race(
                 stream,
                 label,
-                smoothing_window=params.smoothing_window,
                 mass_kg=params.mass_kg,
+                smoothing=params.smoothing,
             )
             metrics.append(race_metrics)
             series.append(race_series)

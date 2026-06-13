@@ -44,10 +44,19 @@ def plot_metric_comparison(
     *,
     metric_key: str,
     x_axis: str,
+    gap_as_speed: bool = False,
 ) -> plt.Figure:
-    """Plot one metric across all races. Raises KeyError on unknown keys."""
+    """Plot one metric across all races. Raises KeyError on unknown keys.
+
+    ``gap_as_speed`` only affects the GAP plot: when True it shows GAP as speed
+    (km/h, higher = faster) instead of pace (min/km).
+    """
     attr, y_label, title = _METRICS[metric_key]
     x_attr, x_label, x_scale = _X_AXES[x_axis]
+
+    show_gap_speed = metric_key == "gap_pace" and gap_as_speed
+    if show_gap_speed:
+        y_label = "GAP speed (km/h, higher = faster)"
 
     fig, ax = plt.subplots(figsize=(12, 5))
     fig.patch.set_facecolor(theme.FIGURE_FACE)
@@ -58,6 +67,8 @@ def plot_metric_comparison(
         y = getattr(series, attr)
         if y is None:
             continue
+        if show_gap_speed:
+            y = 3600.0 / np.asarray(y, dtype=float)  # s/km → km/h
         x = getattr(series, x_attr) * x_scale
         color = theme.CURVE_CYCLE[i % len(theme.CURVE_CYCLE)]
         ax.plot(
@@ -78,7 +89,7 @@ def plot_metric_comparison(
         spine.set_color(theme.SPINE)
         spine.set_visible(side in ("left", "bottom"))
 
-    if metric_key == "gap_pace":
+    if metric_key == "gap_pace" and not show_gap_speed:
         _format_pace_ticks(ax)
 
     if plotted:

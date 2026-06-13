@@ -20,6 +20,11 @@ import streamlit as st
 from src.domain.gap import theme
 from src.domain.models.activity import ActivityStream
 from src.domain.races.plotting import available_metric_keys, plot_metric_comparison
+from src.domain.races.smoothing import (
+    FilterConfig,
+    SmoothingParams,
+    default_smoothing_params,
+)
 from src.usecases.compare_races import CompareRaces, CompareRacesInput
 
 MAX_RACES = 4
@@ -201,6 +206,49 @@ else:
     st.info("Pick at least one workout above to get started.")
     st.stop()
 
+# --- Smoothing settings ----------------------------------------------------
+_SMOOTH_DEFAULTS = default_smoothing_params()
+
+
+def _filter_controls(label: str, key: str, default: FilterConfig) -> FilterConfig:
+    """Render rolling-average + Savitzky–Golay controls for one signal."""
+    c0, c1, c2, c3, c4 = st.columns([1.4, 1, 1.1, 1.2, 1.1])
+    c0.markdown(f"**{label}**")
+    roll_on = c1.checkbox(
+        "Rolling avg", value=default.rolling_window_s is not None, key=f"sm_{key}_roll"
+    )
+    roll_w = c2.number_input(
+        "Window (s)", min_value=1.0, step=1.0,
+        value=float(default.rolling_window_s or 15.0),
+        key=f"sm_{key}_rollw", disabled=not roll_on,
+    )
+    sav_on = c3.checkbox(
+        "Savitzky–Golay", value=default.savgol_window_m is not None, key=f"sm_{key}_sav"
+    )
+    sav_w = c4.number_input(
+        "Window (m)", min_value=10.0, step=10.0,
+        value=float(default.savgol_window_m or 200.0),
+        key=f"sm_{key}_savw", disabled=not sav_on,
+    )
+    return FilterConfig(
+        rolling_window_s=roll_w if roll_on else None,
+        savgol_window_m=sav_w if sav_on else None,
+    )
+
+
+with st.expander("⚙️ Smoothing settings", expanded=False):
+    st.caption(
+        "Each signal can pass through a time-domain rolling average and/or a "
+        "distance-domain Savitzky–Golay filter (applied in that order). "
+        "Altitude smoothing drives the gradient and elevation gain."
+    )
+    smoothing_params = SmoothingParams(
+        pace=_filter_controls("Pace / GAP", "pace", _SMOOTH_DEFAULTS.pace),
+        altitude=_filter_controls("Altitude", "altitude", _SMOOTH_DEFAULTS.altitude),
+        heartrate=_filter_controls("Heart rate", "hr", _SMOOTH_DEFAULTS.heartrate),
+        power=_filter_controls("Power", "power", _SMOOTH_DEFAULTS.power),
+    )
+
 # --- Cross-race analysis ---------------------------------------------------
 st.divider()
 st.header("Analysis")
@@ -214,6 +262,7 @@ result = usecase.execute(
         streams=selected_streams,
         labels=labels,
         mass_kg=st.session_state.get("runner_weight_kg"),
+        smoothing=smoothing_params,
     )
 )
 
@@ -288,13 +337,23 @@ if stats["Avg power"].isna().all():
 # 2-5. Evolution plots, with a shared time/distance x-axis toggle -----------
 st.subheader("Evolution across the race")
 
-x_axis_label = st.radio(
-    "X axis",
-    options=["Time", "Distance"],
-    horizontal=True,
-    help="Switch every graph below between elapsed time and distance covered.",
-)
+col_x, col_gap = st.columns(2)
+with col_x:
+    x_axis_label = st.radio(
+        "X axis",
+        options=["Time", "Distance"],
+        horizontal=True,
+        help="Switch every graph below between elapsed time and distance covered.",
+    )
+with col_gap:
+    gap_display = st.radio(
+        "Show GAP as",
+        options=["Pace", "Speed"],
+        horizontal=True,
+        help="Display the gradient-adjusted-pace graph as pace (min/km) or speed (km/h).",
+    )
 x_axis = "time" if x_axis_label == "Time" else "distance"
+gap_as_speed = gap_display == "Speed"
 
 # title shown above each metric's chart
 _PLOT_TITLES = {
@@ -310,5 +369,7 @@ for metric_key in ("gap_pace", "power", "heartrate", "power_to_hr"):
     if metric_key not in plottable:
         st.info("Set **your weight** on the Home page to enable this graph.")
         continue
-    fig = plot_metric_comparison(result.series, metric_key=metric_key, x_axis=x_axis)
+    fig = plot_metric_comparison(
+        result.series, metric_key=metric_key, x_axis=x_axis, gap_as_speed=gap_as_speed
+    )
     st.pyplot(fig)

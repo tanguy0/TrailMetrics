@@ -5,9 +5,15 @@ Turns a single ``ActivityStream`` into:
   - ``RaceSeries``: aligned per-step series for the evolution plots, switchable
     between a time (s) and a distance (m) x-axis.
 
-Gradient-adjusted pace uses the Strava reference GAP model (the published
-"balanced runner" curve), which maps gradient (m/km) to a speed-adjuster
-factor: ``gap_speed = speed * factor``.
+Smoothing happens in two stages (see :mod:`src.domain.races.smoothing`):
+  1. a time-domain rolling mean on each raw stream — 15 s for speed/pace, 60 s
+     for heart rate and altitude;
+  2. a distance-domain median → Savitzky–Golay pass on the altitude-derived
+     gradient and on altitude (for total elevation gain).
+GAP is derived pointwise from the smoothed pace and gradient. Power is derived
+pointwise then passed through its own 15 s rolling mean. Gradient-adjusted pace
+uses the Strava reference GAP model (the published "balanced runner" curve),
+which maps gradient (m/km) to a speed-adjuster factor.
 """
 
 from dataclasses import dataclass
@@ -17,14 +23,28 @@ import numpy as np
 
 from src.domain.gap.reference_curves import balanced_runner
 from src.domain.models.activity import ActivityStream
+from src.domain.races.smoothing import (
+    SmoothingParams,
+    apply_signal_filters,
+    default_smoothing_params,
+)
 
-# Minimum speed (m/s) below which pace is undefined (standing / walking pauses).
-# ~0.5 m/s ≈ 33 min/km — slower than that we blank the line rather than spike it.
-_MIN_PACE_SPEED = 0.5
+# A jump larger than this between consecutive samples means the watch was paused.
+# Such bridging steps are excluded from every series and every aggregate stat.
+_PAUSE_THRESHOLD_S = 60.0
+
+# Instantaneous speed is clipped to a plausible running range (3–20 km/h);
+# anything outside is a GPS glitch or a stop. The bounds map directly to
+# pace/GAP limits: 20 km/h → 180 s/km (fast), 3 km/h → 1200 s/km (slow).
+_MAX_SPEED_M_PER_S = 20.0 / 3.6
+_MIN_SPEED_M_PER_S = 3.0 / 3.6
+_MIN_PACE_S_PER_KM = 1000.0 / _MAX_SPEED_M_PER_S  # = 180 s/km (20 km/h)
+_MAX_PACE_S_PER_KM = 1000.0 / _MIN_SPEED_M_PER_S  # = 1200 s/km (3 km/h)
 
 # Mechanical running-power model: P = m * v * (Cr + g * s).
 _GRAVITY = 9.81  # m/s²
 _COST_OF_TRANSPORT = 1.0  # J·kg⁻¹·m⁻¹ (typical range 0.9–1.1)
+_MIN_SLOPE = -0.05  # cap downhill slope at -5% to avoid unrealistic power reduction
 
 
 @dataclass
@@ -69,18 +89,6 @@ def gradient_adjustment_factor(elevation_gain_m_per_km: np.ndarray) -> np.ndarra
     )
 
 
-def _moving_average(values: np.ndarray, window: int) -> np.ndarray:
-    """Symmetric rolling mean with edge padding; preserves length."""
-    values = np.asarray(values, dtype=float)
-    if window <= 1 or values.size < window:
-        return values
-    pad = window // 2
-    padded = np.pad(values, pad, mode="edge")
-    kernel = np.ones(window) / window
-    smoothed = np.convolve(padded, kernel, mode="same")
-    return smoothed[pad : pad + values.size]
-
-
 def compute_power_series(
     *,
     speed_m_per_s: np.ndarray,
@@ -90,9 +98,9 @@ def compute_power_series(
     """Mechanical running power per step, in watts.
 
     Uses ``P = m * v * (Cr + g * s)`` where ``s`` is the slope as a rise/run
-    fraction (our gradient is m/km, i.e. ``slope = gradient / 1000``). Per-kg
-    power is floored at 0, so steep descents drive power toward 0 rather than
-    negative.
+    fraction (our gradient is m/km, i.e. ``slope = gradient / 1000``), capped at
+    ``_MIN_SLOPE`` for steep downhills to avoid unrealistic power reduction.
+    Per-kg power is floored at 0.
 
     Returns ``None`` when ``mass_kg`` is missing — power needs the runner's
     weight (set on the Home page), so the table/plots stay gated until then.
@@ -100,7 +108,7 @@ def compute_power_series(
     if mass_kg is None:
         return None
     speed = np.asarray(speed_m_per_s, dtype=float)
-    slope = np.asarray(gradient_m_per_km, dtype=float) / 1000.0
+    slope = np.maximum(np.asarray(gradient_m_per_km, dtype=float) / 1000.0, _MIN_SLOPE)
     power_per_kg = np.maximum(speed * (_COST_OF_TRANSPORT + _GRAVITY * slope), 0.0)
     return mass_kg * power_per_kg
 
@@ -109,17 +117,23 @@ def compute_race(
     stream: ActivityStream,
     label: str,
     *,
-    smoothing_window: int = 30,
     mass_kg: Optional[float] = None,
+    smoothing: Optional[SmoothingParams] = None,
 ) -> tuple[RaceMetrics, RaceSeries]:
     """Compute summary metrics and plotting series for one race.
 
-    ``smoothing_window`` is in samples (~seconds for 1 Hz Strava streams) and
-    only smooths the series/derived gradient — the scalar averages are computed
-    from raw totals, so they stay independent of the smoothing choice.
-    ``mass_kg`` (runner weight) enables the power series; omit it and power
-    stays ``None``.
+    ``smoothing`` selects, per signal, an optional rolling mean (time domain)
+    and/or Savitzky–Golay pass (distance domain); see
+    :func:`default_smoothing_params`. Gradient and elevation gain derive from
+    the smoothed altitude; GAP from the smoothed pace and gradient; power is
+    derived pointwise then runs through its own filters. Watch pauses (time
+    jumps > 60 s) are cut out: the bridging step is excluded from every series
+    and aggregate, and the x-axes use moving time/distance so pauses don't
+    appear. ``mass_kg`` (runner weight) enables the power series.
     """
+    smoothing = smoothing or default_smoothing_params()
+    poly = smoothing.savgol_polyorder
+
     time = np.asarray(stream.time, dtype=float)
     distance = np.asarray(stream.distance, dtype=float)
     altitude = np.asarray(stream.altitude, dtype=float)
@@ -130,60 +144,94 @@ def compute_race(
 
     delta_time = np.diff(time)
     delta_dist = np.diff(distance)
-    delta_alt = np.diff(altitude)
+    step_distance = distance[1:]  # cumulative distance at each per-step sample
+    timestamps = time[1:]
 
-    # Instantaneous speed (m/s); 0 where the runner is stationary.
+    # A step that spans a pause (big time jump) bridges across missing data —
+    # exclude it everywhere so it can't create phantom pace/gradient/distance.
+    moving_step = (delta_time > 0) & (delta_time <= _PAUSE_THRESHOLD_S)
+
+    # --- Altitude (full grid) → gradient + elevation gain --------------------
+    altitude_smoothed = apply_signal_filters(
+        altitude, timestamps_s=time, distance_m=distance,
+        config=smoothing.altitude, polyorder=poly,
+    )
+    delta_alt = np.diff(altitude_smoothed)
+    moved = delta_dist >= 0.1
+    gradient_pct = np.divide(  # rise/run × 100
+        delta_alt, delta_dist, out=np.zeros_like(delta_dist), where=moved
+    ) * 100.0
+    gradient_pct[~moved] = 0.0
+    # GAP reference curve and the power model work in m/km (= %·10).
+    gradient_m_per_km = gradient_pct * 10.0
+    factor = gradient_adjustment_factor(gradient_m_per_km)
+
+    # --- Pace (clipped to 3–20 km/h) and heart rate --------------------------
     speed = np.divide(
         delta_dist, delta_time, out=np.zeros_like(delta_dist), where=delta_time > 0
     )
-    # Gradient (m/km); 0 over near-stationary steps to avoid blow-ups.
-    moved = delta_dist >= 0.1
-    gradient = np.divide(
-        delta_alt, delta_dist, out=np.zeros_like(delta_dist), where=moved
-    ) * 1000.0
-    gradient[~moved] = 0.0
-
-    speed_sm = _moving_average(speed, smoothing_window)
-    gradient_sm = _moving_average(gradient, smoothing_window)
-    heartrate_sm = _moving_average(heartrate[1:], smoothing_window)
-
-    factor = gradient_adjustment_factor(gradient_sm)
-    gap_speed = speed_sm * factor
-
-    gap_pace = np.where(
-        gap_speed > _MIN_PACE_SPEED, (1000.0 / gap_speed) / 60.0, np.nan
+    speed = np.clip(speed, _MIN_SPEED_M_PER_S, _MAX_SPEED_M_PER_S)
+    pace = np.divide(
+        1000.0, speed, out=np.full_like(speed, np.nan), where=moving_step
+    )
+    pace_smoothed = apply_signal_filters(
+        pace, timestamps_s=timestamps, distance_m=step_distance,
+        config=smoothing.pace, polyorder=poly,
+    )
+    heartrate_smoothed = apply_signal_filters(
+        heartrate[1:], timestamps_s=timestamps, distance_m=step_distance,
+        config=smoothing.heartrate, polyorder=poly,
     )
 
+    # --- GAP — pointwise from smoothed pace/gradient; clipped to 180–1200 ----
+    gap_pace = np.clip(
+        pace_smoothed / factor, _MIN_PACE_S_PER_KM, _MAX_PACE_S_PER_KM
+    )
+
+    # --- Power — pointwise, then its own configured filters ------------------
+    speed_smoothed = np.divide(
+        1000.0, pace_smoothed, out=np.full_like(pace_smoothed, np.nan),
+        where=pace_smoothed > 0,
+    )
     power = compute_power_series(
-        speed_m_per_s=speed_sm,
-        gradient_m_per_km=gradient_sm,
+        speed_m_per_s=speed_smoothed,
+        gradient_m_per_km=gradient_m_per_km,
         mass_kg=mass_kg,
     )
     power_to_hr = None
     if power is not None:
-        power_to_hr = np.divide(
-            power, heartrate_sm, out=np.full_like(power, np.nan), where=heartrate_sm > 0
+        power = apply_signal_filters(
+            power, timestamps_s=timestamps, distance_m=step_distance,
+            config=smoothing.power, polyorder=poly,
         )
+        power_to_hr = np.divide(
+            power, heartrate_smoothed,
+            out=np.full_like(power, np.nan), where=heartrate_smoothed > 0,
+        )
+
+    # Moving-time / moving-distance axes: paused steps contribute 0, collapsing
+    # the gap so the curves stay continuous and the x-axes show only real effort.
+    moving_time = np.cumsum(np.where(moving_step, delta_time, 0.0))
+    moving_distance = np.cumsum(np.where(moving_step, delta_dist, 0.0))
 
     series = RaceSeries(
         label=label,
-        time_s=time[1:] - time[0],
-        distance_m=distance[1:] - distance[0],
-        gap_pace_s_per_km=gap_pace * 60.0,  # store seconds/km for a consistent unit
-        heartrate=heartrate_sm,
+        time_s=moving_time,
+        distance_m=moving_distance,
+        gap_pace_s_per_km=gap_pace,
+        heartrate=heartrate_smoothed,
         power_w=power,
         power_to_hr=power_to_hr,
     )
 
     metrics = _summary_metrics(
         label=label,
-        time=time,
-        distance=distance,
-        altitude=altitude,
+        altitude_smoothed=altitude_smoothed,
+        delta_time=delta_time,
         delta_dist=delta_dist,
         factor=factor,
         power=power,
-        smoothing_window=smoothing_window,
+        moving_step=moving_step,
     )
     return metrics, series
 
@@ -191,29 +239,31 @@ def compute_race(
 def _summary_metrics(
     *,
     label: str,
-    time: np.ndarray,
-    distance: np.ndarray,
-    altitude: np.ndarray,
+    altitude_smoothed: np.ndarray,
+    delta_time: np.ndarray,
     delta_dist: np.ndarray,
     factor: np.ndarray,
     power: Optional[np.ndarray],
-    smoothing_window: int,
+    moving_step: np.ndarray,
 ) -> RaceMetrics:
-    total_time = float(time[-1] - time[0])
-    total_dist = float(distance[-1] - distance[0])
+    # Every aggregate sums over moving steps only, so paused intervals are
+    # excluded from time, distance, GAP and elevation gain.
+    total_time = float(np.sum(delta_time[moving_step]))
+    total_dist = float(np.sum(delta_dist[moving_step]))
 
     avg_speed = total_dist / total_time if total_time > 0 else 0.0
     avg_pace = 1000.0 / avg_speed if avg_speed > 0 else float("nan")
 
     # GAP-adjusted distance = Σ (step distance × gradient factor).
-    gap_dist = float(np.nansum(delta_dist * factor))
+    gap_dist = float(np.nansum((delta_dist * factor)[moving_step]))
     avg_gap_speed = gap_dist / total_time if total_time > 0 else 0.0
     avg_gap_pace = 1000.0 / avg_gap_speed if avg_gap_speed > 0 else float("nan")
 
-    # D+: positive altitude diffs after light smoothing to tame barometric noise.
-    altitude_sm = _moving_average(altitude, smoothing_window)
-    gains = np.diff(altitude_sm)
-    elevation_gain = float(np.sum(gains[gains > 0]))
+    # D+: positive deltas on the smoothed altitude (whatever filters the user
+    # chose), with paused/bridging steps dropped so a pause adds no phantom climb.
+    gains = np.diff(altitude_smoothed)
+    rising = moving_step & (gains > 0)
+    elevation_gain = float(np.sum(gains[rising]))
 
     avg_power = float(np.nanmean(power)) if power is not None and power.size else None
 
