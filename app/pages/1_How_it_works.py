@@ -17,10 +17,12 @@ st.markdown(
     designed around **loading your data once** and then exploring it freely.
 
     ### 1. Connect & load (Home page)
-    1. Enter your name.
-    2. Provide your Strava `client_id` / `client_secret`.
-    3. Authorize the app and exchange the one-shot code for a token.
-    4. Click **Load my data**. TrailMetrics fetches the maximum history
+    1. Provide your Strava `client_id` / `client_secret`, then click
+       **Connect with Strava** — you'll be redirected to authorize and brought
+       straight back with a token (no codes to copy). Credentials are remembered
+       for next time.
+    2. Enter your name and weight.
+    3. Click **Load my data**. TrailMetrics fetches the maximum history
        available (all run types) and keeps it in memory for the whole session.
 
     Once loaded, you'll see how many activities were fetched and the date range
