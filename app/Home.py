@@ -9,7 +9,14 @@ from _helpers import add_repo_root_to_path, inject_theme_css, render_run_loader
 
 add_repo_root_to_path()
 
+import json
 import os
+from pathlib import Path
+
+# Credentials are entered in the UI rather than the environment, so silence
+# stravalib's env-var warnings before it is imported.
+os.environ.setdefault("SILENCE_TOKEN_WARNINGS", "true")
+
 from datetime import date, datetime, time, timedelta
 
 import streamlit as st
@@ -39,8 +46,106 @@ st.markdown(
 
 st.divider()
 
-# --- 1. Runner -------------------------------------------------------------
-st.header("1. Runner")
+# --- 1. Connect Strava -----------------------------------------------------
+# Strava auth comes first on purpose: authorizing fully reloads the page (a new
+# Streamlit session that wipes st.session_state), so anything typed *before* it
+# would be lost. Credentials are cached to a local file so they survive that
+# reload; the runner details below are entered *after* it, so they're safe.
+_CREDS_CACHE = Path.home() / ".trailmetrics_strava.json"
+
+
+def _load_cached_creds() -> tuple[str, str]:
+    try:
+        data = json.loads(_CREDS_CACHE.read_text())
+        return data.get("client_id", ""), data.get("client_secret", "")
+    except Exception:
+        return "", ""
+
+
+def _save_cached_creds(client_id: str, client_secret: str) -> None:
+    try:
+        _CREDS_CACHE.write_text(
+            json.dumps({"client_id": client_id, "client_secret": client_secret})
+        )
+        _CREDS_CACHE.chmod(0o600)  # readable only by the owner
+    except Exception:
+        pass
+
+
+_cached_id, _cached_secret = _load_cached_creds()
+
+st.header("1. Connect Strava")
+col_id, col_secret = st.columns(2)
+with col_id:
+    client_id = st.text_input(
+        "STRAVA_CLIENT_ID",
+        value=os.environ.get("STRAVA_CLIENT_ID") or _cached_id,
+        help="Your Strava application client ID.",
+    )
+with col_secret:
+    client_secret = st.text_input(
+        "STRAVA_CLIENT_SECRET",
+        value=os.environ.get("STRAVA_CLIENT_SECRET") or _cached_secret,
+        type="password",
+    )
+
+# Persist as soon as both are present, so they're available after the redirect.
+if client_id and client_secret:
+    _save_cached_creds(client_id, client_secret)
+
+# Strava redirects back to this app with `?code=...`; the code is picked up
+# automatically — no copy-paste. Strava only validates the callback *domain*, so
+# any path/port works; the app's "Authorization Callback Domain" must match
+# REDIRECT_URI's host (localhost).
+REDIRECT_URI = os.environ.get("STRAVA_REDIRECT_URI", "http://localhost:8501")
+
+# When Strava sends us back with ?code=..., exchange it once for a token, then
+# clear the URL so a refresh can't reuse a now-spent code. Credentials come from
+# the inputs above (env or cache file), which survive the page reload.
+incoming_code = st.query_params.get("code")
+if incoming_code and "access_token" not in st.session_state:
+    if client_id and client_secret:
+        try:
+            token_response = Client().exchange_code_for_token(
+                client_id=int(client_id),
+                client_secret=client_secret,
+                code=incoming_code,
+            )
+            st.session_state["access_token"] = token_response["access_token"]
+        except Exception as e:
+            st.error(f"Token exchange failed: {e}")
+    else:
+        st.error("Missing credentials — re-enter STRAVA_CLIENT_ID / SECRET above.")
+    st.query_params.clear()
+
+if "access_token" in st.session_state:
+    st.success("✅ Connected to Strava.")
+elif client_id and client_secret:
+    auth_url = Client().authorization_url(
+        client_id=int(client_id),
+        redirect_uri=REDIRECT_URI,
+    )
+    # Plain anchor with target="_self" so the auth happens in the *same* tab
+    # (st.link_button always opens a new one, leaving a stale page behind).
+    st.markdown(
+        f'<a href="{auth_url}" target="_self" style="display:inline-block;'
+        "padding:0.55rem 1.1rem;background:#fc4c02;color:#fff;border-radius:0.5rem;"
+        'text-decoration:none;font-weight:600;">Connect with Strava</a>',
+        unsafe_allow_html=True,
+    )
+else:
+    st.info("Enter your STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET above to connect.")
+
+# Nothing below is actionable until Strava is connected, so hide the rest of the
+# setup (runner details, data loading) behind a successful connection.
+if "access_token" not in st.session_state:
+    st.stop()
+
+st.divider()
+
+# --- 2. Runner -------------------------------------------------------------
+# Entered after the Strava connect (and its page reload), so it isn't wiped.
+st.header("2. Runner")
 runner_name = st.text_input("Your name", value=st.session_state.get("runner_name", ""))
 if runner_name:
     st.session_state["runner_name"] = runner_name
@@ -56,59 +161,10 @@ runner_weight = st.number_input(
 if runner_weight:
     st.session_state["runner_weight_kg"] = runner_weight
 
-# --- 2. Strava credentials -------------------------------------------------
-st.header("2. Strava credentials")
-col_id, col_secret = st.columns(2)
-with col_id:
-    client_id = st.text_input(
-        "STRAVA_CLIENT_ID",
-        value=os.environ.get("STRAVA_CLIENT_ID", ""),
-        help="Your Strava application client ID.",
-    )
-with col_secret:
-    client_secret = st.text_input(
-        "STRAVA_CLIENT_SECRET",
-        value=os.environ.get("STRAVA_CLIENT_SECRET", ""),
-        type="password",
-    )
-
-# --- 3. Authorize ----------------------------------------------------------
-st.header("3. Authorize")
-if st.button("Generate authorization URL"):
-    if not client_id:
-        st.error("Set STRAVA_CLIENT_ID first.")
-    else:
-        tmp_client = Client()
-        st.session_state["auth_url"] = tmp_client.authorization_url(
-            client_id=int(client_id),
-            redirect_uri="http://localhost:5000/authorization",
-        )
-
-if "auth_url" in st.session_state:
-    st.markdown(f"[Open Strava authorization]({st.session_state['auth_url']})")
-    st.caption("After authorizing, copy the `code=...` value from the redirect URL.")
-
-auth_code = st.text_input("Authorization code (one-shot)", value="")
-
-if st.button("Exchange code for token"):
-    if not (client_id and client_secret and auth_code):
-        st.error("client_id, client_secret and auth_code are all required.")
-    else:
-        try:
-            token_response = Client().exchange_code_for_token(
-                client_id=int(client_id),
-                client_secret=client_secret,
-                code=auth_code,
-            )
-            st.session_state["access_token"] = token_response["access_token"]
-            st.success("Token stored in session.")
-        except Exception as e:
-            st.error(f"Token exchange failed: {e}")
-
 st.divider()
 
-# --- 4. Load data ----------------------------------------------------------
-st.header("4. Load your data")
+# --- 3. Load data ----------------------------------------------------------
+st.header("3. Load your data")
 st.caption(
     "Fetches every run (all types) from the date below up to today. This can "
     "take a while the first time — it only runs once per session."
