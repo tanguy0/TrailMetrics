@@ -25,7 +25,15 @@ class SimulatePersonalizedGapModelInput:
     hr_tolerance: float = 3.0
     efficiency_min_samples_per_bucket: int = 250
     xgboost_bin_width: float = 20.0
+    # Which personalized models to fit. At least one should be True for the
+    # output to carry any personalized curve.
+    fit_efficiency: bool = True
+    fit_xgboost: bool = True
+    # Reference curves. ``include_reference_curves`` is a master switch kept for
+    # backward compatibility; the two specific flags let callers pick either one.
     include_reference_curves: bool = True
+    include_balanced_runner: bool = True
+    include_kilian: bool = True
     verbose: bool = True
     # When provided, these pre-fetched streams are used instead of hitting the
     # stream source — the date range and sport types above become in-memory
@@ -36,8 +44,9 @@ class SimulatePersonalizedGapModelInput:
 @dataclass
 class SimulatePersonalizedGapModelOutput:
     dataset: DownsampledDataset
-    efficiency_model: EfficiencyGapModel
-    xgboost_model: XgboostGapModel
+    # Either model may be None when the caller chose not to fit it.
+    efficiency_model: Optional[EfficiencyGapModel]
+    xgboost_model: Optional[XgboostGapModel]
     gap_curves: Dict[str, GapCurve]
 
 
@@ -80,30 +89,36 @@ class SimulatePersonalizedGapModel(UseCase):
             streams, split_min_time=params.split_min_time, verbose=params.verbose
         )
 
-        efficiency_model = EfficiencyGapModel(
-            min_samples_per_bucket=params.efficiency_min_samples_per_bucket
-        ).fit(dataset)
-        efficiency_curve = self.smoother.smooth(efficiency_model.gap_curve())
-        efficiency_curve.color = theme.EFFICIENCY
+        gap_curves: Dict[str, GapCurve] = {}
 
-        X, y = self.preprocessor.prepare_calibration_dataset(
-            dataset,
-            flat_elevation_gain_range=params.flat_elevation_gain_range,
-            hr_tolerance=params.hr_tolerance,
-        )
-        xgboost_model = XgboostGapModel().fit(X, y)
-        xgboost_curve = self.smoother.smooth(
-            xgboost_model.gap_curve(bin_width=params.xgboost_bin_width)
-        )
-        xgboost_curve.color = theme.AUTO_LEARNING
+        efficiency_model: Optional[EfficiencyGapModel] = None
+        if params.fit_efficiency:
+            efficiency_model = EfficiencyGapModel(
+                min_samples_per_bucket=params.efficiency_min_samples_per_bucket
+            ).fit(dataset)
+            efficiency_curve = self.smoother.smooth(efficiency_model.gap_curve())
+            efficiency_curve.color = theme.EFFICIENCY
+            gap_curves["Efficiency Model"] = efficiency_curve
 
-        gap_curves: Dict[str, GapCurve] = {
-            "Efficiency Model": efficiency_curve,
-            "XGBoost Model": xgboost_curve,
-        }
+        xgboost_model: Optional[XgboostGapModel] = None
+        if params.fit_xgboost:
+            X, y = self.preprocessor.prepare_calibration_dataset(
+                dataset,
+                flat_elevation_gain_range=params.flat_elevation_gain_range,
+                hr_tolerance=params.hr_tolerance,
+            )
+            xgboost_model = XgboostGapModel().fit(X, y)
+            xgboost_curve = self.smoother.smooth(
+                xgboost_model.gap_curve(bin_width=params.xgboost_bin_width)
+            )
+            xgboost_curve.color = theme.AUTO_LEARNING
+            gap_curves["XGBoost Model"] = xgboost_curve
+
         if params.include_reference_curves:
-            gap_curves["Balanced Runner"] = balanced_runner()
-            gap_curves["Kilian Jornet"] = kilian_jornet()
+            if params.include_balanced_runner:
+                gap_curves["Balanced Runner"] = balanced_runner()
+            if params.include_kilian:
+                gap_curves["Kilian Jornet"] = kilian_jornet()
 
         return SimulatePersonalizedGapModelOutput(
             dataset=dataset,

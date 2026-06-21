@@ -5,7 +5,7 @@ The fetched streams stay in session memory until the app is closed, so you can
 play with analysis parameters without ever re-fetching.
 """
 
-from _helpers import add_repo_root_to_path, inject_theme_css, render_run_loader
+from _helpers import add_repo_root_to_path, inject_theme_css, render_run_loader, t
 
 add_repo_root_to_path()
 
@@ -23,6 +23,7 @@ import streamlit as st
 from stravalib import Client
 
 from src.infrastructure.strava.strava_client import StravaClient
+from src.translations import LANGUAGES
 from src.usecases.fetch_athlete_history import (
     FetchAthleteHistory,
     FetchAthleteHistoryInput,
@@ -31,18 +32,22 @@ from src.usecases.fetch_athlete_history import (
 st.set_page_config(page_title="TrailMetrics", page_icon="🏔️", layout="wide")
 inject_theme_css()
 
+# --- Global language selector ----------------------------------------------
+# Stored in session_state["lang"] (codes "fr"/"en"); every page reads it through
+# the t() helper. Rendered first so the rest of the page reflects the choice.
+_, _lang_col = st.columns([4, 1])
+with _lang_col:
+    st.selectbox(
+        t("common.lang_label"),
+        options=list(LANGUAGES),
+        format_func=lambda code: LANGUAGES[code],
+        key="lang",
+    )
+
 st.title("🏔️ TrailMetrics")
-st.subheader("Connect Strava, load your history, then explore your running data")
+st.subheader(t("home.subheader"))
 
-st.markdown(
-    """
-    Set up the connection below and load your activity history **once**. After
-    that, open any analysis from the **left sidebar** — they all reuse this data,
-    so you can tweak parameters freely without re-fetching.
-
-    New here? See **How it works** in the sidebar.
-    """
-)
+st.markdown(t("home.intro"))
 
 st.divider()
 
@@ -74,13 +79,13 @@ def _save_cached_creds(client_id: str, client_secret: str) -> None:
 
 _cached_id, _cached_secret = _load_cached_creds()
 
-st.header("1. Connect Strava")
+st.header(t("home.connect.header"))
 col_id, col_secret = st.columns(2)
 with col_id:
     client_id = st.text_input(
         "STRAVA_CLIENT_ID",
         value=os.environ.get("STRAVA_CLIENT_ID") or _cached_id,
-        help="Your Strava application client ID.",
+        help=t("home.client_id.help"),
     )
 with col_secret:
     client_secret = st.text_input(
@@ -113,13 +118,13 @@ if incoming_code and "access_token" not in st.session_state:
             )
             st.session_state["access_token"] = token_response["access_token"]
         except Exception as e:
-            st.error(f"Token exchange failed: {e}")
+            st.error(t("home.token_exchange_failed").format(error=e))
     else:
-        st.error("Missing credentials — re-enter STRAVA_CLIENT_ID / SECRET above.")
+        st.error(t("home.missing_creds"))
     st.query_params.clear()
 
 if "access_token" in st.session_state:
-    st.success("✅ Connected to Strava.")
+    st.success(t("home.connected"))
 elif client_id and client_secret:
     auth_url = Client().authorization_url(
         client_id=int(client_id),
@@ -130,11 +135,11 @@ elif client_id and client_secret:
     st.markdown(
         f'<a href="{auth_url}" target="_self" style="display:inline-block;'
         "padding:0.55rem 1.1rem;background:#fc4c02;color:#fff;border-radius:0.5rem;"
-        'text-decoration:none;font-weight:600;">Connect with Strava</a>',
+        f'text-decoration:none;font-weight:600;">{t("home.connect_button")}</a>',
         unsafe_allow_html=True,
     )
 else:
-    st.info("Enter your STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET above to connect.")
+    st.info(t("home.enter_creds_info"))
 
 # Nothing below is actionable until Strava is connected, so hide the rest of the
 # setup (runner details, data loading) behind a successful connection.
@@ -145,18 +150,20 @@ st.divider()
 
 # --- 2. Runner -------------------------------------------------------------
 # Entered after the Strava connect (and its page reload), so it isn't wiped.
-st.header("2. Runner")
-runner_name = st.text_input("Your name", value=st.session_state.get("runner_name", ""))
+st.header(t("home.runner.header"))
+runner_name = st.text_input(
+    t("home.runner.name_label"), value=st.session_state.get("runner_name", "")
+)
 if runner_name:
     st.session_state["runner_name"] = runner_name
 
 runner_weight = st.number_input(
-    "Your weight (kg)",
+    t("home.runner.weight_label"),
     min_value=30.0,
     max_value=200.0,
     value=st.session_state.get("runner_weight_kg"),
     step=0.5,
-    help="Used to estimate running power on the Race Comparator. Leave empty to skip.",
+    help=t("home.runner.weight_help"),
 )
 if runner_weight:
     st.session_state["runner_weight_kg"] = runner_weight
@@ -164,22 +171,19 @@ if runner_weight:
 st.divider()
 
 # --- 3. Load data ----------------------------------------------------------
-st.header("3. Load your data")
-st.caption(
-    "Fetches every run (all types) from the date below up to today. This can "
-    "take a while the first time — it only runs once per session."
-)
+st.header(t("home.load.header"))
+st.caption(t("home.load.caption"))
 
 default_from = date.today() - timedelta(days=365 * 2)
 fetch_from_date = st.date_input(
-    "Fetch data back to",
+    t("home.load.from_label"),
     value=default_from,
     max_value=date.today(),
-    help="The oldest date to fetch initially. Older activities are ignored.",
+    help=t("home.load.from_help"),
 )
 
 load = st.button(
-    "Load my data",
+    t("home.load.button"),
     type="primary",
     disabled=("access_token" not in st.session_state) or not runner_name,
 )
@@ -187,11 +191,13 @@ load = st.button(
 if load:
     loader = st.empty()
     # Indeterminate trail while we list activities (length unknown yet).
-    render_run_loader(loader, "Scouting your activities on Strava…", frac=None)
+    render_run_loader(loader, t("home.load.scouting"), frac=None)
 
     def _on_progress(done: int, total: int) -> None:
         frac = (done / total) if total else 1.0
-        render_run_loader(loader, f"Fetching activity {done} of {total}…", frac=frac)
+        render_run_loader(
+            loader, t("home.load.fetching").format(done=done, total=total), frac=frac
+        )
 
     stravalib_client = Client(access_token=st.session_state["access_token"])
     stream_source = StravaClient(stravalib_client)
@@ -219,18 +225,18 @@ if "athlete_streams" in st.session_state:
     oldest = st.session_state.get("fetch_oldest_date")
     newest = st.session_state.get("fetch_newest_date")
 
-    st.success(f"✅ Loaded {count} activities — analyses are unlocked.")
+    st.success(t("home.status.loaded").format(count=count))
 
     c1, c2, c3 = st.columns(3)
-    c1.metric("Activities", count)
+    c1.metric(t("home.metric.activities"), count)
     c2.metric(
-        "Oldest session",
+        t("home.metric.oldest"),
         oldest.strftime("%Y-%m-%d") if isinstance(oldest, datetime) else "—",
     )
     c3.metric(
-        "Most recent session",
+        t("home.metric.newest"),
         newest.strftime("%Y-%m-%d") if isinstance(newest, datetime) else "—",
     )
-    st.info("Open an analysis from the **left sidebar** to get started.")
+    st.info(t("home.status.open_analysis"))
 else:
-    st.warning("No data loaded yet. Complete steps 1–4 to unlock the analyses.")
+    st.warning(t("home.status.no_data"))

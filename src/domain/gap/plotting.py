@@ -4,9 +4,12 @@ import matplotlib.pyplot as plt
 
 from src.domain.gap import theme
 from src.domain.models.gap import GapCurve
+from src.translations import DEFAULT_LANG, translate
 
 
-def plot_gap_curves(gap_curves: Dict[str, GapCurve]) -> plt.Figure:
+def plot_gap_curves(
+    gap_curves: Dict[str, GapCurve], show_std: bool = True, lang: str = DEFAULT_LANG
+) -> plt.Figure:
     fig, ax = plt.subplots(figsize=(12, 6))
     fig.patch.set_facecolor(theme.FIGURE_FACE)
     ax.set_facecolor(theme.AXES_FACE)
@@ -23,21 +26,24 @@ def plot_gap_curves(gap_curves: Dict[str, GapCurve]) -> plt.Figure:
             solid_capstyle="round",
             zorder=3,
         )
-        ax.fill_between(
-            curve.bin_centers,
-            curve.means - curve.stds,
-            curve.means + curve.stds,
-            alpha=0.16,
-            color=color,
-            zorder=2,
-        )
+        if show_std:
+            ax.fill_between(
+                curve.bin_centers,
+                curve.means - curve.stds,
+                curve.means + curve.stds,
+                alpha=0.16,
+                color=color,
+                zorder=2,
+            )
 
-    ax.set_xlabel("Elevation Gain (m/km)", color=theme.TEXT, fontsize=12, fontweight="bold")
+    ax.set_xlabel(
+        translate("plot.gap.xlabel", lang), color=theme.TEXT, fontsize=12, fontweight="bold"
+    )
     ax.set_ylabel(
-        "Speed Adjuster (GAP/speed)", color=theme.TEXT, fontsize=12, fontweight="bold"
+        translate("plot.gap.ylabel", lang), color=theme.TEXT, fontsize=12, fontweight="bold"
     )
     ax.set_title(
-        "GAP Curve(s) and standard deviation(s)",
+        translate("plot.gap.title_std" if show_std else "plot.gap.title", lang),
         color=theme.TEXT,
         fontweight="bold",
         fontsize=15,
