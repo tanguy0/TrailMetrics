@@ -6,7 +6,7 @@ type) feeds a cross-race analysis: a summary stats table plus evolution plots
 distance. Everything runs on the already-fetched history — no re-fetching.
 """
 
-from _helpers import add_repo_root_to_path, inject_theme_css
+from _helpers import add_repo_root_to_path, get_lang, inject_theme_css, t
 
 add_repo_root_to_path()
 
@@ -29,28 +29,30 @@ from src.usecases.compare_races import CompareRaces, CompareRacesInput
 
 MAX_RACES = 4
 
-st.set_page_config(page_title="Race Comparator", layout="wide")
+st.set_page_config(page_title=t("page.races.title"), layout="wide")
 inject_theme_css()
-st.title("Race Comparator")
+st.title(t("page.races.title"))
 
 # --- Gate: data must be loaded on the Home page first ----------------------
 if "athlete_streams" not in st.session_state:
-    st.warning(
-        "No data loaded yet. Go to the **Home** page, connect Strava and click "
-        "**Load my data** to unlock this analysis."
-    )
+    st.warning(t("gate.no_data"))
     st.stop()
 
 streams: List[ActivityStream] = st.session_state["athlete_streams"]
 
-st.markdown(
-    f"""
-    Compare any number of races side by side — from a single workout up to
-    **{MAX_RACES}** at once. Start by picking your workouts below. Use the date
-    search to narrow things down; each option shows its duration, distance and
-    sport type so you can tell similar sessions apart.
-    """
-)
+st.markdown(t("races.intro").format(max=MAX_RACES))
+
+# Localized DataFrame column headers, defined once so the labels shown to the
+# user and the keys used in styling/lookup logic below always match.
+COL_DATE = t("races.col.date")
+COL_SPORT = t("races.col.sport")
+COL_DISTANCE = t("races.col.distance")
+COL_DURATION = t("races.col.duration")
+COL_ELEV = t("races.col.elev_gain")
+COL_TIME = t("races.col.time")
+COL_AVG_PACE = t("races.col.avg_pace")
+COL_AVG_GAP = t("races.col.avg_gap_pace")
+COL_AVG_POWER = t("races.col.avg_power")
 
 
 # --- Workout summaries -----------------------------------------------------
@@ -110,7 +112,7 @@ summaries_by_id = {s["activity_id"]: s for s in summaries}
 
 def _option_label(activity_id: int) -> str:
     s = summaries_by_id[activity_id]
-    date_str = s["date"].strftime("%Y-%m-%d") if s["date"] else "unknown date"
+    date_str = s["date"].strftime("%Y-%m-%d") if s["date"] else t("races.unknown_date")
     return (
         f"{date_str} · {s['sport_type']} · "
         f"{_format_distance(s['distance_m'])} · {_format_duration(s['duration_s'])}"
@@ -118,20 +120,20 @@ def _option_label(activity_id: int) -> str:
 
 
 # --- Selector --------------------------------------------------------------
-st.subheader("Select workouts")
+st.subheader(t("races.select.subheader"))
 
 available_dates = sorted({s["date"] for s in summaries if s["date"] is not None})
 
 search_by_date = st.checkbox(
-    "Search by date",
-    help="Narrow the workout list to a single day.",
+    t("races.search_by_date"),
+    help=t("races.search_by_date_help"),
 )
 
 candidate_ids = [s["activity_id"] for s in summaries]
 
 if search_by_date and available_dates:
     selected_date = st.date_input(
-        "Workout date",
+        t("races.workout_date"),
         value=available_dates[-1],
         min_value=available_dates[0],
         max_value=available_dates[-1],
@@ -140,14 +142,18 @@ if search_by_date and available_dates:
     candidate_ids = [s["activity_id"] for s in matches]
 
     if matches:
-        st.caption(f"{len(matches)} workout(s) on {selected_date.strftime('%Y-%m-%d')}:")
+        st.caption(
+            t("races.matches_caption").format(
+                n=len(matches), date=selected_date.strftime("%Y-%m-%d")
+            )
+        )
         st.dataframe(
             pd.DataFrame(
                 [
                     {
-                        "Sport": m["sport_type"],
-                        "Distance": _format_distance(m["distance_m"]),
-                        "Duration": _format_duration(m["duration_s"]),
+                        COL_SPORT: m["sport_type"],
+                        COL_DISTANCE: _format_distance(m["distance_m"]),
+                        COL_DURATION: _format_duration(m["duration_s"]),
                     }
                     for m in matches
                 ]
@@ -156,12 +162,12 @@ if search_by_date and available_dates:
             width="stretch",
         )
     else:
-        st.info("No workouts on that date.")
+        st.info(t("races.no_workouts_on_date"))
 elif search_by_date:
-    st.info("No dated workouts in the loaded history.")
+    st.info(t("races.no_dated"))
 
 selected_ids = st.multiselect(
-    f"Workouts to compare (up to {MAX_RACES})",
+    t("races.multiselect.label").format(max=MAX_RACES),
     options=candidate_ids,
     default=[
         sid
@@ -170,7 +176,7 @@ selected_ids = st.multiselect(
     ],
     format_func=_option_label,
     max_selections=MAX_RACES,
-    help=f"Pick between 1 and {MAX_RACES} workouts.",
+    help=t("races.multiselect.help").format(max=MAX_RACES),
 )
 
 streams_by_id = {s.activity_id: s for s in streams}
@@ -182,19 +188,21 @@ st.session_state["comparator_selected_streams"] = [
 
 # --- Recap of the current selection ----------------------------------------
 if selected_ids:
-    st.subheader(f"Selected ({len(selected_ids)}/{MAX_RACES})")
+    st.subheader(
+        t("races.selected.subheader").format(n=len(selected_ids), max=MAX_RACES)
+    )
     st.dataframe(
         pd.DataFrame(
             [
                 {
-                    "Date": (
+                    COL_DATE: (
                         summaries_by_id[sid]["date"].strftime("%Y-%m-%d")
                         if summaries_by_id[sid]["date"]
                         else "—"
                     ),
-                    "Sport": summaries_by_id[sid]["sport_type"],
-                    "Distance": _format_distance(summaries_by_id[sid]["distance_m"]),
-                    "Duration": _format_duration(summaries_by_id[sid]["duration_s"]),
+                    COL_SPORT: summaries_by_id[sid]["sport_type"],
+                    COL_DISTANCE: _format_distance(summaries_by_id[sid]["distance_m"]),
+                    COL_DURATION: _format_duration(summaries_by_id[sid]["duration_s"]),
                 }
                 for sid in selected_ids
             ]
@@ -203,7 +211,7 @@ if selected_ids:
         width="stretch",
     )
 else:
-    st.info("Pick at least one workout above to get started.")
+    st.info(t("races.pick_one"))
     st.stop()
 
 # --- Smoothing settings ----------------------------------------------------
@@ -215,18 +223,18 @@ def _filter_controls(label: str, key: str, default: FilterConfig) -> FilterConfi
     c0, c1, c2, c3, c4 = st.columns([1.4, 1, 1.1, 1.2, 1.1])
     c0.markdown(f"**{label}**")
     roll_on = c1.checkbox(
-        "Rolling avg", value=default.rolling_window_s is not None, key=f"sm_{key}_roll"
+        t("races.filter.rolling"), value=default.rolling_window_s is not None, key=f"sm_{key}_roll"
     )
     roll_w = c2.number_input(
-        "Window (s)", min_value=1.0, step=1.0,
+        t("races.filter.window_s"), min_value=1.0, step=1.0,
         value=float(default.rolling_window_s or 15.0),
         key=f"sm_{key}_rollw", disabled=not roll_on,
     )
     sav_on = c3.checkbox(
-        "Savitzky–Golay", value=default.savgol_window_m is not None, key=f"sm_{key}_sav"
+        t("races.filter.savgol"), value=default.savgol_window_m is not None, key=f"sm_{key}_sav"
     )
     sav_w = c4.number_input(
-        "Window (m)", min_value=10.0, step=10.0,
+        t("races.filter.window_m"), min_value=10.0, step=10.0,
         value=float(default.savgol_window_m or 200.0),
         key=f"sm_{key}_savw", disabled=not sav_on,
     )
@@ -236,22 +244,18 @@ def _filter_controls(label: str, key: str, default: FilterConfig) -> FilterConfi
     )
 
 
-with st.expander("⚙️ Smoothing settings", expanded=False):
-    st.caption(
-        "Each signal can pass through a time-domain rolling average and/or a "
-        "distance-domain Savitzky–Golay filter (applied in that order). "
-        "Altitude smoothing drives the gradient and elevation gain."
-    )
+with st.expander(t("races.smoothing.expander"), expanded=False):
+    st.caption(t("races.smoothing.caption"))
     smoothing_params = SmoothingParams(
-        pace=_filter_controls("Pace / GAP", "pace", _SMOOTH_DEFAULTS.pace),
-        altitude=_filter_controls("Altitude", "altitude", _SMOOTH_DEFAULTS.altitude),
-        heartrate=_filter_controls("Heart rate", "hr", _SMOOTH_DEFAULTS.heartrate),
-        power=_filter_controls("Power", "power", _SMOOTH_DEFAULTS.power),
+        pace=_filter_controls(t("races.signal.pace"), "pace", _SMOOTH_DEFAULTS.pace),
+        altitude=_filter_controls(t("races.signal.altitude"), "altitude", _SMOOTH_DEFAULTS.altitude),
+        heartrate=_filter_controls(t("races.signal.hr"), "hr", _SMOOTH_DEFAULTS.heartrate),
+        power=_filter_controls(t("races.signal.power"), "power", _SMOOTH_DEFAULTS.power),
     )
 
 # --- Cross-race analysis ---------------------------------------------------
 st.divider()
-st.header("Analysis")
+st.header(t("races.analysis.header"))
 
 selected_streams = st.session_state["comparator_selected_streams"]
 labels = [_option_label(sid) for sid in selected_ids]
@@ -267,7 +271,7 @@ result = usecase.execute(
 )
 
 # 1. Summary stats table (best value per category highlighted) --------------
-st.subheader("Summary stats")
+st.subheader(t("races.summary.subheader"))
 
 
 def _format_pace(seconds_per_km: float) -> str:
@@ -279,23 +283,23 @@ def _format_pace(seconds_per_km: float) -> str:
 
 # "best" direction per column: True = highest is best, False = lowest is best.
 _BEST_IS_MAX = {
-    "Distance": True,
-    "Elevation gain": True,
-    "Time": False,
-    "Avg pace": False,
-    "Avg GAP pace": False,
-    "Avg power": True,
+    COL_DISTANCE: True,
+    COL_ELEV: True,
+    COL_TIME: False,
+    COL_AVG_PACE: False,
+    COL_AVG_GAP: False,
+    COL_AVG_POWER: True,
 }
 
 stats = pd.DataFrame(
     [
         {
-            "Distance": m.distance_km,
-            "Elevation gain": m.elevation_gain_m,
-            "Time": m.time_s,
-            "Avg pace": m.avg_pace_s_per_km,
-            "Avg GAP pace": m.avg_gap_pace_s_per_km,
-            "Avg power": m.avg_power_w if m.avg_power_w is not None else np.nan,
+            COL_DISTANCE: m.distance_km,
+            COL_ELEV: m.elevation_gain_m,
+            COL_TIME: m.time_s,
+            COL_AVG_PACE: m.avg_pace_s_per_km,
+            COL_AVG_GAP: m.avg_gap_pace_s_per_km,
+            COL_AVG_POWER: m.avg_power_w if m.avg_power_w is not None else np.nan,
         }
         for m in result.metrics
     ],
@@ -318,58 +322,60 @@ def _highlight_best(column: pd.Series) -> List[str]:
 styler = (
     stats.style.format(
         {
-            "Distance": "{:.2f} km",
-            "Elevation gain": "{:.0f} m",
-            "Time": lambda s: _format_duration(s),
-            "Avg pace": _format_pace,
-            "Avg GAP pace": _format_pace,
-            "Avg power": lambda w: "—" if pd.isna(w) else f"{w:.0f} W",
+            COL_DISTANCE: "{:.2f} km",
+            COL_ELEV: "{:.0f} m",
+            COL_TIME: lambda s: _format_duration(s),
+            COL_AVG_PACE: _format_pace,
+            COL_AVG_GAP: _format_pace,
+            COL_AVG_POWER: lambda w: "—" if pd.isna(w) else f"{w:.0f} W",
         }
     ).apply(_highlight_best, axis=0)
 )
 st.dataframe(styler, width="stretch")
-if stats["Avg power"].isna().all():
-    st.caption(
-        "Avg power is blank — set **your weight** on the Home page to enable "
-        "power (and the power graphs below)."
-    )
+if stats[COL_AVG_POWER].isna().all():
+    st.caption(t("races.power_blank"))
 
 # 2-5. Evolution plots, with a shared time/distance x-axis toggle -----------
-st.subheader("Evolution across the race")
+st.subheader(t("races.evolution.subheader"))
 
 col_x, col_gap = st.columns(2)
 with col_x:
-    x_axis_label = st.radio(
-        "X axis",
-        options=["Time", "Distance"],
+    # Options are stable codes; the displayed labels are localized via format_func
+    # so the comparison logic below stays language-independent.
+    x_axis = st.radio(
+        t("races.xaxis.label"),
+        options=["time", "distance"],
         horizontal=True,
-        help="Switch every graph below between elapsed time and distance covered.",
+        format_func=lambda c: t("races.xaxis.time") if c == "time" else t("races.xaxis.distance"),
+        help=t("races.xaxis.help"),
     )
 with col_gap:
     gap_display = st.radio(
-        "Show GAP as",
-        options=["Pace", "Speed"],
+        t("races.gap_display.label"),
+        options=["pace", "speed"],
         horizontal=True,
-        help="Display the gradient-adjusted-pace graph as pace (min/km) or speed (km/h).",
+        format_func=lambda c: t("races.gap_display.pace") if c == "pace" else t("races.gap_display.speed"),
+        help=t("races.gap_display.help"),
     )
-x_axis = "time" if x_axis_label == "Time" else "distance"
-gap_as_speed = gap_display == "Speed"
+gap_as_speed = gap_display == "speed"
 
 # title shown above each metric's chart
 _PLOT_TITLES = {
-    "gap_pace": "Gradient-adjusted pace",
-    "power": "Power",
-    "heartrate": "Heart rate",
-    "power_to_hr": "Power-to-HR",
+    "gap_pace": t("races.plot.gap_pace"),
+    "power": t("races.plot.power"),
+    "heartrate": t("races.plot.heartrate"),
+    "power_to_hr": t("races.plot.power_to_hr"),
 }
 
+lang = get_lang()
 plottable = available_metric_keys(result.series)
 for metric_key in ("gap_pace", "power", "heartrate", "power_to_hr"):
     st.markdown(f"**{_PLOT_TITLES[metric_key]}**")
     if metric_key not in plottable:
-        st.info("Set **your weight** on the Home page to enable this graph.")
+        st.info(t("races.weight_needed"))
         continue
     fig = plot_metric_comparison(
-        result.series, metric_key=metric_key, x_axis=x_axis, gap_as_speed=gap_as_speed
+        result.series, metric_key=metric_key, x_axis=x_axis, gap_as_speed=gap_as_speed,
+        lang=lang,
     )
     st.pyplot(fig)

@@ -34,6 +34,17 @@ GRID = "#CFC3AE"             # muted sand grid lines (a touch darker)
 TEXT = "#241F19"             # deep warm near-black
 SPINE = "#B8AC97"
 
+# Distinct colors for overlaying several time scales on a single figure. Hues
+# are spread out (green / clay / amber / lake / plum) so up to five scales stay
+# easy to tell apart while keeping the warm Trail / Earthy feel.
+TIME_SCALE_CYCLE = [
+    "#2E6F40",  # forest green
+    "#C65D3B",  # terracotta
+    "#E8A33D",  # warm amber
+    "#3A6EA5",  # lake blue
+    "#7A4E9E",  # plum
+]
+
 # Cycle used for any curve that doesn't carry an explicit color.
 CURVE_CYCLE = [
     EFFICIENCY,

@@ -11,18 +11,20 @@ import numpy as np
 
 from src.domain.gap import theme
 from src.domain.races.metrics import RaceSeries
+from src.translations import DEFAULT_LANG, translate
 
-# metric key -> (attribute on RaceSeries, y-axis label, title)
+# metric key -> (attribute on RaceSeries, y-axis label translation key, title key)
 _METRICS = {
-    "gap_pace": ("gap_pace_s_per_km", "GAP pace (min/km, lower = faster)", "Gradient-Adjusted Pace"),
-    "power": ("power_w", "Power (W)", "Power"),
-    "heartrate": ("heartrate", "Heart rate (bpm)", "Heart Rate"),
-    "power_to_hr": ("power_to_hr", "Power / HR (W/bpm)", "Power-to-Heart-Rate"),
+    "gap_pace": ("gap_pace_s_per_km", "plot.races.gap_pace.y", "plot.races.gap_pace.title"),
+    "power": ("power_w", "plot.races.power.y", "plot.races.power.title"),
+    "heartrate": ("heartrate", "plot.races.hr.y", "plot.races.hr.title"),
+    "power_to_hr": ("power_to_hr", "plot.races.p2hr.y", "plot.races.p2hr.title"),
 }
 
+# x-axis key -> (attribute on RaceSeries, axis label translation key, unit scale)
 _X_AXES = {
-    "time": ("time_s", "Time (min)", 1.0 / 60.0),
-    "distance": ("distance_m", "Distance (km)", 1.0 / 1000.0),
+    "time": ("time_s", "plot.races.x.time", 1.0 / 60.0),
+    "distance": ("distance_m", "plot.races.x.distance", 1.0 / 1000.0),
 }
 
 
@@ -45,18 +47,22 @@ def plot_metric_comparison(
     metric_key: str,
     x_axis: str,
     gap_as_speed: bool = False,
+    lang: str = DEFAULT_LANG,
 ) -> plt.Figure:
     """Plot one metric across all races. Raises KeyError on unknown keys.
 
     ``gap_as_speed`` only affects the GAP plot: when True it shows GAP as speed
     (km/h, higher = faster) instead of pace (min/km).
     """
-    attr, y_label, title = _METRICS[metric_key]
-    x_attr, x_label, x_scale = _X_AXES[x_axis]
+    attr, y_label_key, title_key = _METRICS[metric_key]
+    x_attr, x_label_key, x_scale = _X_AXES[x_axis]
+    y_label = translate(y_label_key, lang)
+    x_label = translate(x_label_key, lang)
+    title = translate(title_key, lang)
 
     show_gap_speed = metric_key == "gap_pace" and gap_as_speed
     if show_gap_speed:
-        y_label = "GAP speed (km/h, higher = faster)"
+        y_label = translate("plot.races.gap_speed.y", lang)
 
     fig, ax = plt.subplots(figsize=(12, 5))
     fig.patch.set_facecolor(theme.FIGURE_FACE)
@@ -80,8 +86,8 @@ def plot_metric_comparison(
     ax.set_xlabel(x_label, color=theme.TEXT, fontsize=12, fontweight="bold")
     ax.set_ylabel(y_label, color=theme.TEXT, fontsize=12, fontweight="bold")
     ax.set_title(
-        f"{title} across the race", color=theme.TEXT, fontweight="bold",
-        fontsize=15, pad=12,
+        f"{title} {translate('plot.races.title_suffix', lang)}",
+        color=theme.TEXT, fontweight="bold", fontsize=15, pad=12,
     )
     ax.grid(True, alpha=0.45, color=theme.GRID, linewidth=0.9)
     ax.tick_params(colors=theme.TEXT)

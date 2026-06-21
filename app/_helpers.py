@@ -17,11 +17,24 @@ import streamlit as st
 
 from src.domain.gap import theme
 from src.domain.models.gap import GapCurve
+from src.translations import DEFAULT_LANG, translate
 
 
 def add_repo_root_to_path() -> None:
     """No-op kept for backwards compatibility; the path is set at import time."""
     return
+
+
+# --- i18n ------------------------------------------------------------------
+
+def get_lang() -> str:
+    """Active UI language code ('fr' / 'en'), set by the Home page selector."""
+    return st.session_state.get("lang", DEFAULT_LANG)
+
+
+def t(key: str) -> str:
+    """Translate ``key`` into the active UI language (see src/translations.py)."""
+    return translate(key, get_lang())
 
 
 # --- Theme / UI ------------------------------------------------------------
