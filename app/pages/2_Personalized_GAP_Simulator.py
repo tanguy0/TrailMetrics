@@ -191,20 +191,25 @@ with st.sidebar:
     high_high = st.number_input(t("gap.intensity.high_max"), value=190)
 
     # --- Validation ---------------------------------------------------------
+    # Personal curves are fit per time scale, so a selected model needs at least
+    # one valid scale (and a sport filter). With no model selected the page can
+    # still plot the reference curves alone — or nothing at all — so it always
+    # runs in that case.
     named_scales = [ts for ts in time_scales if ts["name"]]
     inverted = [ts for ts in named_scales if ts["from_date"] > ts["to_date"]]
     valid_scales = [ts for ts in named_scales if ts["from_date"] <= ts["to_date"]]
     a_model_selected = show_efficiency or show_auto_learning
-    can_run = bool(sport_types) and bool(valid_scales) and a_model_selected
 
-    if not sport_types:
-        st.warning(t("gap.validate.no_sport"))
-    if not named_scales:
-        st.warning(t("gap.validate.no_scale"))
-    if inverted:
-        st.warning(t("gap.validate.inverted"))
-    if not a_model_selected:
-        st.warning(t("gap.validate.no_model"))
+    if a_model_selected:
+        can_run = bool(sport_types) and bool(valid_scales)
+        if not sport_types:
+            st.warning(t("gap.validate.no_sport"))
+        if not named_scales:
+            st.warning(t("gap.validate.no_scale"))
+        if inverted:
+            st.warning(t("gap.validate.inverted"))
+    else:
+        can_run = True
 
     run = st.button(t("gap.run_button"), type="primary", disabled=not can_run)
 
@@ -219,39 +224,39 @@ def _to_datetime_end(d: date) -> datetime:
 
 if run:
     lang = get_lang()
-    loader = st.empty()
-    render_run_loader(loader, t("gap.loader"), frac=None)
-
     usecase = SimulatePersonalizedGapModel()
-    scale_labels = _unique_labels(valid_scales)
 
-    # Fit every model once per time scale. Reference curves are independent of the
-    # time scale, so we add them once at the page level rather than per scale.
+    # Personal curves are fit once per time scale. Skip this work entirely when no
+    # model is selected — only the (time-scale-independent) reference curves, if
+    # any, will be plotted. Reference curves are added once at the page level.
     ordered = []  # [{label, color, result}], preserving sidebar order.
-    for i, (ts, label) in enumerate(zip(valid_scales, scale_labels)):
-        params = SimulatePersonalizedGapModelInput(
-            streams=streams,
-            sport_types=sport_types,
-            from_date=_to_datetime_start(ts["from_date"]),
-            to_date=_to_datetime_end(ts["to_date"]),
-            split_min_time=float(split_min_time),
-            hr_tolerance=float(hr_tolerance),
-            efficiency_min_samples_per_bucket=int(efficiency_min_samples),
-            xgboost_bin_width=float(xgb_bin_width),
-            fit_efficiency=show_efficiency,
-            fit_xgboost=show_auto_learning,
-            include_reference_curves=False,
-            verbose=False,
-        )
-        ordered.append(
-            {
-                "label": label,
-                "color": theme.TIME_SCALE_CYCLE[i % len(theme.TIME_SCALE_CYCLE)],
-                "result": usecase.execute(params),
-            }
-        )
-
-    loader.empty()
+    if a_model_selected:
+        loader = st.empty()
+        render_run_loader(loader, t("gap.loader"), frac=None)
+        scale_labels = _unique_labels(valid_scales)
+        for i, (ts, label) in enumerate(zip(valid_scales, scale_labels)):
+            params = SimulatePersonalizedGapModelInput(
+                streams=streams,
+                sport_types=sport_types,
+                from_date=_to_datetime_start(ts["from_date"]),
+                to_date=_to_datetime_end(ts["to_date"]),
+                split_min_time=float(split_min_time),
+                hr_tolerance=float(hr_tolerance),
+                efficiency_min_samples_per_bucket=int(efficiency_min_samples),
+                xgboost_bin_width=float(xgb_bin_width),
+                fit_efficiency=show_efficiency,
+                fit_xgboost=show_auto_learning,
+                include_reference_curves=False,
+                verbose=False,
+            )
+            ordered.append(
+                {
+                    "label": label,
+                    "color": theme.TIME_SCALE_CYCLE[i % len(theme.TIME_SCALE_CYCLE)],
+                    "result": usecase.execute(params),
+                }
+            )
+        loader.empty()
 
     # --- Main overlay: every model, every time scale ------------------------
     eff_label = t("gap.models.efficiency")
@@ -275,84 +280,94 @@ if run:
     if show_kilian:
         display_curves[t("gap.refs.kilian")] = kilian_jornet()
 
-    splits_summary = ", ".join(
-        t("gap.summary.item").format(
-            label=e["label"], n=len(e["result"].dataset.speed)
+    # Per-scale split counts only make sense for the personalized models.
+    if ordered:
+        splits_summary = ", ".join(
+            t("gap.summary.item").format(
+                label=e["label"], n=len(e["result"].dataset.speed)
+            )
+            for e in ordered
         )
-        for e in ordered
-    )
-    st.success(t("gap.summary").format(summary=splits_summary))
+        st.success(t("gap.summary").format(summary=splits_summary))
 
     st.subheader(t("gap.subheader.curves"))
-    st.caption(t("gap.caption.main"))
-    fig = plot_gap_curves(display_curves, show_std=show_std, lang=lang)
-    render_figure_with_download(
-        fig, display_curves, base_filename="gap_curves", key="dl-gap-curves"
-    )
+    if display_curves:
+        # The color/line-style legend only applies when personal curves are shown.
+        if ordered:
+            st.caption(t("gap.caption.main"))
+        fig = plot_gap_curves(display_curves, show_std=show_std, lang=lang)
+        render_figure_with_download(
+            fig, display_curves, base_filename="gap_curves", key="dl-gap-curves"
+        )
+    else:
+        st.info(t("gap.nothing_to_plot"))
 
     # --- Intensity-stratified overlay: one column per selected model --------
-    st.subheader(t("gap.subheader.intensity"))
-    st.caption(t("gap.caption.intensity"))
-    low_range = (float(low_low), float(low_high))
-    high_range = (float(high_low), float(high_high))
-    smoother = usecase.smoother
-    low_word = t("gap.intensity.low")
-    high_word = t("gap.intensity.high")
+    # Only personal models have per-intensity curves, so this section is shown
+    # only when at least one model was fit.
+    if ordered:
+        st.subheader(t("gap.subheader.intensity"))
+        st.caption(t("gap.caption.intensity"))
+        low_range = (float(low_low), float(low_high))
+        high_range = (float(high_low), float(high_high))
+        smoother = usecase.smoother
+        low_word = t("gap.intensity.low")
+        high_word = t("gap.intensity.high")
 
-    def _intensity_curve(model_kind, result, hr_range):
-        """Smoothed per-intensity GAP curve for one model on one time scale."""
-        if model_kind == "efficiency":
+        def _intensity_curve(model_kind, result, hr_range):
+            """Smoothed per-intensity GAP curve for one model on one time scale."""
+            if model_kind == "efficiency":
+                return smoother.smooth(
+                    EfficiencyGapModel(
+                        min_samples_per_bucket=int(efficiency_subset_min_samples)
+                    )
+                    .fit_on_subset(result.dataset, heartrate_range=hr_range)
+                    .gap_curve()
+                )
             return smoother.smooth(
-                EfficiencyGapModel(
-                    min_samples_per_bucket=int(efficiency_subset_min_samples)
+                result.xgboost_model.gap_curve(
+                    heartrate_range=hr_range, bin_width=float(xgb_bin_width)
                 )
-                .fit_on_subset(result.dataset, heartrate_range=hr_range)
-                .gap_curve()
             )
-        return smoother.smooth(
-            result.xgboost_model.gap_curve(
-                heartrate_range=hr_range, bin_width=float(xgb_bin_width)
+
+        active_models = []
+        if show_efficiency:
+            active_models.append(
+                ("efficiency", t("gap.col.efficiency_heading").format(runner=runner_name))
             )
-        )
+        if show_auto_learning:
+            active_models.append(
+                ("auto", t("gap.col.auto_heading").format(runner=runner_name))
+            )
 
-    active_models = []
-    if show_efficiency:
-        active_models.append(
-            ("efficiency", t("gap.col.efficiency_heading").format(runner=runner_name))
-        )
-    if show_auto_learning:
-        active_models.append(
-            ("auto", t("gap.col.auto_heading").format(runner=runner_name))
-        )
-
-    for col, (model_kind, heading) in zip(st.columns(len(active_models)), active_models):
-        with col:
-            st.markdown(f"**{heading}**")
-            curves = {}
-            for entry in ordered:
-                label, color, result = entry["label"], entry["color"], entry["result"]
-                for word, hr_range, linestyle in (
-                    (low_word, low_range, "-"),
-                    (high_word, high_range, "--"),
-                ):
-                    try:
-                        curve = _intensity_curve(model_kind, result, hr_range)
-                        curve.color = color
-                        curve.linestyle = linestyle
-                        curves[f"{label} – {word}"] = curve
-                    except Exception as e:
-                        st.info(
-                            t("gap.intensity.unavailable").format(
-                                label=label, intensity=word.lower(), error=e
+        for col, (model_kind, heading) in zip(st.columns(len(active_models)), active_models):
+            with col:
+                st.markdown(f"**{heading}**")
+                curves = {}
+                for entry in ordered:
+                    label, color, result = entry["label"], entry["color"], entry["result"]
+                    for word, hr_range, linestyle in (
+                        (low_word, low_range, "-"),
+                        (high_word, high_range, "--"),
+                    ):
+                        try:
+                            curve = _intensity_curve(model_kind, result, hr_range)
+                            curve.color = color
+                            curve.linestyle = linestyle
+                            curves[f"{label} – {word}"] = curve
+                        except Exception as e:
+                            st.info(
+                                t("gap.intensity.unavailable").format(
+                                    label=label, intensity=word.lower(), error=e
+                                )
                             )
-                        )
-            if curves:
-                fig_intensity = plot_gap_curves(curves, show_std=show_std, lang=lang)
-                render_figure_with_download(
-                    fig_intensity,
-                    curves,
-                    base_filename=f"{model_kind}_by_intensity",
-                    key=f"dl-{model_kind}-intensity",
-                )
+                if curves:
+                    fig_intensity = plot_gap_curves(curves, show_std=show_std, lang=lang)
+                    render_figure_with_download(
+                        fig_intensity,
+                        curves,
+                        base_filename=f"{model_kind}_by_intensity",
+                        key=f"dl-{model_kind}-intensity",
+                    )
 else:
     st.info(t("gap.run_hint"))

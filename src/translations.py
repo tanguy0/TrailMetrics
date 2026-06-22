@@ -355,6 +355,11 @@ TRANSLATIONS = {
         "fr": "Simulation terminée — {summary}.",
     },
     "gap.subheader.curves": {"en": "GAP curves", "fr": "Courbes GAP"},
+    "gap.nothing_to_plot": {
+        "en": "Nothing to plot — select a model or a reference curve in the sidebar.",
+        "fr": "Rien à tracer — sélectionnez un modèle ou une courbe de référence "
+        "dans la barre latérale.",
+    },
     "gap.caption.main": {
         "en": "Color = time scale · solid = Efficiency model · dash-dot = "
         "Auto-Learning model · dashed = reference curves.",
