@@ -556,6 +556,178 @@ TRANSLATIONS = {
     "plot.races.x.time": {"en": "Time (min)", "fr": "Temps (min)"},
     "plot.races.x.distance": {"en": "Distance (km)", "fr": "Distance (km)"},
     "plot.races.title_suffix": {"en": "across the race", "fr": "sur la course"},
+
+    # --- Long-Term Progress page --------------------------------------------
+    "page.ltp.title": {
+        "en": "📈 Long-Term Progress",
+        "fr": "📈 Progression long terme",
+    },
+    "ltp.intro": {
+        "en": "Season-over-season trends across your **entire** history (runs and "
+        "trail runs). The first run crunches every activity — best efforts, "
+        "gradients — then the controls below just re-shape the results instantly.",
+        "fr": "Tendances saison après saison sur **tout** votre historique (course "
+        "et trail). Le premier passage analyse chaque activité — meilleurs efforts, "
+        "pentes — puis les options ci-dessous se contentent de réafficher les "
+        "résultats instantanément.",
+    },
+    "ltp.computing": {
+        "en": "Crunching your whole history (best efforts + gradients)…",
+        "fr": "Analyse de tout votre historique (meilleurs efforts + pentes)…",
+    },
+    "ltp.no_data": {
+        "en": "No dated activities to analyse in the loaded history.",
+        "fr": "Aucune activité datée à analyser dans l'historique chargé.",
+    },
+    "ltp.col.season": {"en": "Season", "fr": "Saison"},
+    "ltp.bin_label": {"en": "Aggregate by", "fr": "Agréger par"},
+    "ltp.bin.week": {"en": "Week", "fr": "Semaine"},
+    "ltp.bin.month": {"en": "Month", "fr": "Mois"},
+
+    # Section 1 — Personal records
+    "ltp.section.records": {
+        "en": "Evolution of personal records",
+        "fr": "Évolution des records personnels",
+    },
+    "ltp.section.records.help": {
+        "en": "One line per distance: a point each time you set a new record. For "
+        "every activity long enough, the fastest contiguous segment of each "
+        "distance is found; the best of those is your record. Click a distance in "
+        "the legend to show or hide it.",
+        "fr": "Une ligne par distance : un point à chaque nouveau record. Pour "
+        "chaque activité assez longue, on cherche le segment continu le plus rapide "
+        "de chaque distance ; le meilleur d'entre eux est votre record. Cliquez sur "
+        "une distance dans la légende pour l'afficher ou la masquer.",
+    },
+    "ltp.records.metric_label": {"en": "Show as", "fr": "Afficher en"},
+    "ltp.records.metric.pace": {"en": "Pace (min/km)", "fr": "Allure (min/km)"},
+    "ltp.records.metric.time": {"en": "Time", "fr": "Temps"},
+    "ltp.records.col.distance": {"en": "Distance", "fr": "Distance"},
+    "ltp.records.col.record": {"en": "Record", "fr": "Record"},
+    "ltp.records.col.pace": {"en": "Pace", "fr": "Allure"},
+    "ltp.records.col.date": {"en": "Date", "fr": "Date"},
+    "ltp.records.none": {
+        "en": "No records yet — no activity is long enough for these distances.",
+        "fr": "Aucun record — aucune activité n'est assez longue pour ces distances.",
+    },
+
+    # Section 2 — Annual mileage
+    "ltp.section.mileage": {
+        "en": "Evolution of annual mileage",
+        "fr": "Évolution du kilométrage annuel",
+    },
+    "ltp.mileage.col.total": {"en": "Total", "fr": "Total"},
+
+    # Section 3 — Annual elevation gain
+    "ltp.section.elevation": {
+        "en": "Evolution of annual elevation gain",
+        "fr": "Évolution du dénivelé annuel",
+    },
+    "ltp.elevation.col.total": {"en": "Total D+", "fr": "Total D+"},
+
+    # Section 4 — Average gradient per season
+    "ltp.section.gradient": {
+        "en": "Evolution of average gradient per season",
+        "fr": "Évolution de la pente moyenne par saison",
+    },
+    "ltp.section.gradient.help": {
+        "en": "Average gradient over each bin = total elevation gain ÷ total "
+        "distance for that bin (always positive). One line per season — click a "
+        "season in the legend to show or hide it.",
+        "fr": "Pente moyenne sur chaque période = dénivelé total ÷ distance totale "
+        "de la période (toujours positive). Une ligne par saison — cliquez sur une "
+        "saison dans la légende pour l'afficher ou la masquer.",
+    },
+    "ltp.gradient.col.avg": {"en": "Season avg", "fr": "Moy. saison"},
+
+    # Section 5 — Gradient map
+    "ltp.section.gradient_map": {"en": "Gradient map", "fr": "Carte des pentes"},
+    "ltp.gradient_map.help": {
+        "en": "Share of moving time spent in each gradient band, per bin. Each bar "
+        "sums to 100%. Click a band in the legend to show or hide it.",
+        "fr": "Part du temps en mouvement passé dans chaque catégorie de pente, par "
+        "période. Chaque barre totalise 100 %. Cliquez sur une catégorie dans la "
+        "légende pour l'afficher ou la masquer.",
+    },
+    "ltp.gradient_map.range_label": {"en": "Time span", "fr": "Période"},
+    "ltp.band.steep_descent": {
+        "en": "Steep descent (< -12%)", "fr": "Forte descente (< -12 %)",
+    },
+    "ltp.band.gentle_descent": {
+        "en": "Gentle descent (-12% to -3%)", "fr": "Descente douce (-12 % à -3 %)",
+    },
+    "ltp.band.flat": {"en": "Flat (-3% to 3%)", "fr": "Plat (-3 % à 3 %)"},
+    "ltp.band.gentle_ascent": {
+        "en": "Gentle ascent (3% to 12%)", "fr": "Montée douce (3 % à 12 %)",
+    },
+    "ltp.band.steep_ascent": {
+        "en": "Steep ascent (> 12%)", "fr": "Forte montée (> 12 %)",
+    },
+
+    # Section 6 — Power-to-HR
+    "ltp.section.power_hr": {
+        "en": "Evolution of power-to-HR",
+        "fr": "Évolution du rapport puissance / FC",
+    },
+    "ltp.section.power_hr.help": {
+        "en": "Weekly average of each session's mean power-to-heart-rate ratio "
+        "(an aerobic-efficiency proxy — higher is better), on one continuous "
+        "timeline. Each season has its own color; click a season in the legend to "
+        "show or hide it.",
+        "fr": "Moyenne hebdomadaire du rapport puissance / fréquence cardiaque moyen "
+        "de chaque séance (un indicateur d'efficacité aérobie — plus haut est "
+        "meilleur), sur une frise continue. Chaque saison a sa couleur ; cliquez sur "
+        "une saison dans la légende pour l'afficher ou la masquer.",
+    },
+
+    # --- Plot labels: long-term progress (domain) ---------------------------
+    "plot.ltp.x.month": {"en": "Month", "fr": "Mois"},
+    "plot.ltp.power_hr.title": {
+        "en": "Power-to-HR efficiency over time",
+        "fr": "Efficacité puissance / FC au fil du temps",
+    },
+    "plot.ltp.power_hr.x": {"en": "Time", "fr": "Temps"},
+    "plot.ltp.power_hr.y": {"en": "Power / HR (W/bpm)", "fr": "Puissance / FC (W/bpm)"},
+    "plot.ltp.records.title": {
+        "en": "Personal-record evolution",
+        "fr": "Évolution des records personnels",
+    },
+    "plot.ltp.records.x": {"en": "Date", "fr": "Date"},
+    "plot.ltp.records.y_pace": {
+        "en": "Record pace (min/km, faster = higher)",
+        "fr": "Allure record (min/km, plus rapide = plus haut)",
+    },
+    "plot.ltp.records.y_time": {
+        "en": "Record time (faster = higher)",
+        "fr": "Temps record (plus rapide = plus haut)",
+    },
+    "plot.ltp.records.hover_record": {"en": "Record", "fr": "Record"},
+    "plot.ltp.records.hover_pace": {"en": "Pace", "fr": "Allure"},
+    "plot.ltp.mileage.title": {
+        "en": "Cumulative distance by season",
+        "fr": "Distance cumulée par saison",
+    },
+    "plot.ltp.mileage.y": {
+        "en": "Cumulative distance (km)", "fr": "Distance cumulée (km)",
+    },
+    "plot.ltp.elevation.title": {
+        "en": "Cumulative elevation gain by season",
+        "fr": "Dénivelé cumulé par saison",
+    },
+    "plot.ltp.elevation.y": {
+        "en": "Cumulative elevation gain (m)", "fr": "Dénivelé cumulé (m)",
+    },
+    "plot.ltp.gradient.title": {
+        "en": "Average gradient by season",
+        "fr": "Pente moyenne par saison",
+    },
+    "plot.ltp.gradient.y": {"en": "Average gradient (%)", "fr": "Pente moyenne (%)"},
+    "plot.ltp.gradient_map.title": {
+        "en": "Time spent per gradient band",
+        "fr": "Temps passé par catégorie de pente",
+    },
+    "plot.ltp.gradient_map.x": {"en": "Time", "fr": "Temps"},
+    "plot.ltp.gradient_map.y": {"en": "% of moving time", "fr": "% du temps en mouvement"},
 }
 
 

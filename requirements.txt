@@ -9,6 +9,7 @@ xgboost>=1.5.0
 
 # Data visualization
 matplotlib>=3.5.0
+plotly>=5.18.0  # interactive (clickable-legend) charts on the Long-Term Progress page
 
 # Strava API client
 stravalib>=0.10.0
