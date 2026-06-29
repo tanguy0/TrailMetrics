@@ -64,7 +64,7 @@ class RaceSeries:
     """Aligned per-step series for one race (length N-1 for an N-sample stream).
 
     ``time_s`` and ``distance_m`` are the two x-axes; the rest are y-series.
-    Undefined points are NaN so matplotlib leaves a gap rather than spiking.
+    Undefined points are NaN so the chart leaves a gap rather than spiking.
     """
     label: str
     time_s: np.ndarray

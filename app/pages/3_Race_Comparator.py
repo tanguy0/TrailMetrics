@@ -378,4 +378,4 @@ for metric_key in ("gap_pace", "power", "heartrate", "power_to_hr"):
         result.series, metric_key=metric_key, x_axis=x_axis, gap_as_speed=gap_as_speed,
         lang=lang,
     )
-    st.pyplot(fig)
+    st.plotly_chart(fig, use_container_width=True)
