@@ -1,7 +1,7 @@
 """Trail / Earthy color theme shared by the app UI and the GAP plots.
 
 One source of truth for every color used across TrailMetrics, so the
-Streamlit chrome (see ``.streamlit/config.toml``) and the matplotlib figures
+Streamlit chrome (see ``.streamlit/config.toml``) and the Plotly figures
 stay visually coherent.
 """
 

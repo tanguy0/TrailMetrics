@@ -1,8 +1,6 @@
 """Shared Streamlit helpers."""
 
-import io
 import sys
-import zipfile
 from pathlib import Path
 from typing import Dict
 
@@ -11,8 +9,8 @@ _REPO_ROOT = str(Path(__file__).resolve().parent.parent)
 if _REPO_ROOT not in sys.path:
     sys.path.append(_REPO_ROOT)
 
-import matplotlib.pyplot as plt
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 from src.domain.gap import theme
@@ -145,31 +143,23 @@ def _curves_to_csv_bytes(curves: Dict[str, GapCurve]) -> bytes:
 
 
 def render_figure_with_download(
-    fig: plt.Figure,
+    fig: go.Figure,
     curves: Dict[str, GapCurve],
     *,
     base_filename: str,
     key: str,
 ) -> None:
-    """Render a figure, then offer a single 'Download data' button that bundles PNG + CSV in a ZIP."""
-    st.pyplot(fig)
+    """Render an interactive Plotly figure, then offer a CSV download of its data.
 
-    png_buf = io.BytesIO()
-    fig.savefig(png_buf, format="png", dpi=150, bbox_inches="tight")
-    png_buf.seek(0)
-
-    csv_bytes = _curves_to_csv_bytes(curves)
-
-    zip_buf = io.BytesIO()
-    with zipfile.ZipFile(zip_buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr(f"{base_filename}.png", png_buf.getvalue())
-        zf.writestr(f"{base_filename}.csv", csv_bytes)
-    zip_buf.seek(0)
+    The figure's own toolbar exports a PNG (camera icon); this adds a button for
+    the underlying curve data as CSV.
+    """
+    st.plotly_chart(fig, use_container_width=True)
 
     st.download_button(
-        label="Download data",
-        data=zip_buf,
-        file_name=f"{base_filename}.zip",
-        mime="application/zip",
+        label="Download data (CSV)",
+        data=_curves_to_csv_bytes(curves),
+        file_name=f"{base_filename}.csv",
+        mime="text/csv",
         key=key,
     )

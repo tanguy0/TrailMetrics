@@ -22,6 +22,11 @@ TrailMetrics/
 │   │   │   ├── xgboost_model.py   # XGBoost GAP regressor
 │   │   │   ├── plotting.py        # plot_gap_curves helper
 │   │   │   └── reference_curves.py# Balanced Runner + Kilian Jornet reference curves
+│   │   ├── progress/                # long-term-progress domain services
+│   │   │   ├── models.py           # ActivityProgress + PR distances / gradient bands
+│   │   │   ├── records.py          # sliding-window best efforts + record progression
+│   │   │   ├── aggregates.py       # season overlays, avg gradient, gradient map
+│   │   │   └── plotting.py         # Plotly (clickable) figures, Trail/Earthy theme
 │   │   └── ports/
 │   │       └── activity_stream_source.py  # ActivityStreamSource ABC
 │   ├── infrastructure/            # concrete adapters implementing domain ports
@@ -30,7 +35,8 @@ TrailMetrics/
 │   ├── usecases/                  # orchestrate domain + infrastructure to fulfill one task
 │   │   ├── base.py                # UseCase ABC
 │   │   ├── fetch_athlete_history.py        # fetch max history once (cached by the app)
-│   │   └── simulate_personalized_gap_model.py  # runs on pre-fetched streams (or fetches)
+│   │   ├── simulate_personalized_gap_model.py  # runs on pre-fetched streams (or fetches)
+│   │   └── analyze_long_term_progress.py    # per-activity summaries for season trends
 │   └── utils.py                   # tiny time-format helpers
 ├── .streamlit/
 │   └── config.toml                # Trail/Earthy UI theme
