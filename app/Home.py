@@ -129,6 +129,9 @@ elif client_id and client_secret:
     auth_url = Client().authorization_url(
         client_id=int(client_id),
         redirect_uri=REDIRECT_URI,
+        # `activity:read_all` is required to read private / followers-only
+        # activities; the default `activity:read` only returns public ones.
+        scope=["read", "activity:read_all"],
     )
     # Plain anchor with target="_self" so the auth happens in the *same* tab
     # (st.link_button always opens a new one, leaving a stale page behind).
@@ -174,13 +177,19 @@ st.divider()
 st.header(t("home.load.header"))
 st.caption(t("home.load.caption"))
 
-default_from = date.today() - timedelta(days=365 * 2)
-fetch_from_date = st.date_input(
-    t("home.load.from_label"),
-    value=default_from,
-    max_value=date.today(),
-    help=t("home.load.from_help"),
+fetch_all_history = st.checkbox(
+    t("home.load.all_history"),
+    value=True,
+    help=t("home.load.all_history_help"),
 )
+fetch_from_date = None
+if not fetch_all_history:
+    fetch_from_date = st.date_input(
+        t("home.load.from_label"),
+        value=date.today() - timedelta(days=365 * 2),
+        max_value=date.today(),
+        help=t("home.load.from_help"),
+    )
 
 load = st.button(
     t("home.load.button"),
@@ -204,8 +213,12 @@ if load:
     usecase = FetchAthleteHistory(stream_source=stream_source)
     result = usecase.execute(
         FetchAthleteHistoryInput(
-            sport_types=["TrailRun", "Run"],
-            from_date=datetime.combine(fetch_from_date, time.min),
+            sport_types=["TrailRun", "Run", "VirtualRun"],
+            from_date=(
+                datetime.combine(fetch_from_date, time.min)
+                if fetch_from_date is not None
+                else None
+            ),
             to_date=datetime.combine(date.today(), time.max),
             max_activities=None,
             verbose=False,

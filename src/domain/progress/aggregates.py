@@ -4,9 +4,16 @@ Pure functions over a list of :class:`ActivityProgress` — no I/O, no plotting 
 so the page can recompute any view instantly when a UI option changes, without
 touching the raw streams again.
 
-Overlay plots (mileage, elevation, average gradient) place every season on a
-shared **reference year** x-axis so the curves stack on top of each other. The
-gradient map instead runs along the real, continuous timeline.
+Every trend is grouped by user-defined :class:`Season` periods and can be drawn
+two ways (see :func:`metric_series`):
+
+* **overlay** — each season aligned to its own start, x = months elapsed, so the
+  seasons stack from a common 0 (activities outside every season are dropped);
+* **continuous** — the real calendar timeline, one colored curve per season plus
+  a greyed "unassigned" curve for activities outside every season.
+
+Both support day / week / month / quarter granularity. The gradient map keeps its
+own real, continuous timeline.
 """
 
 from collections import defaultdict
@@ -20,9 +27,15 @@ from src.domain.progress.models import (
     PR_DISTANCES,
 )
 from src.domain.progress.records import record_progression
-
-# A leap year, so both Feb 29 and day 366 exist when remapping dates for overlay.
-REFERENCE_YEAR = 2000
+from src.domain.progress.seasons import (
+    Season,
+    assign_season_index,
+    continuous_bin_start,
+    overlay_bin_index,
+    overlay_bin_months,
+    to_date,
+)
+from src.domain.races.smoothing import smooth_uniform_series
 
 
 # --- Personal records ------------------------------------------------------
@@ -62,143 +75,310 @@ def current_records(
     return records
 
 
-# --- Annual cumulative (distance / elevation) ------------------------------
+# --- Season curves (mileage / elevation / gradient / power-to-HR) -----------
+
+# Season index used for the "outside every season" curve (continuous mode only).
+UNASSIGNED_INDEX = -1
+
 
 @dataclass
-class CumulativeYear:
-    """One season's cumulative curve, on the reference-year x-axis."""
+class SeasonCurve:
+    """One season's curve for an overlay/continuous plot.
 
-    year: int
-    x: List[datetime] = field(default_factory=list)
+    ``index`` is the season's position in the user's list (or
+    :data:`UNASSIGNED_INDEX` for the greyed out-of-season curve); the plotting
+    layer maps it to a stable color. ``x`` holds elapsed-months floats (overlay)
+    or real ``datetime``s (continuous). ``total`` is the season's own aggregate
+    (sum for mileage/elevation, average % for gradient), for the side table.
+    """
+
+    name: str
+    index: int
+    x: List = field(default_factory=list)
     y: List[float] = field(default_factory=list)
     total: float = 0.0
 
 
-def annual_cumulative(
+def metric_series(
     activities: Sequence[ActivityProgress],
     attr: str,
-    scale: float = 1.0,
-) -> List[CumulativeYear]:
-    """Cumulative ``getattr(a, attr) * scale`` per calendar year over the year.
+    scale: float,
+    seasons: Sequence[Season],
+    *,
+    mode: str,
+    granularity: str,
+    cumulative: bool,
+    unassigned_label: str = "—",
+) -> List[SeasonCurve]:
+    """Per-season curves of a summed metric (``getattr(a, attr) * scale``).
 
-    Each season starts from a Jan-1 zero baseline and accrues at every activity
-    (a staircase). Returns one :class:`CumulativeYear` per year, newest first.
+    ``mode`` is ``"overlay"`` or ``"continuous"``; ``cumulative`` picks a running
+    total vs. each bin's own total.
     """
-    by_year: Dict[int, List[ActivityProgress]] = defaultdict(list)
+    if mode == "overlay":
+        return _overlay_sum(activities, attr, scale, seasons, granularity, cumulative)
+    return _continuous_sum(
+        activities, attr, scale, seasons, granularity, cumulative, unassigned_label
+    )
+
+
+def _overlay_sum(activities, attr, scale, seasons, granularity, cumulative):
+    per_season: List[Dict[int, float]] = [defaultdict(float) for _ in seasons]
+    totals: List[float] = [0.0] * len(seasons)
     for a in activities:
-        by_year[a.date.year].append(a)
+        d = to_date(a.date)
+        si = assign_season_index(d, seasons)
+        if si is None:
+            continue  # overlay drops out-of-season activities
+        value = float(getattr(a, attr)) * scale
+        per_season[si][overlay_bin_index(d, seasons[si].start, granularity)] += value
+        totals[si] += value
 
-    series: List[CumulativeYear] = []
-    for year in sorted(by_year, reverse=True):
-        acts = sorted(by_year[year], key=lambda a: a.date)
-        cy = CumulativeYear(year=year)
-        cy.x.append(datetime(REFERENCE_YEAR, 1, 1))
-        cy.y.append(0.0)
-        cumulative = 0.0
-        for a in acts:
-            cumulative += float(getattr(a, attr)) * scale
-            cy.x.append(_to_reference_date(a.date))
-            cy.y.append(cumulative)
-        cy.total = cumulative
-        series.append(cy)
-    return series
+    curves: List[SeasonCurve] = []
+    for si, bins in enumerate(per_season):
+        if not bins:
+            continue
+        curve = SeasonCurve(name=seasons[si].name, index=si, total=totals[si])
+        if cumulative:
+            curve.x.append(0.0)
+            curve.y.append(0.0)
+            running = 0.0
+            for bi in sorted(bins):
+                running += bins[bi]
+                curve.x.append(overlay_bin_months(bi, granularity))
+                curve.y.append(running)
+        else:
+            for bi in sorted(bins):
+                curve.x.append(overlay_bin_months(bi, granularity))
+                curve.y.append(bins[bi])
+        curves.append(curve)
+    return curves
 
 
-# --- Average gradient per season -------------------------------------------
+def _continuous_sum(
+    activities, attr, scale, seasons, granularity, cumulative, unassigned_label
+):
+    bins: Dict[date, float] = defaultdict(float)
+    for a in activities:
+        d = to_date(a.date)
+        bins[continuous_bin_start(d, granularity)] += float(getattr(a, attr)) * scale
 
-@dataclass
-class GradientYear:
-    """One season's per-bin average-gradient curve (ΣD+ / Σdistance, %)."""
+    curves: Dict[int, SeasonCurve] = {}
+    running = 0.0
+    prev: Optional[Tuple[datetime, float, int]] = None
+    for start in sorted(bins):
+        increment = bins[start]
+        running += increment
+        y = running if cumulative else increment
+        si = assign_season_index(start, seasons)
+        key = si if si is not None else UNASSIGNED_INDEX
+        curve = curves.get(key)
+        if curve is None:
+            name = seasons[si].name if si is not None else unassigned_label
+            curve = SeasonCurve(name=name, index=key)
+            curves[key] = curve
+        x = datetime(start.year, start.month, start.day)
+        prev_key = prev[2] if prev is not None else None
+        if key == UNASSIGNED_INDEX:
+            _break_reentry(curve, key, prev_key)
+        elif cumulative and prev is not None and prev_key != key:
+            # Keep the colored cumulative line unbroken across season changes.
+            curve.x.append(prev[0])
+            curve.y.append(prev[1])
+        curve.x.append(x)
+        curve.y.append(y)
+        curve.total += increment
+        prev = (x, y, key)
 
-    year: int
-    x: List[datetime] = field(default_factory=list)
-    y: List[float] = field(default_factory=list)
-    season_avg: float = 0.0
+    return _ordered_curves(curves)
 
 
-def avg_gradient_series(
+def gradient_series(
     activities: Sequence[ActivityProgress],
-    granularity: str = "week",
-) -> List[GradientYear]:
-    """Average gradient (%) per week/month, one curve per season.
+    seasons: Sequence[Season],
+    *,
+    mode: str,
+    granularity: str,
+    unassigned_label: str = "—",
+) -> List[SeasonCurve]:
+    """Per-season average-gradient (%) curves = Σ elevation ÷ Σ distance per bin."""
+    if mode == "overlay":
+        return _overlay_gradient(activities, seasons, granularity)
+    return _continuous_gradient(activities, seasons, granularity, unassigned_label)
 
-    The average for a bin is ``Σ elevation_gain / Σ distance × 100`` over that
-    bin's activities — always positive. ``season_avg`` applies the same ratio
-    over the whole year. Returns one :class:`GradientYear` per year, newest first.
-    """
-    # (year, bin_index) -> [dist_sum, elev_sum]
-    bins: Dict[Tuple[int, int], List[float]] = defaultdict(lambda: [0.0, 0.0])
-    year_totals: Dict[int, List[float]] = defaultdict(lambda: [0.0, 0.0])
 
+def _overlay_gradient(activities, seasons, granularity):
+    # per season: bin_index -> [dist_sum, elev_sum]; plus season totals.
+    per_season: List[Dict[int, List[float]]] = [
+        defaultdict(lambda: [0.0, 0.0]) for _ in seasons
+    ]
+    totals: List[List[float]] = [[0.0, 0.0] for _ in seasons]
     for a in activities:
-        idx = _bin_index(a.date, granularity)
-        bins[(a.date.year, idx)][0] += a.distance_m
-        bins[(a.date.year, idx)][1] += a.elevation_gain_m
-        year_totals[a.date.year][0] += a.distance_m
-        year_totals[a.date.year][1] += a.elevation_gain_m
+        d = to_date(a.date)
+        si = assign_season_index(d, seasons)
+        if si is None:
+            continue
+        bi = overlay_bin_index(d, seasons[si].start, granularity)
+        per_season[si][bi][0] += a.distance_m
+        per_season[si][bi][1] += a.elevation_gain_m
+        totals[si][0] += a.distance_m
+        totals[si][1] += a.elevation_gain_m
 
-    by_year: Dict[int, List[Tuple[int, float, float]]] = defaultdict(list)
-    for (year, idx), (dist, elev) in bins.items():
-        by_year[year].append((idx, dist, elev))
-
-    series: List[GradientYear] = []
-    for year in sorted(by_year, reverse=True):
-        gy = GradientYear(year=year)
-        for idx, dist, elev in sorted(by_year[year]):
+    curves: List[SeasonCurve] = []
+    for si, bins in enumerate(per_season):
+        if not bins:
+            continue
+        curve = SeasonCurve(name=seasons[si].name, index=si)
+        for bi in sorted(bins):
+            dist, elev = bins[bi]
             if dist <= 0:
                 continue
-            gy.x.append(_bin_reference_date(idx, granularity))
-            gy.y.append(elev / dist * 100.0)
-        ytot = year_totals[year]
-        gy.season_avg = (ytot[1] / ytot[0] * 100.0) if ytot[0] > 0 else 0.0
-        series.append(gy)
-    return series
+            curve.x.append(overlay_bin_months(bi, granularity))
+            curve.y.append(elev / dist * 100.0)
+        curve.total = totals[si][1] / totals[si][0] * 100.0 if totals[si][0] > 0 else 0.0
+        curves.append(curve)
+    return curves
 
 
-# --- Power-to-HR efficiency -------------------------------------------------
+def _continuous_gradient(activities, seasons, granularity, unassigned_label):
+    bins: Dict[date, List[float]] = defaultdict(lambda: [0.0, 0.0])
+    for a in activities:
+        start = continuous_bin_start(to_date(a.date), granularity)
+        bins[start][0] += a.distance_m
+        bins[start][1] += a.elevation_gain_m
 
-@dataclass
-class PowerHrSeries:
-    """One season's weekly power-to-HR points, on the *real* timeline.
+    curves: Dict[int, SeasonCurve] = {}
+    prev_key: Optional[int] = None
+    for start in sorted(bins):
+        dist, elev = bins[start]
+        if dist <= 0:
+            continue
+        si = assign_season_index(start, seasons)
+        key = si if si is not None else UNASSIGNED_INDEX
+        curve = curves.get(key)
+        if curve is None:
+            name = seasons[si].name if si is not None else unassigned_label
+            curve = SeasonCurve(name=name, index=key)
+            curves[key] = curve
+        _break_reentry(curve, key, prev_key)
+        curve.x.append(datetime(start.year, start.month, start.day))
+        curve.y.append(elev / dist * 100.0)
+        prev_key = key
+    return _ordered_curves(curves)
 
-    Unlike the season overlays, ``x`` keeps real calendar dates so the seasons
-    sit end-to-end on one continuous axis; splitting into one series per year is
-    purely so each season draws in its own color (the color flips at Jan 1).
-    """
 
-    year: int
-    x: List[datetime] = field(default_factory=list)
-    y: List[float] = field(default_factory=list)
-
-
-def power_hr_weekly(
+def power_hr_series(
     activities: Sequence[ActivityProgress],
+    seasons: Sequence[Season],
+    *,
     granularity: str = "week",
-) -> List[PowerHrSeries]:
-    """Average power-to-HR per bin, split into one real-timeline series per year.
+    from_date: Optional[datetime] = None,
+    to_date_bound: Optional[datetime] = None,
+    rolling_window: Optional[int] = None,
+    savgol_window: Optional[int] = None,
+    savgol_polyorder: int = 2,
+    unassigned_label: str = "—",
+) -> List[SeasonCurve]:
+    """Per-bin average power-to-HR on the continuous timeline, colored per season.
 
-    Each session contributes its session-average ratio; the bin value is the
-    mean across that bin's sessions. Sessions without power-to-HR (no weight, no
-    HR) are skipped. Returns one :class:`PowerHrSeries` per year, oldest first
-    so the timeline reads left to right.
+    Sessions without power-to-HR (no weight / no HR) or outside
+    ``[from_date, to_date_bound]`` (inclusive) are skipped. ``rolling_window`` /
+    ``savgol_window`` smooth the whole binned curve (windows in points/bins)
+    before it is split per season for coloring, so smoothing carries across
+    season boundaries.
     """
-    # bin start date -> list of session ratios
     bins: Dict[date, List[float]] = defaultdict(list)
     for a in activities:
         if a.power_to_hr is None:
             continue
-        bins[_bin_start(a.date, granularity)].append(a.power_to_hr)
-
-    by_year: Dict[int, PowerHrSeries] = {}
-    for start in sorted(bins):
-        values = bins[start]
-        if not values:
+        if from_date is not None and a.date < from_date:
             continue
-        series = by_year.setdefault(start.year, PowerHrSeries(year=start.year))
-        series.x.append(datetime(start.year, start.month, start.day))
-        series.y.append(sum(values) / len(values))
+        if to_date_bound is not None and a.date > to_date_bound:
+            continue
+        bins[continuous_bin_start(to_date(a.date), granularity)].append(a.power_to_hr)
 
-    return [by_year[year] for year in sorted(by_year)]
+    starts = sorted(bins)
+    if not starts:
+        return []
+    values = [sum(bins[s]) / len(bins[s]) for s in starts]
+    values = smooth_uniform_series(
+        values,
+        rolling_window=rolling_window,
+        savgol_window=savgol_window,
+        polyorder=savgol_polyorder,
+    )
+
+    curves: Dict[int, SeasonCurve] = {}
+    prev_key: Optional[int] = None
+    for start, value in zip(starts, values):
+        si = assign_season_index(start, seasons)
+        key = si if si is not None else UNASSIGNED_INDEX
+        curve = curves.get(key)
+        if curve is None:
+            name = seasons[si].name if si is not None else unassigned_label
+            curve = SeasonCurve(name=name, index=key)
+            curves[key] = curve
+        _break_reentry(curve, key, prev_key)
+        curve.x.append(datetime(start.year, start.month, start.day))
+        curve.y.append(value)
+        prev_key = key
+    return _ordered_curves(curves)
+
+
+def _ordered_curves(curves: Dict[int, SeasonCurve]) -> List[SeasonCurve]:
+    """Seasons in order, with the unassigned (greyed) curve last."""
+    return [
+        curves[k]
+        for k in sorted(curves, key=lambda k: (k == UNASSIGNED_INDEX, k))
+    ]
+
+
+def _break_reentry(curve: SeasonCurve, key: int, prev_key: Optional[int]) -> None:
+    """Insert a gap so the grey (unassigned) line never bridges an assigned season.
+
+    Called before adding an unassigned point: if the previous point belonged to a
+    season, this unassigned point starts a fresh run, so a ``None`` break is added
+    to keep the two sides of the season disconnected.
+    """
+    if key == UNASSIGNED_INDEX and curve.x and prev_key not in (None, UNASSIGNED_INDEX):
+        curve.x.append(None)
+        curve.y.append(None)
+
+
+# --- Per-season side tables (mode-independent) ------------------------------
+
+def season_totals(
+    activities: Sequence[ActivityProgress],
+    attr: str,
+    scale: float,
+    seasons: Sequence[Season],
+) -> List[Tuple[str, float]]:
+    """``(season name, Σ attr·scale)`` per season, newest first."""
+    totals = [0.0] * len(seasons)
+    for a in activities:
+        si = assign_season_index(to_date(a.date), seasons)
+        if si is not None:
+            totals[si] += float(getattr(a, attr)) * scale
+    rows = [(seasons[i].name, totals[i]) for i in range(len(seasons))]
+    return list(reversed(rows))
+
+
+def season_gradient_averages(
+    activities: Sequence[ActivityProgress],
+    seasons: Sequence[Season],
+) -> List[Tuple[str, float]]:
+    """``(season name, Σ elevation ÷ Σ distance %)`` per season, newest first."""
+    sums = [[0.0, 0.0] for _ in seasons]
+    for a in activities:
+        si = assign_season_index(to_date(a.date), seasons)
+        if si is not None:
+            sums[si][0] += a.distance_m
+            sums[si][1] += a.elevation_gain_m
+    rows = [
+        (seasons[i].name, (sums[i][1] / sums[i][0] * 100.0) if sums[i][0] > 0 else 0.0)
+        for i in range(len(seasons))
+    ]
+    return list(reversed(rows))
 
 
 # --- Gradient map ----------------------------------------------------------
@@ -215,25 +395,24 @@ def gradient_map(
     activities: Sequence[ActivityProgress],
     *,
     from_date: Optional[datetime] = None,
-    to_date: Optional[datetime] = None,
+    to_date_bound: Optional[datetime] = None,
     granularity: str = "week",
 ) -> GradientMap:
     """Per-bin share of moving time in each gradient band (sums to 100%).
 
-    Activities outside ``[from_date, to_date]`` (inclusive, ``None`` = open) are
-    dropped. Each bin's band seconds are summed across its activities and
-    normalised to percentages. Bins are ordered along the real calendar timeline.
+    Activities outside ``[from_date, to_date_bound]`` (inclusive, ``None`` =
+    open) are dropped. Each bin's band seconds are summed across its activities
+    and normalised to percentages, ordered along the real calendar timeline.
     """
-    # bin start date -> {band key: seconds}
     bins: Dict[date, Dict[str, float]] = defaultdict(
         lambda: {k: 0.0 for k in GRADIENT_BAND_KEYS}
     )
     for a in activities:
         if from_date is not None and a.date < from_date:
             continue
-        if to_date is not None and a.date > to_date:
+        if to_date_bound is not None and a.date > to_date_bound:
             continue
-        start = _bin_start(a.date, granularity)
+        start = continuous_bin_start(to_date(a.date), granularity)
         for key in GRADIENT_BAND_KEYS:
             bins[start][key] += a.band_seconds.get(key, 0.0)
 
@@ -246,37 +425,3 @@ def gradient_map(
         for key in GRADIENT_BAND_KEYS:
             result.band_pct[key].append(bins[start][key] / total * 100.0)
     return result
-
-
-# --- Date / binning helpers ------------------------------------------------
-
-def _to_reference_date(d: datetime) -> datetime:
-    """Map a date onto the reference year (keep month/day) for season overlay."""
-    return datetime(REFERENCE_YEAR, d.month, d.day)
-
-
-def _week_of_year(d: datetime) -> int:
-    """Simple 1-based week index within the calendar year (1…53)."""
-    return (d.timetuple().tm_yday - 1) // 7 + 1
-
-
-def _bin_index(d: datetime, granularity: str) -> int:
-    """Index of the activity's bin within its own year (week 1…53 or month 1…12)."""
-    if granularity == "month":
-        return d.month
-    return _week_of_year(d)
-
-
-def _bin_reference_date(idx: int, granularity: str) -> datetime:
-    """Representative reference-year date for a within-year bin index."""
-    if granularity == "month":
-        return datetime(REFERENCE_YEAR, idx, 1)
-    return datetime(REFERENCE_YEAR, 1, 1) + timedelta(weeks=idx - 1)
-
-
-def _bin_start(d: datetime, granularity: str) -> date:
-    """Real calendar start of the activity's bin (month 1st or week Monday)."""
-    if granularity == "month":
-        return date(d.year, d.month, 1)
-    day = date(d.year, d.month, d.day)
-    return day - timedelta(days=day.weekday())

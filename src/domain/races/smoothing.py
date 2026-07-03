@@ -14,7 +14,7 @@ left entirely to the caller (the page exposes them as inputs).
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Optional, Sequence
 
 import numpy as np
 import pandas as pd
@@ -139,3 +139,37 @@ def apply_signal_filters(
     if config.savgol_window_m and config.savgol_window_m > 0:
         out = savgol_distance(out, distance_m, config.savgol_window_m, polyorder)
     return out
+
+
+def smooth_uniform_series(
+    values: Sequence[float],
+    *,
+    rolling_window: Optional[int] = None,
+    savgol_window: Optional[int] = None,
+    polyorder: int = 2,
+) -> List[float]:
+    """Smooth an *already-binned*, evenly-spaced 1-D series; windows in points.
+
+    Unlike the per-signal filters above (keyed on real time / distance), this
+    treats the series as uniformly sampled — for curves that are already one
+    point per week/month, like the long-term power-to-HR trend. Rolling mean
+    (centered) first, then Savitzky–Golay; each window is a count of points.
+    Returns the values unchanged when a window is too small or too large to fit.
+    """
+    arr = np.asarray(list(values), dtype=float)
+    if arr.size == 0:
+        return []
+    if rolling_window and rolling_window > 1:
+        arr = (
+            pd.Series(arr)
+            .rolling(int(rolling_window), min_periods=1, center=True)
+            .mean()
+            .to_numpy()
+        )
+    if savgol_window and savgol_window > polyorder:
+        w = int(savgol_window)
+        if w % 2 == 0:
+            w += 1
+        if polyorder < w <= arr.size:
+            arr = savgol_filter(arr, window_length=w, polyorder=polyorder, mode="interp")
+    return arr.tolist()
