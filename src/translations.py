@@ -104,11 +104,21 @@ TRANSLATIONS = {
     },
     "home.load.header": {"en": "3. Load your data", "fr": "3. Charger vos données"},
     "home.load.caption": {
-        "en": "Fetches every run (all types) from the date below up to today. This "
-        "can take a while the first time — it only runs once per session.",
-        "fr": "Récupère toutes les courses (tous types) depuis la date ci-dessous "
-        "jusqu'à aujourd'hui. Cela peut prendre un moment la première fois — "
-        "exécuté une seule fois par session.",
+        "en": "Fetches every run (all types) up to today. This can take a while "
+        "the first time — it only runs once per session.",
+        "fr": "Récupère toutes les courses (tous types) jusqu'à aujourd'hui. Cela "
+        "peut prendre un moment la première fois — exécuté une seule fois par "
+        "session.",
+    },
+    "home.load.all_history": {
+        "en": "Fetch my entire history",
+        "fr": "Récupérer tout mon historique",
+    },
+    "home.load.all_history_help": {
+        "en": "On by default: no time limit, all your activities are fetched. "
+        "Uncheck to fetch only from a chosen start date.",
+        "fr": "Activé par défaut : aucune limite, toutes vos activités sont "
+        "récupérées. Décochez pour ne récupérer qu'à partir d'une date de début.",
     },
     "home.load.from_label": {
         "en": "Fetch data back to",
@@ -583,6 +593,50 @@ TRANSLATIONS = {
     "ltp.bin_label": {"en": "Aggregate by", "fr": "Agréger par"},
     "ltp.bin.week": {"en": "Week", "fr": "Semaine"},
     "ltp.bin.month": {"en": "Month", "fr": "Mois"},
+    "ltp.view_label": {"en": "View", "fr": "Affichage"},
+    "ltp.view.cumulative": {"en": "Cumulative", "fr": "Cumulatif"},
+    "ltp.view.periodic": {"en": "Per period", "fr": "Par période"},
+    "ltp.scale_label": {"en": "Scale", "fr": "Échelle"},
+    "ltp.scale.overlay": {"en": "Overlay seasons", "fr": "Superposer les saisons"},
+    "ltp.scale.continuous": {"en": "Continuous", "fr": "Temps continu"},
+    "ltp.gran_label": {"en": "Aggregate by", "fr": "Agréger par"},
+    "ltp.gran.day": {"en": "Day", "fr": "Jour"},
+    "ltp.gran.week": {"en": "Week", "fr": "Semaine"},
+    "ltp.gran.month": {"en": "Month", "fr": "Mois"},
+    "ltp.gran.quarter": {"en": "Quarter", "fr": "Trimestre"},
+
+    # Season definition
+    "ltp.seasons.header": {
+        "en": "Season definition",
+        "fr": "Définition des saisons",
+    },
+    "ltp.seasons.help": {
+        "en": "Define any named periods to use as your seasons across this page. "
+        "Add or remove rows freely. Leave the table empty to fall back to "
+        "calendar years.",
+        "fr": "Définissez autant de périodes nommées que vous voulez ; elles "
+        "servent de saisons sur toute la page. Ajoutez/supprimez des lignes "
+        "librement. Laissez la table vide pour revenir aux années civiles.",
+    },
+    "ltp.seasons.col.name": {"en": "Name", "fr": "Nom"},
+    "ltp.seasons.col.start": {"en": "Start", "fr": "Début"},
+    "ltp.seasons.col.end": {"en": "End", "fr": "Fin"},
+    "ltp.seasons.invalid": {
+        "en": "Some rows are incomplete or have start after end — they were ignored.",
+        "fr": "Certaines lignes sont incomplètes ou ont un début après la fin — "
+        "elles ont été ignorées.",
+    },
+    "ltp.seasons.overlap": {
+        "en": "⚠️ Overlapping seasons: {pairs}. Overlapping days are counted in the "
+        "first matching season.",
+        "fr": "⚠️ Saisons qui se chevauchent : {pairs}. Les jours en commun sont "
+        "comptés dans la première saison correspondante.",
+    },
+    "ltp.seasons.empty_fallback": {
+        "en": "No valid season defined — using calendar years.",
+        "fr": "Aucune saison valide définie — utilisation des années civiles.",
+    },
+    "ltp.season.unassigned": {"en": "Unassigned", "fr": "Non assigné"},
 
     # Section 1 — Personal records
     "ltp.section.records": {
@@ -679,9 +733,33 @@ TRANSLATIONS = {
         "meilleur), sur une frise continue. Chaque saison a sa couleur ; cliquez sur "
         "une saison dans la légende pour l'afficher ou la masquer.",
     },
+    "ltp.power_hr.range_label": {"en": "Time span", "fr": "Période"},
+    "ltp.power_hr.smoothing": {
+        "en": "Smooth the curve", "fr": "Lisser la courbe",
+    },
+    "ltp.power_hr.smoothing.help": {
+        "en": "Optional smoothing of the final weekly points to read the trend "
+        "through the week-to-week noise. Windows are in points (weeks).",
+        "fr": "Lissage optionnel des points hebdomadaires pour lire la tendance "
+        "au-delà du bruit d'une semaine à l'autre. Les fenêtres sont en points "
+        "(semaines).",
+    },
+    "ltp.power_hr.filter.rolling": {
+        "en": "Rolling average", "fr": "Moyenne glissante",
+    },
+    "ltp.power_hr.filter.savgol": {"en": "Savitzky–Golay", "fr": "Savitzky–Golay"},
+    "ltp.power_hr.filter.window_pts": {
+        "en": "Window (points)", "fr": "Fenêtre (points)",
+    },
 
     # --- Plot labels: long-term progress (domain) ---------------------------
     "plot.ltp.x.month": {"en": "Month", "fr": "Mois"},
+    "plot.ltp.x.time": {"en": "Time", "fr": "Temps"},
+    "plot.ltp.x.months_since_start": {
+        "en": "Months since season start",
+        "fr": "Mois depuis le début de la saison",
+    },
+    "plot.ltp.months": {"en": "mo", "fr": "mois"},
     "plot.ltp.power_hr.title": {
         "en": "Power-to-HR efficiency over time",
         "fr": "Efficacité puissance / FC au fil du temps",
@@ -710,12 +788,26 @@ TRANSLATIONS = {
     "plot.ltp.mileage.y": {
         "en": "Cumulative distance (km)", "fr": "Distance cumulée (km)",
     },
+    "plot.ltp.mileage.periodic.title": {
+        "en": "Distance per period by season",
+        "fr": "Distance par période par saison",
+    },
+    "plot.ltp.mileage.periodic.y": {
+        "en": "Distance (km)", "fr": "Distance (km)",
+    },
     "plot.ltp.elevation.title": {
         "en": "Cumulative elevation gain by season",
         "fr": "Dénivelé cumulé par saison",
     },
     "plot.ltp.elevation.y": {
         "en": "Cumulative elevation gain (m)", "fr": "Dénivelé cumulé (m)",
+    },
+    "plot.ltp.elevation.periodic.title": {
+        "en": "Elevation gain per period by season",
+        "fr": "Dénivelé par période par saison",
+    },
+    "plot.ltp.elevation.periodic.y": {
+        "en": "Elevation gain (m)", "fr": "Dénivelé (m)",
     },
     "plot.ltp.gradient.title": {
         "en": "Average gradient by season",

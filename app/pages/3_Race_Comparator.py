@@ -38,7 +38,13 @@ if "athlete_streams" not in st.session_state:
     st.warning(t("gate.no_data"))
     st.stop()
 
-streams: List[ActivityStream] = st.session_state["athlete_streams"]
+# Summary-only activities (no per-second streams) can't be plotted here — the
+# comparator needs the full time/distance/HR traces, so drop them.
+streams: List[ActivityStream] = [
+    s
+    for s in st.session_state["athlete_streams"]
+    if getattr(s, "has_streams", True)
+]
 
 st.markdown(t("races.intro").format(max=MAX_RACES))
 

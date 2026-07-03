@@ -95,7 +95,10 @@ class AnalyzeLongTermProgress(UseCase):
         heartrate = np.asarray(stream.heartrate, dtype=float)
         n = time.size
         if n < 2 or distance.size != n or altitude.size != n:
-            return None
+            # No usable per-second streams — fall back to the activity-level
+            # totals so distance/elevation/time trends still include it (best
+            # efforts, gradient bands and power-to-HR need streams, so stay empty).
+            return self._summary_progress(stream)
 
         # Best efforts run on the raw cumulative distance / time streams.
         best_efforts = {
@@ -149,6 +152,29 @@ class AnalyzeLongTermProgress(UseCase):
             band_seconds=band_seconds,
             best_efforts=best_efforts,
             power_to_hr=power_to_hr,
+        )
+
+    @staticmethod
+    def _summary_progress(stream: ActivityStream) -> Optional[ActivityProgress]:
+        """Build an :class:`ActivityProgress` from activity-level totals only.
+
+        Used for streamless activities (manual entries, missing streams). Without
+        per-second data there are no best efforts, no per-band time and no
+        power-to-HR — only distance, elevation gain and moving time are known.
+        Returns ``None`` when even the summary distance is unknown.
+        """
+        if stream.summary_distance_m is None:
+            return None
+        return ActivityProgress(
+            activity_id=stream.activity_id,
+            date=_naive(stream.start_date),
+            sport_type=_sport_name(stream.sport_type),
+            distance_m=float(stream.summary_distance_m or 0.0),
+            elevation_gain_m=float(stream.summary_elevation_gain_m or 0.0),
+            moving_seconds=float(stream.summary_moving_time_s or 0.0),
+            band_seconds={key: 0.0 for key, _, _ in GRADIENT_BANDS},
+            best_efforts={label: None for label, _ in PR_DISTANCES},
+            power_to_hr=None,
         )
 
     @staticmethod

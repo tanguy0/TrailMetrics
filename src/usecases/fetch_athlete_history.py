@@ -19,6 +19,11 @@ class FetchAthleteHistoryInput:
     to_date: Optional[datetime] = None
     max_activities: Optional[int] = None
     verbose: bool = False
+    # The full history is for distance/elevation/record trends, which don't need
+    # HR — so by default keep activities without HR, and keep activities whose
+    # streams can't be fetched (as summary-only) so they still count.
+    require_heartrate: bool = False
+    keep_streamless: bool = True
 
 
 @dataclass
@@ -56,6 +61,8 @@ class FetchAthleteHistory(UseCase):
             max_activities=params.max_activities,
             verbose=params.verbose,
             progress_callback=progress_callback,
+            require_heartrate=params.require_heartrate,
+            keep_streamless=params.keep_streamless,
         )
 
         dates = [s.start_date for s in streams if s.start_date is not None]

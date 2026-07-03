@@ -135,6 +135,8 @@ class SimulatePersonalizedGapModel(UseCase):
         """Filter pre-fetched streams by sport type and date range, in memory."""
         out: List[ActivityStream] = []
         for s in streams:
+            if not getattr(s, "has_streams", True):
+                continue  # summary-only activities have no per-second data to model
             if params.sport_types and s.sport_type not in params.sport_types:
                 continue
             if s.start_date is not None:
