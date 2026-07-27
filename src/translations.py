@@ -1,301 +1,60 @@
-"""Central UI translation table for TrailMetrics.
+"""Central translation table for TrailMetrics.
 
 One source of truth for every user-facing string, in English (``en``) and French
-(``fr``). Pure Python with no Streamlit / framework dependency, so both the
-Streamlit app (``app/``) and the domain plot helpers (``src/domain/...``) can
-import it.
+(``fr``). Pure Python with no framework dependency, so the domain, the plot
+registry and the API all read from it.
 
 Usage:
     from src.translations import translate
-    translate("home.connect.header", "fr")
+    translate("plot.metric_trend.label", "fr")
 
-The app reads the active language from ``st.session_state["lang"]`` (set by the
-selector on the Home page) through the ``t()`` helper in ``app/_helpers.py``;
-domain plot functions receive an explicit ``lang`` argument.
+Everything user-facing is translated **server-side**: plot labels and parameter
+schemas are rendered into the ``/registry`` payload, and chart IR carries finished
+text rather than keys. The web app therefore has no translation table of its own —
+it displays what it is given, and adding a language here covers the whole product.
 
 Strings may contain ``{placeholder}`` fields — format them at the call site,
-e.g. ``translate("home.status.loaded", lang).format(count=12)``.
+e.g. ``translate("panel.dropped_streamless", lang).format(count=12)``.
 """
 
 LANGUAGES = {"fr": "Français", "en": "English"}
 DEFAULT_LANG = "fr"
 
-
 # key -> {"en": ..., "fr": ...}
 TRANSLATIONS = {
-    # --- Common --------------------------------------------------------------
-    "common.you": {"en": "You", "fr": "Vous"},
-    "common.lang_label": {"en": "Language / Langue", "fr": "Langue / Language"},
-    "gate.no_data": {
-        "en": "No data loaded yet. Go to the **Home** page, connect Strava and "
-        "click **Load my data** to unlock this analysis.",
-        "fr": "Aucune donnée chargée pour l'instant. Allez sur la page "
-        "**Accueil**, connectez-vous à Strava et cliquez sur **Charger mes "
-        "données** pour débloquer cette analyse.",
-    },
-
-    # --- Page titles (browser tab + h1) -------------------------------------
-    "page.howitworks.tab": {"en": "How it works", "fr": "Comment ça marche"},
-    "page.howitworks.title": {
-        "en": "❓ How TrailMetrics works",
-        "fr": "❓ Comment fonctionne TrailMetrics",
-    },
+    # --- Built-in page names -------------------------------------------------
     "page.gap.title": {
         "en": "Personalized GAP Simulator",
         "fr": "Simulateur GAP personnalisé",
     },
     "page.races.title": {"en": "Race Comparator", "fr": "Comparateur de courses"},
 
-    # --- Home ----------------------------------------------------------------
-    "home.subheader": {
-        "en": "Connect Strava, load your history, then explore your running data",
-        "fr": "Connectez Strava, chargez votre historique, puis explorez vos "
-        "données de course",
-    },
-    "home.intro": {
-        "en": """
-    Set up the connection below and load your activity history **once**. After
-    that, open any analysis from the **left sidebar** — they all reuse this data,
-    so you can tweak parameters freely without re-fetching.
-
-    New here? See **How it works** in the sidebar.
-    """,
-        "fr": """
-    Configurez la connexion ci-dessous et chargez votre historique d'activités
-    **une seule fois**. Ensuite, ouvrez n'importe quelle analyse depuis la
-    **barre latérale gauche** — elles réutilisent toutes ces données, vous pouvez
-    donc ajuster les paramètres librement sans nouvelle récupération.
-
-    Nouveau ici ? Consultez **Comment ça marche** dans la barre latérale.
-    """,
-    },
-    "home.connect.header": {"en": "1. Connect Strava", "fr": "1. Connexion à Strava"},
-    "home.client_id.help": {
-        "en": "Your Strava application client ID.",
-        "fr": "L'identifiant client de votre application Strava.",
-    },
-    "home.token_exchange_failed": {
-        "en": "Token exchange failed: {error}",
-        "fr": "Échec de l'échange du jeton : {error}",
-    },
-    "home.missing_creds": {
-        "en": "Missing credentials — re-enter STRAVA_CLIENT_ID / SECRET above.",
-        "fr": "Identifiants manquants — saisissez à nouveau STRAVA_CLIENT_ID / "
-        "SECRET ci-dessus.",
-    },
-    "home.connected": {"en": "✅ Connected to Strava.", "fr": "✅ Connecté à Strava."},
-    "home.connect_button": {
-        "en": "Connect with Strava",
-        "fr": "Se connecter avec Strava",
-    },
-    "home.enter_creds_info": {
-        "en": "Enter your STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET above to connect.",
-        "fr": "Saisissez vos STRAVA_CLIENT_ID et STRAVA_CLIENT_SECRET ci-dessus "
-        "pour vous connecter.",
-    },
-    "home.runner.header": {"en": "2. Runner", "fr": "2. Coureur"},
-    "home.runner.name_label": {"en": "Your name", "fr": "Votre nom"},
-    "home.runner.weight_label": {"en": "Your weight (kg)", "fr": "Votre poids (kg)"},
-    "home.runner.weight_help": {
-        "en": "Used to estimate running power on the Race Comparator. Leave empty "
-        "to skip.",
-        "fr": "Sert à estimer la puissance de course dans le Comparateur de "
-        "courses. Laissez vide pour ignorer.",
-    },
-    "home.load.header": {"en": "3. Load your data", "fr": "3. Charger vos données"},
-    "home.load.caption": {
-        "en": "Fetches every run (all types) up to today. This can take a while "
-        "the first time — it only runs once per session.",
-        "fr": "Récupère toutes les courses (tous types) jusqu'à aujourd'hui. Cela "
-        "peut prendre un moment la première fois — exécuté une seule fois par "
-        "session.",
-    },
-    "home.load.all_history": {
-        "en": "Fetch my entire history",
-        "fr": "Récupérer tout mon historique",
-    },
-    "home.load.all_history_help": {
-        "en": "On by default: no time limit, all your activities are fetched. "
-        "Uncheck to fetch only from a chosen start date.",
-        "fr": "Activé par défaut : aucune limite, toutes vos activités sont "
-        "récupérées. Décochez pour ne récupérer qu'à partir d'une date de début.",
-    },
-    "home.load.from_label": {
-        "en": "Fetch data back to",
-        "fr": "Récupérer les données jusqu'au",
-    },
-    "home.load.from_help": {
-        "en": "The oldest date to fetch initially. Older activities are ignored.",
-        "fr": "La date la plus ancienne à récupérer initialement. Les activités "
-        "plus anciennes sont ignorées.",
-    },
-    "home.load.button": {"en": "Load my data", "fr": "Charger mes données"},
-    "home.load.scouting": {
-        "en": "Scouting your activities on Strava…",
-        "fr": "Repérage de vos activités sur Strava…",
-    },
-    "home.load.fetching": {
-        "en": "Fetching activity {done} of {total}…",
-        "fr": "Récupération de l'activité {done} sur {total}…",
-    },
-    "home.status.loaded": {
-        "en": "✅ Loaded {count} activities — analyses are unlocked.",
-        "fr": "✅ {count} activités chargées — les analyses sont débloquées.",
-    },
-    "home.metric.activities": {"en": "Activities", "fr": "Activités"},
-    "home.metric.oldest": {"en": "Oldest session", "fr": "Séance la plus ancienne"},
-    "home.metric.newest": {"en": "Most recent session", "fr": "Séance la plus récente"},
-    "home.status.open_analysis": {
-        "en": "Open an analysis from the **left sidebar** to get started.",
-        "fr": "Ouvrez une analyse depuis la **barre latérale gauche** pour "
-        "commencer.",
-    },
-    "home.status.no_data": {
-        "en": "No data loaded yet. Complete the steps above to unlock the analyses.",
-        "fr": "Aucune donnée chargée pour l'instant. Complétez les étapes "
-        "ci-dessus pour débloquer les analyses.",
-    },
-
-    # --- How it works --------------------------------------------------------
-    "howitworks.body": {
-        "en": """
-    TrailMetrics is a personal lab for running-data simulations. The flow is
-    designed around **loading your data once** and then exploring it freely.
-
-    ### 1. Connect & load (Home page)
-    1. Provide your Strava `client_id` / `client_secret`, then click
-       **Connect with Strava** — you'll be redirected to authorize and brought
-       straight back with a token (no codes to copy). Credentials are remembered
-       for next time.
-    2. Enter your name and weight.
-    3. Click **Load my data**. TrailMetrics fetches the maximum history
-       available (all run types) and keeps it in memory for the whole session.
-
-    Once loaded, you'll see how many activities were fetched and the date range
-    they span (oldest → most recent session).
-
-    ### 2. Run an analysis (sidebar pages)
-    Each analysis lives on its own page and unlocks only after data is loaded.
-    All of its inputs — **date range**, **session types**, model parameters,
-    intensity ranges — are *filters applied to the data already in memory*. That
-    means you can tweak any parameter and re-run instantly, without re-fetching
-    from Strava.
-
-    - The selectable date range is bounded by your fetched history
-      (oldest session → today).
-
-    ### Available analyses
-    - **Personalized GAP Simulator** — builds personalized GAP (Gradient
-      Adjusted Pace) curves from your history and compares them against the
-      *Balanced Runner* and *Kilian Jornet* reference curves, including
-      intensity-stratified panels. Every figure has a **Download data** button
-      (PNG + CSV bundled in a ZIP).
-
-    ### Notes
-    - Your Strava token lives only in this browser session and is never stored
-      on disk.
-    - Closing the app clears the loaded data; you'll load it again next time.
-    """,
-        "fr": """
-    TrailMetrics est un labo personnel de simulations sur vos données de course.
-    Le principe : **charger vos données une seule fois**, puis les explorer
-    librement.
-
-    ### 1. Connexion & chargement (page Accueil)
-    1. Renseignez vos `client_id` / `client_secret` Strava, puis cliquez sur
-       **Se connecter avec Strava** — vous serez redirigé pour autoriser puis
-       ramené directement avec un jeton (aucun code à copier). Les identifiants
-       sont mémorisés pour la prochaine fois.
-    2. Saisissez votre nom et votre poids.
-    3. Cliquez sur **Charger mes données**. TrailMetrics récupère le maximum
-       d'historique disponible (tous types de course) et le garde en mémoire
-       pendant toute la session.
-
-    Une fois chargé, vous verrez le nombre d'activités récupérées et la plage de
-    dates qu'elles couvrent (séance la plus ancienne → la plus récente).
-
-    ### 2. Lancer une analyse (pages de la barre latérale)
-    Chaque analyse a sa propre page et ne se débloque qu'une fois les données
-    chargées. Toutes ses entrées — **plage de dates**, **types de séance**,
-    paramètres de modèle, plages d'intensité — sont des *filtres appliqués aux
-    données déjà en mémoire*. Vous pouvez donc ajuster n'importe quel paramètre
-    et relancer instantanément, sans nouvelle récupération depuis Strava.
-
-    - La plage de dates sélectionnable est bornée par votre historique récupéré
-      (séance la plus ancienne → aujourd'hui).
-
-    ### Analyses disponibles
-    - **Simulateur GAP personnalisé** — construit des courbes GAP (allure
-      ajustée à la pente) personnalisées à partir de votre historique et les
-      compare aux courbes de référence *Coureur équilibré* et *Kilian Jornet*,
-      avec des panneaux par intensité. Chaque graphique dispose d'un bouton
-      **Télécharger les données** (PNG + CSV regroupés dans un ZIP).
-
-    ### Remarques
-    - Votre jeton Strava ne vit que dans cette session de navigateur et n'est
-      jamais stocké sur le disque.
-    - Fermer l'application efface les données chargées ; vous les rechargerez la
-      prochaine fois.
-    """,
-    },
-
-    # --- GAP simulator -------------------------------------------------------
+    # --- GAP model labels, parameters and captions ---------------------------
     "gap.intro": {
         "en": """
-    Build personalized GAP (Gradient Adjusted Pace) curves from your loaded
-    history and compare them against reference curves. Define one or more
-    **time scales** (named date ranges), choose which models and reference
-    curves to plot in the sidebar, then re-run — no re-fetching required.
+    Build personalized GAP (Gradient Adjusted Pace) curves from your own activities
+    and compare them against reference curves. Set the panel's data source to
+    several time windows to fit one curve per period.
     """,
         "fr": """
-    Construisez des courbes GAP (allure ajustée à la pente) personnalisées à
-    partir de votre historique et comparez-les à des courbes de référence.
-    Définissez une ou plusieurs **échelles de temps** (plages de dates nommées),
-    choisissez les modèles et les courbes de référence à afficher dans la barre
-    latérale, puis relancez — aucune nouvelle récupération nécessaire.
+    Construisez des courbes GAP (allure ajustée à la pente) personnalisées à partir
+    de vos propres activités et comparez-les à des courbes de référence. Utilisez
+    plusieurs fenêtres temporelles dans la source du panneau pour obtenir une
+    courbe par période.
     """,
     },
-    "gap.filters.header": {"en": "Filters", "fr": "Filtres"},
-    "gap.session_types": {"en": "Session types", "fr": "Types de séance"},
-    "gap.timescales.header": {"en": "Time scales", "fr": "Échelles de temps"},
-    "gap.timescales.caption": {
-        "en": "Compare up to five time scales — each is a named date range. At "
-        "least one named scale is required; every figure overlays them.",
-        "fr": "Comparez jusqu'à cinq échelles de temps — chacune est une plage de "
-        "dates nommée. Au moins une échelle nommée est requise ; chaque graphique "
-        "les superpose.",
-    },
-    "gap.timescales.name_label": {"en": "Name", "fr": "Nom"},
-    "gap.timescales.name_default": {"en": "Scale {n}", "fr": "Échelle {n}"},
-    "gap.timescales.name_placeholder": {
-        "en": "e.g. 2025 season",
-        "fr": "ex. saison 2025",
-    },
-    "gap.timescales.remove_help": {
-        "en": "Remove this time scale",
-        "fr": "Supprimer cette échelle de temps",
-    },
-    "gap.timescales.from": {"en": "From", "fr": "Du"},
-    "gap.timescales.to": {"en": "To", "fr": "Au"},
-    "gap.timescales.add": {
-        "en": "➕ Add time scale",
-        "fr": "➕ Ajouter une échelle de temps",
-    },
-    "gap.models.header": {"en": "GAP models", "fr": "Modèles GAP"},
     "gap.models.caption": {
         "en": "Pick at least one model to plot.",
         "fr": "Choisissez au moins un modèle à afficher.",
     },
     "gap.models.efficiency": {"en": "Efficiency model", "fr": "Modèle d'efficacité"},
     "gap.models.auto": {"en": "Auto-Learning model", "fr": "Modèle auto-apprenant"},
-    "gap.refs.header": {"en": "Reference curves", "fr": "Courbes de référence"},
     "gap.refs.caption": {
-        "en": "Optional overlays — leave both off to hide them.",
+        "en": "Optional overlays — uncheck both to hide them.",
         "fr": "Superpositions optionnelles — décochez les deux pour les masquer.",
     },
     "gap.refs.balanced": {"en": "Balanced runner", "fr": "Coureur équilibré"},
     "gap.refs.kilian": {"en": "Kilian curve", "fr": "Courbe Kilian"},
-    "gap.display.header": {"en": "Display options", "fr": "Options d'affichage"},
     "gap.display.show_std": {
         "en": "Show standard deviation bands",
         "fr": "Afficher les bandes d'écart-type",
@@ -305,7 +64,6 @@ TRANSLATIONS = {
         "fr": "Ombre ±1 écart-type autour de chaque courbe. Décochez pour une "
         "superposition plus épurée.",
     },
-    "gap.params.header": {"en": "Simulation parameters", "fr": "Paramètres de simulation"},
     "gap.params.split_min_time": {
         "en": "Split min time (seconds)",
         "fr": "Durée min. de segment (secondes)",
@@ -327,35 +85,8 @@ TRANSLATIONS = {
         "moins de points.",
     },
     "gap.params.bin_width": {"en": "Bin width (m/km)", "fr": "Largeur de classe (m/km)"},
-    "gap.intensity.header": {"en": "Intensity ranges", "fr": "Plages d'intensité"},
-    "gap.intensity.low_min": {"en": "Low intensity: min HR", "fr": "Intensité basse : FC min"},
-    "gap.intensity.low_max": {"en": "Low intensity: max HR", "fr": "Intensité basse : FC max"},
-    "gap.intensity.high_min": {"en": "High intensity: min HR", "fr": "Intensité haute : FC min"},
-    "gap.intensity.high_max": {"en": "High intensity: max HR", "fr": "Intensité haute : FC max"},
     "gap.intensity.low": {"en": "Low", "fr": "Basse"},
     "gap.intensity.high": {"en": "High", "fr": "Haute"},
-    "gap.validate.no_sport": {
-        "en": "Select at least one session type.",
-        "fr": "Sélectionnez au moins un type de séance.",
-    },
-    "gap.validate.no_scale": {
-        "en": "Name at least one time scale.",
-        "fr": "Nommez au moins une échelle de temps.",
-    },
-    "gap.validate.inverted": {
-        "en": "Some time scales have From after To — fix the dates.",
-        "fr": "Certaines échelles ont une date « Du » postérieure au « Au » — "
-        "corrigez les dates.",
-    },
-    "gap.validate.no_model": {
-        "en": "Select at least one GAP model.",
-        "fr": "Sélectionnez au moins un modèle GAP.",
-    },
-    "gap.run_button": {"en": "Run simulation", "fr": "Lancer la simulation"},
-    "gap.loader": {
-        "en": "Filtering activities and fitting models…",
-        "fr": "Filtrage des activités et ajustement des modèles…",
-    },
     "gap.summary.item": {
         "en": "{label}: {n} splits",
         "fr": "{label} : {n} segments",
@@ -364,169 +95,57 @@ TRANSLATIONS = {
         "en": "Simulation complete — {summary}.",
         "fr": "Simulation terminée — {summary}.",
     },
-    "gap.subheader.curves": {"en": "GAP curves", "fr": "Courbes GAP"},
     "gap.nothing_to_plot": {
-        "en": "Nothing to plot — select a model or a reference curve in the sidebar.",
-        "fr": "Rien à tracer — sélectionnez un modèle ou une courbe de référence "
-        "dans la barre latérale.",
+        "en": "Nothing to plot — select a personal model or a reference curve.",
+        "fr": "Rien à tracer — sélectionnez un modèle personnel ou une courbe de "
+        "référence.",
     },
     "gap.caption.main": {
-        "en": "Color = time scale · solid = Efficiency model · dash-dot = "
-        "Auto-Learning model · dashed = reference curves.",
-        "fr": "Couleur = échelle de temps · trait plein = modèle d'efficacité · "
-        "trait mixte = modèle auto-apprenant · tirets = courbes de référence.",
-    },
-    "gap.subheader.intensity": {
-        "en": "Intensity-stratified GAP curves",
-        "fr": "Courbes GAP par intensité",
+        "en": "Colour = data-source group · line style = model and heart-rate band · "
+        "dashed = reference curves.",
+        "fr": "Couleur = groupe de la source · style de trait = modèle et zone de "
+        "fréquence cardiaque · tirets = courbes de référence.",
     },
     "gap.caption.intensity": {
-        "en": "Color = time scale · solid = low intensity · dashed = high intensity.",
-        "fr": "Couleur = échelle de temps · trait plein = intensité basse · "
-        "tirets = intensité haute.",
-    },
-    "gap.col.efficiency_heading": {
-        "en": "{runner} (Efficiency model)",
-        "fr": "{runner} (Modèle d'efficacité)",
-    },
-    "gap.col.auto_heading": {
-        "en": "{runner} (Auto-Learning model)",
-        "fr": "{runner} (Modèle auto-apprenant)",
-    },
-    "gap.intensity.unavailable": {
-        "en": "{label} {intensity}-intensity curve unavailable: {error}",
-        "fr": "Courbe d'intensité {intensity} pour {label} indisponible : {error}",
-    },
-    "gap.run_hint": {
-        "en": "Define your time scales, choose models and reference curves in the "
-        "sidebar, then click 'Run simulation'.",
-        "fr": "Définissez vos échelles de temps, choisissez les modèles et les "
-        "courbes de référence dans la barre latérale, puis cliquez sur "
-        "« Lancer la simulation ».",
+        "en": "The same fit, split by heart-rate band — how the cost of climbing "
+        "changes with intensity.",
+        "fr": "Le même ajustement, séparé par zone de fréquence cardiaque — comment "
+        "le coût de la montée évolue avec l'intensité.",
     },
 
-    # --- Race comparator -----------------------------------------------------
+    # --- Race / stream signal labels and columns -----------------------------
     "races.intro": {
         "en": """
-    Compare any number of races side by side — from a single workout up to
-    **{max}** at once. Start by picking your workouts below. Use the date
-    search to narrow things down; each option shows its duration, distance and
-    sport type so you can tell similar sessions apart.
+    Compare races side by side. Pick the workouts in the panel's data source — every
+    plot below then describes that same selection. Around {max} at once stays
+    readable; past that, raise each plot's series limit.
     """,
         "fr": """
-    Comparez autant de courses que vous voulez côte à côte — d'une seule séance
-    jusqu'à **{max}** à la fois. Commencez par choisir vos séances ci-dessous.
-    Utilisez la recherche par date pour affiner ; chaque option affiche sa
-    durée, sa distance et son type de sport pour distinguer les séances
-    similaires.
+    Comparez des courses côte à côte. Choisissez les séances dans la source du
+    panneau — tous les graphiques décrivent ensuite cette même sélection. Environ
+    {max} à la fois reste lisible ; au-delà, augmentez la limite de séries de chaque
+    graphique.
     """,
     },
-    "races.select.subheader": {"en": "Select workouts", "fr": "Sélection des séances"},
-    "races.search_by_date": {"en": "Search by date", "fr": "Rechercher par date"},
-    "races.search_by_date_help": {
-        "en": "Narrow the workout list to a single day.",
-        "fr": "Restreindre la liste des séances à un seul jour.",
-    },
-    "races.workout_date": {"en": "Workout date", "fr": "Date de la séance"},
-    "races.matches_caption": {
-        "en": "{n} workout(s) on {date}:",
-        "fr": "{n} séance(s) le {date} :",
-    },
-    "races.unknown_date": {"en": "unknown date", "fr": "date inconnue"},
-    "races.no_workouts_on_date": {
-        "en": "No workouts on that date.",
-        "fr": "Aucune séance à cette date.",
-    },
-    "races.no_dated": {
-        "en": "No dated workouts in the loaded history.",
-        "fr": "Aucune séance datée dans l'historique chargé.",
-    },
-    "races.multiselect.label": {
-        "en": "Workouts to compare (up to {max})",
-        "fr": "Séances à comparer (jusqu'à {max})",
-    },
-    "races.multiselect.help": {
-        "en": "Pick between 1 and {max} workouts.",
-        "fr": "Choisissez entre 1 et {max} séances.",
-    },
-    "races.selected.subheader": {
-        "en": "Selected ({n}/{max})",
-        "fr": "Sélection ({n}/{max})",
-    },
-    "races.pick_one": {
-        "en": "Pick at least one workout above to get started.",
-        "fr": "Choisissez au moins une séance ci-dessus pour commencer.",
+    "races.select.subheader": {
+        "en": "Pick the workouts in the data source above",
+        "fr": "Choisissez les séances dans la source de données ci-dessus",
     },
     "races.col.date": {"en": "Date", "fr": "Date"},
     "races.col.sport": {"en": "Sport", "fr": "Sport"},
-    "races.col.distance": {"en": "Distance", "fr": "Distance"},
-    "races.col.duration": {"en": "Duration", "fr": "Durée"},
-    "races.smoothing.expander": {
-        "en": "⚙️ Smoothing settings",
-        "fr": "⚙️ Paramètres de lissage",
-    },
-    "races.smoothing.caption": {
-        "en": "Each signal can pass through a time-domain rolling average and/or a "
-        "distance-domain Savitzky–Golay filter (applied in that order). Altitude "
-        "smoothing drives the gradient and elevation gain.",
-        "fr": "Chaque signal peut passer par une moyenne glissante (domaine "
-        "temporel) et/ou un filtre Savitzky–Golay (domaine distance), appliqués "
-        "dans cet ordre. Le lissage de l'altitude pilote la pente et le dénivelé.",
-    },
-    "races.filter.rolling": {"en": "Rolling avg", "fr": "Moyenne glissante"},
-    "races.filter.window_s": {"en": "Window (s)", "fr": "Fenêtre (s)"},
-    "races.filter.savgol": {"en": "Savitzky–Golay", "fr": "Savitzky–Golay"},
-    "races.filter.window_m": {"en": "Window (m)", "fr": "Fenêtre (m)"},
     "races.signal.pace": {"en": "Pace / GAP", "fr": "Allure / GAP"},
     "races.signal.altitude": {"en": "Altitude", "fr": "Altitude"},
     "races.signal.hr": {"en": "Heart rate", "fr": "Fréquence cardiaque"},
     "races.signal.power": {"en": "Power", "fr": "Puissance"},
-    "races.analysis.header": {"en": "Analysis", "fr": "Analyse"},
-    "races.summary.subheader": {"en": "Summary stats", "fr": "Statistiques récapitulatives"},
-    "races.col.elev_gain": {"en": "Elevation gain", "fr": "Dénivelé"},
-    "races.col.time": {"en": "Time", "fr": "Temps"},
-    "races.col.avg_pace": {"en": "Avg pace", "fr": "Allure moy."},
-    "races.col.avg_gap_pace": {"en": "Avg GAP pace", "fr": "Allure GAP moy."},
-    "races.col.avg_power": {"en": "Avg power", "fr": "Puissance moy."},
-    "races.power_blank": {
-        "en": "Avg power is blank — set **your weight** on the Home page to enable "
-        "power (and the power graphs below).",
-        "fr": "La puissance moy. est vide — renseignez **votre poids** sur la page "
-        "Accueil pour activer la puissance (et les graphiques de puissance "
-        "ci-dessous).",
-    },
-    "races.evolution.subheader": {
-        "en": "Evolution across the race",
-        "fr": "Évolution sur la course",
-    },
-    "races.xaxis.label": {"en": "X axis", "fr": "Axe X"},
     "races.xaxis.time": {"en": "Time", "fr": "Temps"},
     "races.xaxis.distance": {"en": "Distance", "fr": "Distance"},
     "races.xaxis.help": {
-        "en": "Switch every graph below between elapsed time and distance covered.",
-        "fr": "Basculer tous les graphiques ci-dessous entre le temps écoulé et "
-        "la distance parcourue.",
+        "en": "Elapsed time, or distance covered.",
+        "fr": "Temps écoulé, ou distance parcourue.",
     },
-    "races.gap_display.label": {"en": "Show GAP as", "fr": "Afficher le GAP en"},
-    "races.gap_display.pace": {"en": "Pace", "fr": "Allure"},
-    "races.gap_display.speed": {"en": "Speed", "fr": "Vitesse"},
-    "races.gap_display.help": {
-        "en": "Display the gradient-adjusted-pace graph as pace (min/km) or speed "
-        "(km/h).",
-        "fr": "Afficher le graphique d'allure ajustée à la pente en allure "
-        "(min/km) ou en vitesse (km/h).",
-    },
-    "races.plot.gap_pace": {
-        "en": "Gradient-adjusted pace",
-        "fr": "Allure ajustée à la pente",
-    },
-    "races.plot.power": {"en": "Power", "fr": "Puissance"},
-    "races.plot.heartrate": {"en": "Heart rate", "fr": "Fréquence cardiaque"},
-    "races.plot.power_to_hr": {"en": "Power-to-HR", "fr": "Puissance / FC"},
     "races.weight_needed": {
-        "en": "Set **your weight** on the Home page to enable this graph.",
-        "fr": "Renseignez **votre poids** sur la page Accueil pour activer ce "
-        "graphique.",
+        "en": "Set your weight to enable the power metrics.",
+        "fr": "Renseignez votre poids pour activer les métriques de puissance.",
     },
 
     # --- Plot labels: GAP curves (domain) -----------------------------------
@@ -546,28 +165,17 @@ TRANSLATIONS = {
         "en": "GAP pace (min/km, lower = faster)",
         "fr": "Allure GAP (min/km, plus bas = plus rapide)",
     },
-    "plot.races.gap_pace.title": {
-        "en": "Gradient-Adjusted Pace",
-        "fr": "Allure ajustée à la pente",
-    },
     "plot.races.gap_speed.y": {
         "en": "GAP speed (km/h, higher = faster)",
         "fr": "Vitesse GAP (km/h, plus haut = plus rapide)",
     },
     "plot.races.power.y": {"en": "Power (W)", "fr": "Puissance (W)"},
-    "plot.races.power.title": {"en": "Power", "fr": "Puissance"},
     "plot.races.hr.y": {"en": "Heart rate (bpm)", "fr": "Fréquence cardiaque (bpm)"},
-    "plot.races.hr.title": {"en": "Heart Rate", "fr": "Fréquence cardiaque"},
     "plot.races.p2hr.y": {"en": "Power / HR (W/bpm)", "fr": "Puissance / FC (W/bpm)"},
-    "plot.races.p2hr.title": {
-        "en": "Power-to-Heart-Rate",
-        "fr": "Puissance / Fréquence cardiaque",
-    },
     "plot.races.x.time": {"en": "Time (min)", "fr": "Temps (min)"},
     "plot.races.x.distance": {"en": "Distance (km)", "fr": "Distance (km)"},
-    "plot.races.title_suffix": {"en": "across the race", "fr": "sur la course"},
 
-    # --- Long-Term Progress page --------------------------------------------
+    # --- Long-term progress labels (records, bands, sections) ---------------
     "page.ltp.title": {
         "en": "📈 Long-Term Progress",
         "fr": "📈 Progression long terme",
@@ -581,62 +189,8 @@ TRANSLATIONS = {
         "pentes — puis les options ci-dessous se contentent de réafficher les "
         "résultats instantanément.",
     },
-    "ltp.computing": {
-        "en": "Crunching your whole history (best efforts + gradients)…",
-        "fr": "Analyse de tout votre historique (meilleurs efforts + pentes)…",
-    },
-    "ltp.no_data": {
-        "en": "No dated activities to analyse in the loaded history.",
-        "fr": "Aucune activité datée à analyser dans l'historique chargé.",
-    },
-    "ltp.col.season": {"en": "Season", "fr": "Saison"},
-    "ltp.bin_label": {"en": "Aggregate by", "fr": "Agréger par"},
-    "ltp.bin.week": {"en": "Week", "fr": "Semaine"},
-    "ltp.bin.month": {"en": "Month", "fr": "Mois"},
-    "ltp.view_label": {"en": "View", "fr": "Affichage"},
-    "ltp.view.cumulative": {"en": "Cumulative", "fr": "Cumulatif"},
-    "ltp.view.periodic": {"en": "Per period", "fr": "Par période"},
-    "ltp.scale_label": {"en": "Scale", "fr": "Échelle"},
-    "ltp.scale.overlay": {"en": "Overlay seasons", "fr": "Superposer les saisons"},
-    "ltp.scale.continuous": {"en": "Continuous", "fr": "Temps continu"},
-    "ltp.gran_label": {"en": "Aggregate by", "fr": "Agréger par"},
-    "ltp.gran.day": {"en": "Day", "fr": "Jour"},
-    "ltp.gran.week": {"en": "Week", "fr": "Semaine"},
-    "ltp.gran.month": {"en": "Month", "fr": "Mois"},
-    "ltp.gran.quarter": {"en": "Quarter", "fr": "Trimestre"},
 
     # Season definition
-    "ltp.seasons.header": {
-        "en": "Season definition",
-        "fr": "Définition des saisons",
-    },
-    "ltp.seasons.help": {
-        "en": "Define any named periods to use as your seasons across this page. "
-        "Add or remove rows freely. Leave the table empty to fall back to "
-        "calendar years.",
-        "fr": "Définissez autant de périodes nommées que vous voulez ; elles "
-        "servent de saisons sur toute la page. Ajoutez/supprimez des lignes "
-        "librement. Laissez la table vide pour revenir aux années civiles.",
-    },
-    "ltp.seasons.col.name": {"en": "Name", "fr": "Nom"},
-    "ltp.seasons.col.start": {"en": "Start", "fr": "Début"},
-    "ltp.seasons.col.end": {"en": "End", "fr": "Fin"},
-    "ltp.seasons.invalid": {
-        "en": "Some rows are incomplete or have start after end — they were ignored.",
-        "fr": "Certaines lignes sont incomplètes ou ont un début après la fin — "
-        "elles ont été ignorées.",
-    },
-    "ltp.seasons.overlap": {
-        "en": "⚠️ Overlapping seasons: {pairs}. Overlapping days are counted in the "
-        "first matching season.",
-        "fr": "⚠️ Saisons qui se chevauchent : {pairs}. Les jours en commun sont "
-        "comptés dans la première saison correspondante.",
-    },
-    "ltp.seasons.empty_fallback": {
-        "en": "No valid season defined — using calendar years.",
-        "fr": "Aucune saison valide définie — utilisation des années civiles.",
-    },
-    "ltp.season.unassigned": {"en": "Unassigned", "fr": "Non assigné"},
 
     # Section 1 — Personal records
     "ltp.section.records": {
@@ -653,49 +207,18 @@ TRANSLATIONS = {
         "de chaque distance ; le meilleur d'entre eux est votre record. Cliquez sur "
         "une distance dans la légende pour l'afficher ou la masquer.",
     },
-    "ltp.records.metric_label": {"en": "Show as", "fr": "Afficher en"},
-    "ltp.records.metric.pace": {"en": "Pace (min/km)", "fr": "Allure (min/km)"},
-    "ltp.records.metric.time": {"en": "Time", "fr": "Temps"},
     "ltp.records.col.distance": {"en": "Distance", "fr": "Distance"},
     "ltp.records.col.record": {"en": "Record", "fr": "Record"},
     "ltp.records.col.pace": {"en": "Pace", "fr": "Allure"},
     "ltp.records.col.date": {"en": "Date", "fr": "Date"},
-    "ltp.records.none": {
-        "en": "No records yet — no activity is long enough for these distances.",
-        "fr": "Aucun record — aucune activité n'est assez longue pour ces distances.",
-    },
 
     # Section 2 — Annual mileage
-    "ltp.section.mileage": {
-        "en": "Evolution of annual mileage",
-        "fr": "Évolution du kilométrage annuel",
-    },
-    "ltp.mileage.col.total": {"en": "Total", "fr": "Total"},
 
     # Section 3 — Annual elevation gain
-    "ltp.section.elevation": {
-        "en": "Evolution of annual elevation gain",
-        "fr": "Évolution du dénivelé annuel",
-    },
-    "ltp.elevation.col.total": {"en": "Total D+", "fr": "Total D+"},
 
     # Section 4 — Average gradient per season
-    "ltp.section.gradient": {
-        "en": "Evolution of average gradient per season",
-        "fr": "Évolution de la pente moyenne par saison",
-    },
-    "ltp.section.gradient.help": {
-        "en": "Average gradient over each bin = total elevation gain ÷ total "
-        "distance for that bin (always positive). One line per season — click a "
-        "season in the legend to show or hide it.",
-        "fr": "Pente moyenne sur chaque période = dénivelé total ÷ distance totale "
-        "de la période (toujours positive). Une ligne par saison — cliquez sur une "
-        "saison dans la légende pour l'afficher ou la masquer.",
-    },
-    "ltp.gradient.col.avg": {"en": "Season avg", "fr": "Moy. saison"},
 
     # Section 5 — Gradient map
-    "ltp.section.gradient_map": {"en": "Gradient map", "fr": "Carte des pentes"},
     "ltp.gradient_map.help": {
         "en": "Share of moving time spent in each gradient band, per bin. Each bar "
         "sums to 100%. Click a band in the legend to show or hide it.",
@@ -703,7 +226,6 @@ TRANSLATIONS = {
         "période. Chaque barre totalise 100 %. Cliquez sur une catégorie dans la "
         "légende pour l'afficher ou la masquer.",
     },
-    "ltp.gradient_map.range_label": {"en": "Time span", "fr": "Période"},
     "ltp.band.steep_descent": {
         "en": "Steep descent (< -12%)", "fr": "Forte descente (< -12 %)",
     },
@@ -733,44 +255,12 @@ TRANSLATIONS = {
         "meilleur), sur une frise continue. Chaque saison a sa couleur ; cliquez sur "
         "une saison dans la légende pour l'afficher ou la masquer.",
     },
-    "ltp.power_hr.range_label": {"en": "Time span", "fr": "Période"},
-    "ltp.power_hr.smoothing": {
-        "en": "Smooth the curve", "fr": "Lisser la courbe",
-    },
-    "ltp.power_hr.smoothing.help": {
-        "en": "Optional smoothing of the final weekly points to read the trend "
-        "through the week-to-week noise. Windows are in points (weeks).",
-        "fr": "Lissage optionnel des points hebdomadaires pour lire la tendance "
-        "au-delà du bruit d'une semaine à l'autre. Les fenêtres sont en points "
-        "(semaines).",
-    },
-    "ltp.power_hr.filter.rolling": {
-        "en": "Rolling average", "fr": "Moyenne glissante",
-    },
-    "ltp.power_hr.filter.savgol": {"en": "Savitzky–Golay", "fr": "Savitzky–Golay"},
-    "ltp.power_hr.filter.window_pts": {
-        "en": "Window (points)", "fr": "Fenêtre (points)",
-    },
 
     # --- Plot labels: long-term progress (domain) ---------------------------
-    "plot.ltp.x.month": {"en": "Month", "fr": "Mois"},
-    "plot.ltp.x.time": {"en": "Time", "fr": "Temps"},
-    "plot.ltp.x.months_since_start": {
-        "en": "Months since season start",
-        "fr": "Mois depuis le début de la saison",
-    },
-    "plot.ltp.months": {"en": "mo", "fr": "mois"},
-    "plot.ltp.power_hr.title": {
-        "en": "Power-to-HR efficiency over time",
-        "fr": "Efficacité puissance / FC au fil du temps",
-    },
-    "plot.ltp.power_hr.x": {"en": "Time", "fr": "Temps"},
-    "plot.ltp.power_hr.y": {"en": "Power / HR (W/bpm)", "fr": "Puissance / FC (W/bpm)"},
     "plot.ltp.records.title": {
         "en": "Personal-record evolution",
         "fr": "Évolution des records personnels",
     },
-    "plot.ltp.records.x": {"en": "Date", "fr": "Date"},
     "plot.ltp.records.y_pace": {
         "en": "Record pace (min/km, faster = higher)",
         "fr": "Allure record (min/km, plus rapide = plus haut)",
@@ -781,47 +271,373 @@ TRANSLATIONS = {
     },
     "plot.ltp.records.hover_record": {"en": "Record", "fr": "Record"},
     "plot.ltp.records.hover_pace": {"en": "Pace", "fr": "Allure"},
-    "plot.ltp.mileage.title": {
-        "en": "Cumulative distance by season",
-        "fr": "Distance cumulée par saison",
-    },
-    "plot.ltp.mileage.y": {
-        "en": "Cumulative distance (km)", "fr": "Distance cumulée (km)",
-    },
-    "plot.ltp.mileage.periodic.title": {
-        "en": "Distance per period by season",
-        "fr": "Distance par période par saison",
-    },
-    "plot.ltp.mileage.periodic.y": {
-        "en": "Distance (km)", "fr": "Distance (km)",
-    },
-    "plot.ltp.elevation.title": {
-        "en": "Cumulative elevation gain by season",
-        "fr": "Dénivelé cumulé par saison",
-    },
-    "plot.ltp.elevation.y": {
-        "en": "Cumulative elevation gain (m)", "fr": "Dénivelé cumulé (m)",
-    },
-    "plot.ltp.elevation.periodic.title": {
-        "en": "Elevation gain per period by season",
-        "fr": "Dénivelé par période par saison",
-    },
-    "plot.ltp.elevation.periodic.y": {
-        "en": "Elevation gain (m)", "fr": "Dénivelé (m)",
-    },
-    "plot.ltp.gradient.title": {
-        "en": "Average gradient by season",
-        "fr": "Pente moyenne par saison",
-    },
-    "plot.ltp.gradient.y": {"en": "Average gradient (%)", "fr": "Pente moyenne (%)"},
     "plot.ltp.gradient_map.title": {
         "en": "Time spent per gradient band",
         "fr": "Temps passé par catégorie de pente",
     },
     "plot.ltp.gradient_map.x": {"en": "Time", "fr": "Temps"},
     "plot.ltp.gradient_map.y": {"en": "% of moving time", "fr": "% du temps en mouvement"},
-}
 
+    # --- Panels & pages (the composable builder) -----------------------------
+    "panel.group": {"en": "Group", "fr": "Groupe"},
+    "panel.all": {"en": "All", "fr": "Tout"},
+    "panel.selection": {"en": "Selection", "fr": "Sélection"},
+    "panel.no_activities": {
+        "en": "No activity matches this panel's data source.",
+        "fr": "Aucune activité ne correspond à la source de données de ce panneau.",
+    },
+    "panel.dropped_streamless": {
+        "en": "{count} activity(ies) without per-second data were skipped — "
+        "this plot needs the full traces.",
+        "fr": "{count} activité(s) sans données par seconde ont été ignorées — "
+        "ce graphique a besoin des traces complètes.",
+    },
+
+    # --- Plot catalogue ------------------------------------------------------
+    "plotcat.general": {"en": "General", "fr": "Général"},
+    "plotcat.trends": {"en": "Trends over time", "fr": "Évolutions"},
+    "plotcat.records": {"en": "Records", "fr": "Records"},
+    "plotcat.within": {"en": "Inside one activity", "fr": "Dans une activité"},
+    "plotcat.models": {"en": "Models", "fr": "Modèles"},
+    "plotcat.explore": {"en": "Exploration", "fr": "Exploration"},
+    "plotcat.tables": {"en": "Tables", "fr": "Tableaux"},
+
+    "plot.metric_trend.label": {"en": "Metric over time", "fr": "Métrique dans le temps"},
+    "plot.metric_trend.description": {
+        "en": "Any metric, binned by day/week/month/quarter, per period or "
+        "cumulative, on the calendar or aligned to each group's start.",
+        "fr": "N'importe quelle métrique, groupée par jour/semaine/mois/trimestre, "
+        "par période ou cumulée, sur le calendrier ou alignée sur le début de "
+        "chaque groupe.",
+    },
+    "plot.gradient_map.label": {"en": "Gradient map", "fr": "Carte des pentes"},
+    "plot.gradient_map.description": {
+        "en": "Share of moving time spent in each gradient band, over time.",
+        "fr": "Part du temps en mouvement passée dans chaque catégorie de pente, "
+        "dans le temps.",
+    },
+    "plot.gradient_map.no_stream_data": {
+        "en": "No per-second data available to classify gradients.",
+        "fr": "Aucune donnée par seconde disponible pour classer les pentes.",
+    },
+    "plot.pr_progression.label": {
+        "en": "Record progression", "fr": "Progression des records",
+    },
+    "plot.pr_progression.description": {
+        "en": "Stepped evolution of your best effort per distance.",
+        "fr": "Évolution en escalier de votre meilleur effort par distance.",
+    },
+    "plot.records_table.label": {"en": "Records table", "fr": "Tableau des records"},
+    "plot.records_table.description": {
+        "en": "Your current best time and pace for each distance.",
+        "fr": "Votre meilleur temps et allure actuels pour chaque distance.",
+    },
+    "plot.records_table.title": {"en": "Personal records", "fr": "Records personnels"},
+    "plot.stream_evolution.label": {
+        "en": "Signal inside the activity", "fr": "Signal dans l'activité",
+    },
+    "plot.stream_evolution.description": {
+        "en": "One line per activity for a chosen signal (GAP, pace, HR, power, "
+        "altitude, gradient), over time or distance.",
+        "fr": "Une courbe par activité pour un signal choisi (GAP, allure, FC, "
+        "puissance, altitude, pente), en temps ou en distance.",
+    },
+    "plot.gap_curve.label": {"en": "GAP curves", "fr": "Courbes GAP"},
+    "plot.gap_curve.description": {
+        "en": "Fits your personal gradient-adjusted-pace models on the selected "
+        "activities and overlays the reference curves.",
+        "fr": "Ajuste vos modèles personnels d'allure ajustée à la pente sur les "
+        "activités sélectionnées et superpose les courbes de référence.",
+    },
+    "plot.metric_scatter.label": {"en": "Metric vs metric", "fr": "Métrique vs métrique"},
+    "plot.metric_scatter.description": {
+        "en": "One point per activity, any metric against any other, with an "
+        "optional trendline.",
+        "fr": "Un point par activité, n'importe quelle métrique contre une autre, "
+        "avec une droite de tendance optionnelle.",
+    },
+    "plot.metric_distribution.label": {"en": "Distribution", "fr": "Distribution"},
+    "plot.metric_distribution.description": {
+        "en": "How a metric is spread across the selected activities.",
+        "fr": "Comment une métrique se répartit sur les activités sélectionnées.",
+    },
+    "plot.data_table.label": {"en": "Table", "fr": "Tableau"},
+    "plot.data_table.description": {
+        "en": "The raw feature table — pick your columns, one row per activity or "
+        "per group, downloadable as CSV.",
+        "fr": "Le tableau de données brut — choisissez vos colonnes, une ligne par "
+        "activité ou par groupe, téléchargeable en CSV.",
+    },
+    "plot.data_table.title": {"en": "Activities", "fr": "Activités"},
+
+    # --- Shared plot messages ------------------------------------------------
+    "plot.no_data": {
+        "en": "No data for this selection.", "fr": "Aucune donnée pour cette sélection.",
+    },
+    "plot.metric_unavailable": {
+        "en": "{metric} is not available for these activities.",
+        "fr": "{metric} n'est pas disponible pour ces activités.",
+    },
+    "plot.unknown_type": {
+        "en": "Unknown plot type: {type}", "fr": "Type de graphique inconnu : {type}",
+    },
+    "plot.x.time": {"en": "Time", "fr": "Temps"},
+    "plot.x.months_since_start": {
+        "en": "Months since the group started", "fr": "Mois depuis le début du groupe",
+    },
+    "plot.months": {"en": "months", "fr": "mois"},
+    "plot.trend.cumulative_ignored": {
+        "en": "Cumulative is ignored here: a running total of averages or ratios "
+        "has no meaning.",
+        "fr": "Le cumul est ignoré ici : un total cumulé de moyennes ou de ratios "
+        "n'a pas de sens.",
+    },
+    "plot.trend.totals": {"en": "Totals per group", "fr": "Totaux par groupe"},
+    "plot.records.none": {
+        "en": "No record found for the selected distances.",
+        "fr": "Aucun record trouvé pour les distances sélectionnées.",
+    },
+    "plot.distribution.title": {
+        "en": "Distribution of {metric}", "fr": "Distribution de {metric}",
+    },
+    "plot.distribution.count": {"en": "activities", "fr": "activités"},
+    "plot.distribution.pct": {"en": "%", "fr": "%"},
+    "plot.distribution.y_count": {
+        "en": "Number of activities", "fr": "Nombre d'activités",
+    },
+    "plot.distribution.y_pct": {"en": "% of activities", "fr": "% des activités"},
+    "plot.scatter.title": {"en": "{y} vs {x}", "fr": "{y} vs {x}"},
+    "plot.scatter.trend": {"en": "trend", "fr": "tendance"},
+    "plot.scatter.trend_unavailable": {
+        "en": "Not enough spread to fit a trendline for {series}.",
+        "fr": "Pas assez de dispersion pour ajuster une tendance sur {series}.",
+    },
+    "plot.stream.no_stream_data": {
+        "en": "None of the selected activities has per-second data.",
+        "fr": "Aucune des activités sélectionnées n'a de données par seconde.",
+    },
+    "plot.stream.truncated": {
+        "en": "Showing the first {shown} of {total} activities — raise the limit to "
+        "see more.",
+        "fr": "Affichage des {shown} premières activités sur {total} — augmentez la "
+        "limite pour en voir plus.",
+    },
+
+    # --- Activity metrics ----------------------------------------------------
+    "metric.distance_km": {"en": "Distance", "fr": "Distance"},
+    "metric.elevation_gain_m": {"en": "Elevation gain", "fr": "Dénivelé positif"},
+    "metric.moving_time": {"en": "Moving time", "fr": "Temps en mouvement"},
+    "metric.activity_count": {"en": "Number of activities", "fr": "Nombre d'activités"},
+    "metric.avg_pace": {"en": "Average pace", "fr": "Allure moyenne"},
+    "metric.avg_gap_pace": {"en": "Average GAP pace", "fr": "Allure GAP moyenne"},
+    "metric.avg_speed_kmh": {"en": "Average speed", "fr": "Vitesse moyenne"},
+    "metric.avg_gradient_pct": {"en": "Average gradient", "fr": "Pente moyenne"},
+    "metric.elevation_per_km": {"en": "Elevation per km", "fr": "Dénivelé par km"},
+    "metric.avg_hr": {"en": "Average heart rate", "fr": "Fréquence cardiaque moyenne"},
+    "metric.max_hr": {"en": "Max heart rate", "fr": "Fréquence cardiaque max"},
+    "metric.avg_power_w": {"en": "Average power", "fr": "Puissance moyenne"},
+    "metric.power_to_hr": {"en": "Power-to-HR", "fr": "Puissance / FC"},
+    "metric.best.1_km": {"en": "Best 1 km", "fr": "Meilleur 1 km"},
+    "metric.best.3_km": {"en": "Best 3 km", "fr": "Meilleur 3 km"},
+    "metric.best.5_km": {"en": "Best 5 km", "fr": "Meilleur 5 km"},
+    "metric.best.10_km": {"en": "Best 10 km", "fr": "Meilleur 10 km"},
+    "metric.best.semi": {"en": "Best half marathon", "fr": "Meilleur semi"},
+    "metric.best.marathon": {"en": "Best marathon", "fr": "Meilleur marathon"},
+    "metric.best.50_km": {"en": "Best 50 km", "fr": "Meilleur 50 km"},
+    "metric.best.100_km": {"en": "Best 100 km", "fr": "Meilleur 100 km"},
+    "metric.best.150_km": {"en": "Best 150 km", "fr": "Meilleur 150 km"},
+
+    # --- Aggregations & granularities ---------------------------------------
+    "agg.sum": {"en": "Sum", "fr": "Somme"},
+    "agg.mean": {"en": "Average", "fr": "Moyenne"},
+    "agg.median": {"en": "Median", "fr": "Médiane"},
+    "agg.max": {"en": "Maximum", "fr": "Maximum"},
+    "agg.min": {"en": "Minimum", "fr": "Minimum"},
+    "agg.count": {"en": "Count", "fr": "Nombre"},
+    "gran.activity": {"en": "Per activity", "fr": "Par activité"},
+    "gran.day": {"en": "Day", "fr": "Jour"},
+    "gran.week": {"en": "Week", "fr": "Semaine"},
+    "gran.month": {"en": "Month", "fr": "Mois"},
+    "gran.quarter": {"en": "Quarter", "fr": "Trimestre"},
+    "gran.year": {"en": "Year", "fr": "Année"},
+
+    # --- Stream signals ------------------------------------------------------
+    "signal.gap_pace": {"en": "GAP pace", "fr": "Allure GAP"},
+    "signal.pace": {"en": "Pace", "fr": "Allure"},
+    "signal.pace.y": {"en": "Pace (min/km)", "fr": "Allure (min/km)"},
+    "signal.heartrate": {"en": "Heart rate", "fr": "Fréquence cardiaque"},
+    "signal.power": {"en": "Power", "fr": "Puissance"},
+    "signal.power_to_hr": {"en": "Power-to-HR", "fr": "Puissance / FC"},
+    "signal.altitude": {"en": "Altitude", "fr": "Altitude"},
+    "signal.altitude.y": {"en": "Altitude (m)", "fr": "Altitude (m)"},
+    "signal.gradient": {"en": "Gradient", "fr": "Pente"},
+    "signal.gradient.y": {"en": "Gradient (%)", "fr": "Pente (%)"},
+
+    # --- Plot parameters -----------------------------------------------------
+    "param.metric": {"en": "Metric", "fr": "Métrique"},
+    "param.metric.help": {
+        "en": "Adding a metric to the registry makes it available in every plot "
+        "that takes one.",
+        "fr": "Ajouter une métrique au registre la rend disponible dans tous les "
+        "graphiques qui en acceptent une.",
+    },
+    "param.aggregation": {"en": "Aggregation", "fr": "Agrégation"},
+    "param.granularity": {"en": "Granularity", "fr": "Granularité"},
+    "param.x_mode": {"en": "X axis", "fr": "Axe X"},
+    "param.x_mode.calendar": {"en": "Calendar", "fr": "Calendrier"},
+    "param.x_mode.elapsed": {"en": "Aligned to group start", "fr": "Aligné sur le début"},
+    "param.x_mode.help": {
+        "en": "Aligned mode draws every time window from a common zero, so blocks "
+        "of different lengths compare directly.",
+        "fr": "Le mode aligné trace chaque fenêtre depuis un zéro commun, pour "
+        "comparer directement des blocs de durées différentes.",
+    },
+    "param.cumulative": {"en": "Cumulative", "fr": "Cumulé"},
+    "param.chart": {"en": "Chart", "fr": "Graphique"},
+    "param.chart.line": {"en": "Line", "fr": "Ligne"},
+    "param.chart.step": {"en": "Step", "fr": "Escalier"},
+    "param.chart.bar": {"en": "Bars", "fr": "Barres"},
+    "param.chart.area": {"en": "Area", "fr": "Aire"},
+    "param.markers": {"en": "Show points", "fr": "Afficher les points"},
+    "param.split_by": {"en": "Split series by", "fr": "Séparer les séries par"},
+    "param.split_by.none": {"en": "Nothing", "fr": "Rien"},
+    "param.split_by.sport": {"en": "Sport type", "fr": "Type de sport"},
+    "param.smooth_rolling": {"en": "Rolling mean (points)", "fr": "Moyenne glissante (points)"},
+    "param.smooth_rolling.help": {
+        "en": "0 disables it. Smooths the already-binned curve.",
+        "fr": "0 désactive. Lisse la courbe déjà groupée.",
+    },
+    "param.smooth_savgol": {"en": "Savitzky–Golay (points)", "fr": "Savitzky–Golay (points)"},
+    "param.smooth_savgol.help": {"en": "0 disables it.", "fr": "0 désactive."},
+    "param.show_totals": {"en": "Show totals table", "fr": "Afficher le tableau des totaux"},
+    "param.show_totals.help": {
+        "en": "Adds one aggregate per group beside the chart.",
+        "fr": "Ajoute un agrégat par groupe à côté du graphique.",
+    },
+    "param.bands": {"en": "Gradient bands", "fr": "Catégories de pente"},
+    "param.bands.help": {
+        "en": "Bands are stacked in physical order, descent at the bottom.",
+        "fr": "Les catégories sont empilées dans l'ordre physique, descente en bas.",
+    },
+    "param.bins": {"en": "Bins", "fr": "Classes"},
+    "param.normalize": {"en": "As a percentage", "fr": "En pourcentage"},
+    "param.normalize.help": {
+        "en": "Compare the shape of groups of different sizes.",
+        "fr": "Comparer la forme de groupes de tailles différentes.",
+    },
+    "param.x_metric": {"en": "X metric", "fr": "Métrique X"},
+    "param.y_metric": {"en": "Y metric", "fr": "Métrique Y"},
+    "param.color_by": {"en": "Colour by", "fr": "Couleur par"},
+    "param.color_by.group": {"en": "Group", "fr": "Groupe"},
+    "param.color_by.sport": {"en": "Sport type", "fr": "Type de sport"},
+    "param.trendline": {"en": "Trendline", "fr": "Droite de tendance"},
+    "param.trendline.help": {
+        "en": "Least-squares fit across the observed range.",
+        "fr": "Régression des moindres carrés sur la plage observée.",
+    },
+    "param.rows": {"en": "One row per", "fr": "Une ligne par"},
+    "param.rows.activity": {"en": "Activity", "fr": "Activité"},
+    "param.rows.group": {"en": "Group", "fr": "Groupe"},
+    "param.rows.help": {
+        "en": "Group rows aggregate every activity of the group.",
+        "fr": "Les lignes par groupe agrègent toutes les activités du groupe.",
+    },
+    "param.columns": {"en": "Columns", "fr": "Colonnes"},
+    "param.highlight_best": {"en": "Highlight the best value", "fr": "Mettre en avant la meilleure valeur"},
+    "param.highlight_best.help": {
+        "en": "Only for metrics that have a meaningful best.",
+        "fr": "Uniquement pour les métriques ayant un « meilleur » qui a du sens.",
+    },
+    "param.sort_by": {"en": "Sort by", "fr": "Trier par"},
+    "param.descending": {"en": "Descending", "fr": "Décroissant"},
+    "param.limit": {"en": "Row limit", "fr": "Limite de lignes"},
+    "param.limit.help": {"en": "0 shows every row.", "fr": "0 affiche toutes les lignes."},
+    "param.distances": {"en": "Distances", "fr": "Distances"},
+    "param.record_display": {"en": "Show", "fr": "Afficher"},
+    "param.record_display.pace": {"en": "Pace", "fr": "Allure"},
+    "param.record_display.time": {"en": "Time", "fr": "Temps"},
+    "param.record_display.help": {
+        "en": "Pace is comparable across distances; time is the raw record.",
+        "fr": "L'allure est comparable entre distances ; le temps est le record brut.",
+    },
+    "param.extend_to_last": {"en": "Extend to the last activity", "fr": "Prolonger jusqu'à la dernière activité"},
+    "param.extend_to_last.help": {
+        "en": "Carries the current record flat to the edge of the plot.",
+        "fr": "Prolonge le record actuel à plat jusqu'au bord du graphique.",
+    },
+    "param.split_by_group": {"en": "One series per group", "fr": "Une série par groupe"},
+    "param.split_by_group.help": {
+        "en": "Off means records are all-time across every selected activity.",
+        "fr": "Désactivé, les records sont calculés sur toutes les activités.",
+    },
+    "param.per_group": {"en": "One row per group", "fr": "Une ligne par groupe"},
+    "param.per_group.help": {
+        "en": "Compare each window's own best.",
+        "fr": "Comparer le meilleur de chaque fenêtre.",
+    },
+    "param.signal": {"en": "Signal", "fr": "Signal"},
+    "param.x_axis": {"en": "X axis", "fr": "Axe X"},
+    "param.as_speed": {"en": "Show as speed", "fr": "Afficher en vitesse"},
+    "param.as_speed.help": {
+        "en": "km/h instead of min/km — higher is faster.",
+        "fr": "km/h au lieu de min/km — plus haut = plus rapide.",
+    },
+    "param.max_series": {"en": "Max activities shown", "fr": "Activités affichées max"},
+    "param.max_series.help": {
+        "en": "Keeps a large selection readable; the plot says when it truncates.",
+        "fr": "Garde une grande sélection lisible ; le graphique signale la troncature.",
+    },
+    "param.smoothing": {"en": "Smoothing", "fr": "Lissage"},
+    "param.filter.rolling_s": {"en": "Rolling mean (s)", "fr": "Moyenne glissante (s)"},
+    "param.filter.savgol_m": {"en": "Savitzky–Golay (m)", "fr": "Savitzky–Golay (m)"},
+    "param.gap_models": {"en": "Personal models", "fr": "Modèles personnels"},
+    "param.gap_references": {"en": "Reference curves", "fr": "Courbes de référence"},
+    "param.hr_bands": {"en": "Heart-rate bands", "fr": "Zones de fréquence cardiaque"},
+    "param.hr_bands.help": {
+        "en": "Leave empty for one curve per model. Add bands to stratify the same "
+        "fit by intensity.",
+        "fr": "Laissez vide pour une courbe par modèle. Ajoutez des zones pour "
+        "stratifier le même ajustement par intensité.",
+    },
+    "param.hr_band.name": {"en": "Name", "fr": "Nom"},
+    "param.hr_band.min": {"en": "Min bpm", "fr": "FC min"},
+    "param.hr_band.max": {"en": "Max bpm", "fr": "FC max"},
+
+    # --- GAP plot messages ---------------------------------------------------
+    "gap.group_no_splits": {
+        "en": "{label}: no usable split found — the activities may be too short or "
+        "lack heart rate.",
+        "fr": "{label} : aucun segment exploitable — les activités sont peut-être "
+        "trop courtes ou sans fréquence cardiaque.",
+    },
+    "gap.curve_unavailable": {
+        "en": "{label}: curve unavailable ({error}).",
+        "fr": "{label} : courbe indisponible ({error}).",
+    },
+    "gap.reason.no_calibration": {
+        "en": "no flat section shares a heart rate with a climbing section, so the "
+        "adjustment cannot be learned",
+        "fr": "aucune section plate ne partage une fréquence cardiaque avec une "
+        "section en montée, l'ajustement ne peut pas être appris",
+    },
+    "gap.reason.empty_curve": {
+        "en": "no sample falls in this range",
+        "fr": "aucun échantillon dans cette plage",
+    },
+
+    # --- Built-in example pages ---------------------------------------------
+    "dash.window.all_history": {"en": "All history", "fr": "Tout l'historique"},
+    "dash.gap.panel.curves": {"en": "GAP curves", "fr": "Courbes GAP"},
+    "dash.gap.panel.intensity": {"en": "By intensity", "fr": "Par intensité"},
+    "dash.races.panel.selection": {
+        "en": "Selected workouts", "fr": "Séances sélectionnées",
+    },
+    "dash.races.selection_label": {"en": "Selection", "fr": "Sélection"},
+    "dash.ltp.panel.volume": {
+        "en": "Volume: distance and elevation", "fr": "Volume : distance et dénivelé",
+    },
+    "dash.ltp.panel.terrain": {"en": "Terrain", "fr": "Terrain"},
+}
 
 def translate(key: str, lang: str = DEFAULT_LANG) -> str:
     """Return the ``lang`` string for ``key``.

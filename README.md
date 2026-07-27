@@ -1,119 +1,156 @@
 # TrailMetrics
 
-Personal-use Python project for simulating running metrics from watch data, organized as a small DDD-flavored codebase.
+A data-science workbench for running data. The user builds the pages: pick a data
+source, then add the plots you want over it.
 
-Today's only usecase is **personalized GAP (Gradient Adjusted Pace) modeling**: pulling a runner's Strava trail-run history and fitting two GAP models to compare against reference curves (Balanced Runner, Kilian Jornet).
+The organising idea is that **a page is data, not code**:
+
+```
+PageSpec ──< PanelSpec ──< PlotSpec
+                └── DataSourceSpec
+```
+
+* a **panel** has exactly one data source and as many plots as you like;
+* a **data source** is either a hand-picked set of activities, one time window, or
+  several named windows compared side by side;
+* a **plot** is a registry entry with a declarative parameter schema, so its form —
+  including sub-parameters that only appear when relevant — is generated, never written.
+
+Because a page is a serializable document, "the user built this", "the app ships this
+as an example" and "this lives in a database" are all the same mechanism. The three
+example pages (Personalized GAP Simulator, Race Comparator, Long-Term Progress) are
+`PageSpec`s assembled in [`src/dashboards/`](src/dashboards/) from the same panels and
+plots a user gets. If an example needs something the builder cannot express, the
+builder is missing a feature.
+
+## Architecture
+
+Four abstractions carry the whole design.
+
+**1. Specs** — [`src/domain/spec/`](src/domain/spec/). Pure, JSON-serializable
+dataclasses. Parameter schemas include their conditional logic as a serializable
+`Condition` tree, so the browser evaluates the same visibility rules as Python
+instead of re-implementing them.
+
+**2. Three data levels** — [`src/domain/dataset/`](src/domain/dataset/). Each plot
+declares which it consumes, and the resolver builds only that, lazily and memoized:
+
+| level | shape | feeds |
+|---|---|---|
+| `ACTIVITY` | tidy frame, one row per (group, activity) | trends, records, tables, scatter |
+| `STREAM` | per-second series for one activity | within-activity signal traces |
+| `SPLIT` | samples pooled across a group | GAP model fitting |
+
+The activity feature table is the centrepiece. Columns are *raw sums* — `distance_m`,
+`moving_s` — never averages, because [`metrics.py`](src/domain/dataset/metrics.py)
+derives averages as ratios (Σ distance ÷ Σ time) that re-aggregate correctly over any
+time bin. A mean of per-activity paces silently over-weights short runs; expressing it
+as a ratio metric makes that bug unwritable.
+
+**3. Plot registry** — [`src/domain/plots/`](src/domain/plots/). A plot type is a key,
+a parameter schema, a data level, and a pure `compute`. Nothing else. It never renders
+and never reads request state.
+
+**4. Chart IR** — [`src/domain/charts/ir.py`](src/domain/charts/ir.py). `compute`
+returns traces, axes and tables as data, not figures. One renderer draws it
+([Python](src/domain/charts/plotly.py) for notebooks,
+[TypeScript](web/components/ChartView.tsx) for the web app), so palette, duration axes
+and hover styling are defined once and every new plot type inherits them.
+
+### Extension points
+
+* **A new quantity to plot** → add a column in
+  [`features.py`](src/domain/dataset/features.py) and an entry in
+  [`metrics.py`](src/domain/dataset/metrics.py). It is immediately available in every
+  metric-taking plot, at every granularity, in every chart form, with no frontend change.
+* **A new plot type** → one module in [`src/domain/plots/`](src/domain/plots/) plus a
+  `register(...)` call. `/registry` picks it up and the UI renders its form.
 
 ## Repository layout
 
 ```
 TrailMetrics/
-├── pyproject.toml                 # installable package (pip install -e .)
-├── requirements.txt
-├── src/                           # source code, split into DDD layers
-│   ├── domain/                    # pure business logic + ports (interfaces)
-│   │   ├── models/                # dataclasses (entities / value objects)
-│   │   │   ├── activity.py        # ActivityStream
-│   │   │   └── gap.py             # ProcessedStream, DownsampledDataset, GapCurve
-│   │   ├── gap/                   # GAP-specific domain services
-│   │   │   ├── base.py            # GapModel ABC
-│   │   │   ├── preprocessing.py   # StreamPreprocessor ABC + DefaultStreamPreprocessor
-│   │   │   ├── efficiency_model.py# Strava-style bucketed efficiency model
-│   │   │   ├── xgboost_model.py   # XGBoost GAP regressor
-│   │   │   ├── plotting.py        # plot_gap_curves helper
-│   │   │   └── reference_curves.py# Balanced Runner + Kilian Jornet reference curves
-│   │   ├── progress/                # long-term-progress domain services
-│   │   │   ├── models.py           # ActivityProgress + PR distances / gradient bands
-│   │   │   ├── records.py          # sliding-window best efforts + record progression
-│   │   │   ├── aggregates.py       # season overlays, avg gradient, gradient map
-│   │   │   └── plotting.py         # Plotly (clickable) figures, Trail/Earthy theme
-│   │   └── ports/
-│   │       └── activity_stream_source.py  # ActivityStreamSource ABC
-│   ├── infrastructure/            # concrete adapters implementing domain ports
-│   │   └── strava/
-│   │       └── strava_client.py   # StravaClient(ActivityStreamSource)
-│   ├── usecases/                  # orchestrate domain + infrastructure to fulfill one task
-│   │   ├── base.py                # UseCase ABC
-│   │   ├── fetch_athlete_history.py        # fetch max history once (cached by the app)
-│   │   ├── simulate_personalized_gap_model.py  # runs on pre-fetched streams (or fetches)
-│   │   └── analyze_long_term_progress.py    # per-activity summaries for season trends
-│   └── utils.py                   # tiny time-format helpers
-├── .streamlit/
-│   └── config.toml                # Trail/Earthy UI theme
-├── app/
-│   ├── Home.py                    # landing page: Strava connect + one-shot data load
-│   ├── _helpers.py                # shared UI helpers (sys.path, PNG download button)
-│   └── pages/                     # auto-listed in the sidebar
-│       ├── 1_Personalized_GAP_Simulator.py  # analysis; unlocks once data is loaded
-│       └── 2_How_it_works.py      # explanations
-└── notebook/                      # exploratory notebooks (kept for research/iteration)
-    └── gap/
-        ├── full-flow.ipynb        # end-to-end personalized GAP flow
-        └── experimental.ipynb     # low-level preprocessing exploration
+├── src/
+│   ├── domain/                     # pure logic, no I/O, no framework
+│   │   ├── models/                 # ActivityStream, GapCurve, …
+│   │   ├── spec/                   # PageSpec / PanelSpec / PlotSpec / params
+│   │   ├── dataset/                # feature table, metric registry, binning, resolver
+│   │   ├── charts/                 # chart IR + the Plotly renderer
+│   │   ├── plots/                  # the plot registry (one module per type)
+│   │   ├── gap/ races/ progress/   # the analytics primitives
+│   │   └── ports/                  # interfaces infrastructure must implement
+│   ├── infrastructure/
+│   │   ├── strava/                 # API client + OAuth/refresh
+│   │   ├── postgres/               # schema.sql + repositories
+│   │   └── storage/                # stream blobs (Supabase Storage / local disk)
+│   ├── usecases/                   # resolve_panel_data, render_page, sync, …
+│   └── dashboards/                 # the built-in example PageSpecs
+├── api/                            # FastAPI compute service
+├── web/                            # Next.js app (Vercel)
+└── notebook/                       # exploratory notebooks
 ```
 
-### Layer responsibilities
+## Running it locally
 
-- **`domain/`** — pure logic and abstract ports. No I/O, no framework.
-  - `domain/models/` holds the dataclasses (entities, value objects) — the *data shapes* shared across services.
-  - `domain/<topic>/` holds the domain services (`StreamPreprocessor`, `GapModel`, ...).
-  - `domain/ports/` holds the interfaces (`ActivityStreamSource`) that infrastructure must implement.
-  Where DDD's "domain" and "core" usually overlap, we keep them merged here to avoid splitting one concept across two folders.
-- **`infrastructure/`** — adapters that implement domain ports (e.g. `StravaClient` implements `ActivityStreamSource`). This is the only place that knows about external services or persistence.
-- **`usecases/`** — one class per user-facing task. Receives dependencies (a stream source, optionally a preprocessor) and orchestrates them. `SimulatePersonalizedGapModel.execute(...)` is the only usecase today.
-- **`app/`** — the Streamlit front-end. Imports usecases directly (no HTTP layer for now); an `api/` layer (e.g. FastAPI) will be added if/when a remote consumer appears.
-
-## Setup
+Three processes: Postgres, the compute API, the web app.
 
 ```bash
-# 1. Create + activate a virtual env
-python -m venv .venv
-source .venv/bin/activate
+# 1. Postgres
+docker run -d --name tm-pg -e POSTGRES_PASSWORD=tm -e POSTGRES_DB=trailmetrics \
+  -p 55432:5432 postgres:16-alpine
 
-# 2. Install the project in editable mode (so `from src...` works everywhere)
-pip install -e .
-pip install -r requirements.txt
+# 2. Compute API
+pip install -r requirements-compute.txt -r requirements-api.txt
+cp .env.example .env && python -m api.keys   # paste the three secrets into .env
+set -a && . ./.env && set +a
+uvicorn api.main:app --reload --port 8000
 
-# 3. Configure Strava credentials (do NOT commit these)
-export STRAVA_CLIENT_ID=...
-export STRAVA_CLIENT_SECRET=...
+# 3. Web app
+cd web && npm install
+cp .env.example .env.local            # TRAILMETRICS_SERVICE_TOKEN must match the API's
+npm run dev                           # http://localhost:3000
 ```
 
-## Running the Streamlit app
+The schema is applied automatically on API startup (every statement is
+`if not exists`). With `SUPABASE_URL` unset, per-second streams are written to
+`LOCAL_STREAM_ROOT` on disk, so nothing but Postgres is needed to run the whole thing.
 
-```bash
-streamlit run app/Home.py
-```
+`GET /health` reports what is configured and names any missing environment variable —
+the fastest way to diagnose a half-configured setup.
 
-The flow is **load once, analyse many**:
+### Deployment
 
-1. On the **Home** page: enter your name, provide Strava credentials, authorize,
-   then click **Load my data**. The app fetches the maximum history available
-   (all run types) and caches the raw streams in the Streamlit session, then
-   reports the date range fetched (oldest → most recent session).
-2. Each analysis lives in its own file under `app/pages/` and shows up
-   automatically in the sidebar. Analyses are **locked until data is loaded**.
-   Their inputs — date range, session types, model parameters — are filters
-   applied to the in-memory data, so you can tweak and re-run without
-   re-fetching from Strava.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). The shape is Next.js on **Vercel** →
+FastAPI on **Railway** (or Render) → **Supabase** for Postgres and Storage.
 
-Today there's one analysis:
+Worth knowing up front: **Streamlit cannot run on Vercel** — it needs a long-lived
+server with websockets. That is why the web UI is a separate Next.js app rather than a
+port of the Streamlit pages.
 
-- **Personalized GAP Simulator** &mdash; date range + session-type filters, both
-  GAP models, intensity-stratified panels, and download buttons under every figure.
+### The Streamlit app is gone
 
-A separate **How it works** page holds the usage explanations.
+An earlier version of this project was a Streamlit app with three hard-coded pages.
+It was removed once the stack above was verified end to end, because it was a second
+UI over the same analytics and the two would drift. Deleting it also retired ~2,800
+lines that existed only to serve it — `progress/aggregates.py`, `progress/plotting.py`,
+`progress/seasons.py`, `races/plotting.py` and two use cases — all of which are
+superseded by the metric registry, the chart IR and the single generic renderer.
 
-To add a new analysis, drop a `app/pages/<N>_<Name>.py` file in the folder. Use
-`add_repo_root_to_path()` from `app/_helpers.py` to keep `from src...` imports
-working, gate on `"athlete_streams" in st.session_state`, and pass
-`streams=st.session_state["athlete_streams"]` into your usecase input.
+The analytics primitives it shared (`gap/`, `races/metrics.py`, `races/smoothing.py`,
+`progress/models.py`, `progress/records.py`) are unchanged and still used.
 
-### Theme
+## Notes on the data
 
-Colors live in one place — [`src/domain/gap/theme.py`](src/domain/gap/theme.py)
-for the plots and [`.streamlit/config.toml`](.streamlit/config.toml) for the UI
-chrome — so the app and figures stay coherent (Trail / Earthy palette).
+* **Power is stored per kilogram.** The model `P = m·v·(Cr + g·s)` is linear in body
+  mass, so a stored row is valid for any weight and changing yours rescales the whole
+  history instantly instead of invalidating it.
+* **Activities without per-second streams** (manual entries, activities Strava won't
+  serve) still get a feature row from the activity summary, so they count in volume
+  trends. Plots that need full traces skip them *and say how many they skipped*.
+* **The GAP preprocessor reads raw altitude** and discards any 10-second split whose
+  gradient changes sign. Barometric traces are smooth enough for this; with GPS-grade
+  altitude jitter (σ ≈ 0.4 m) it discards nearly every split. Worth revisiting if GAP
+  curves ever come back empty on real data.
 
 ## Running the notebooks
 
@@ -121,12 +158,5 @@ chrome — so the app and figures stay coherent (Trail / Earthy palette).
 jupyter notebook notebook/gap/full-flow.ipynb
 ```
 
-The notebooks expect the same `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` env vars.
-
-## Adding a new usecase
-
-1. If new data shapes are needed, add dataclasses under `src/domain/models/`.
-2. If new domain logic is needed, add it under `src/domain/<topic>/`.
-3. If a new external dependency is needed, add a port under `src/domain/ports/` and an adapter under `src/infrastructure/`.
-4. Create a new file under `src/usecases/` with a class inheriting `UseCase` and implementing `.execute(params)`.
-5. Wire it into a new `app/pages/<N>_<Name>.py` page (and, eventually, an `api/` route).
+They expect `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` and use the domain layer
+directly.
