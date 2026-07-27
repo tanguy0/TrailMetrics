@@ -4,3 +4,14 @@ data/.DS_Store
 # Python bytecode
 __pycache__/
 *.py[cod]
+
+# Secrets and local runtime state — never commit these
+.env
+.env.local
+.streams/
+
+# Next.js (web/.gitignore covers these too; belt and braces)
+web/node_modules/
+web/.next/
+web/next-env.d.ts
+*.tsbuildinfo

@@ -1,0 +1,36 @@
+# Render deployment, as an alternative to Railway. Same Dockerfile either way.
+#
+# Secrets are marked sync:false so Render prompts for them rather than keeping
+# them in this file. Fill them from `python -m api.keys` (see docs/DEPLOYMENT.md).
+
+services:
+  - type: web
+    name: trailmetrics-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter          # 512 MB is tight for an XGBoost fit; move up if it OOMs
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        sync: false        # Supabase connection string (use the pooler, port 6543)
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: activity-streams
+      - key: STRAVA_CLIENT_ID
+        sync: false
+      - key: STRAVA_CLIENT_SECRET
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: SERVICE_TOKEN
+        sync: false        # must match the web app's TRAILMETRICS_SERVICE_TOKEN
+      - key: ENCRYPTION_KEY
+        sync: false        # Fernet key; rotating it forces every athlete to reconnect
+      - key: WEB_APP_URL
+        sync: false        # https://<your-app>.vercel.app
+      - key: LOG_LEVEL
+        value: INFO

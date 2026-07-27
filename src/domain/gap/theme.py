@@ -1,14 +1,14 @@
 """Trail / Earthy color theme shared by the app UI and the GAP plots.
 
 One source of truth for every color used across TrailMetrics, so the
-Streamlit chrome (see ``.streamlit/config.toml``) and the Plotly figures
-stay visually coherent.
+Plotly figures and the web app stay visually coherent — ``web/lib/theme.ts``
+mirrors the values a renderer needs.
 """
 
 # --- Accent palette --------------------------------------------------------
 # Brighter accents used for highlights, gradients and extra contrast. They
 # stay inside the Trail / Earthy family (greens, terracotta, warm amber).
-PRIMARY = "#2E6F40"          # forest green (matches the Streamlit primary)
+PRIMARY = "#2E6F40"          # forest green — the brand colour
 TERRACOTTA = "#C65D3B"       # warm clay
 SUNRISE = "#E8A33D"          # warm amber — the punchy highlight
 MOSS = "#5E9C4E"             # mid green, bridges primary -> amber in gradients
@@ -28,7 +28,7 @@ LOW_INTENSITY = "#7FB069"    # fresh sage
 HIGH_INTENSITY = "#14532B"   # deep pine
 
 # --- Figure chrome ---------------------------------------------------------
-FIGURE_FACE = "#FBF8F3"      # warm off-white (matches Streamlit background)
+FIGURE_FACE = "#FBF8F3"      # warm off-white — the page background
 AXES_FACE = "#FFFDF9"        # slightly lighter than the page for contrast
 GRID = "#CFC3AE"             # muted sand grid lines (a touch darker)
 TEXT = "#241F19"             # deep warm near-black

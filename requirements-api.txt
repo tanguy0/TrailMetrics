@@ -1,0 +1,17 @@
+# Compute API — installed on top of requirements.txt.
+#
+# Deliberately small. This image already carries pandas, scipy, scikit-learn and
+# XGBoost, so every extra dependency costs build time and container size on a
+# platform that charges for both.
+
+fastapi>=0.110
+uvicorn[standard]>=0.27
+# Postgres driver + pool. Sync on purpose: the work here is CPU-bound, so async
+# would block the event loop anyway (see api/main.py).
+psycopg[binary,pool]>=3.1
+# Encrypts Strava tokens at rest.
+cryptography>=42.0
+# Signs the session tokens the web app holds in a cookie.
+PyJWT>=2.8
+# Supabase Storage is reached over its REST API rather than the SDK.
+httpx>=0.27

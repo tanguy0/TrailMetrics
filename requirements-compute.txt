@@ -1,0 +1,13 @@
+# Analytics dependencies — what src/ needs to compute anything.
+#
+# Split out from requirements.txt so the API container installs the scientific
+# stack without Streamlit, Jupyter or matplotlib. Those belong to the local dev
+# environment, not to a service whose image size and cold-start time matter.
+
+numpy>=1.21.0
+pandas>=1.3.0
+scipy>=1.7.0        # Savitzky–Golay smoothing in the signal pipeline
+scikit-learn>=1.0.0 # train/test split for the auto-learning GAP model
+xgboost>=1.5.0      # the auto-learning GAP model itself
+plotly>=5.18.0      # chart IR -> figures (also used by the notebooks)
+stravalib>=0.10.0   # Strava API client

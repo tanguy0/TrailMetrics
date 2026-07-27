@@ -1,22 +1,12 @@
-# Core data science packages
-numpy>=1.21.0
-pandas>=1.3.0
-scipy>=1.7.0  # Savitzky–Golay smoothing for the race comparator
+# Full local development environment: the compute stack, the API, and the notebooks.
+#
+# Deployment uses the two narrower files instead:
+#   requirements-compute.txt  — what src/ needs to compute anything
+#   requirements-api.txt      — the FastAPI service on top of it
 
-# Machine learning
-scikit-learn>=1.0.0
-xgboost>=1.5.0
+-r requirements-compute.txt
+-r requirements-api.txt
 
-# Data visualization
-matplotlib>=3.5.0
-plotly>=5.18.0  # interactive (clickable-legend) charts across the app
-
-# Strava API client
-stravalib>=0.10.0
-
-# Streamlit app
-streamlit>=1.35.0
-
-# Jupyter notebook support (optional, for development)
+# Notebooks (exploratory work under notebook/)
 jupyter>=1.0.0
 ipykernel>=6.0.0

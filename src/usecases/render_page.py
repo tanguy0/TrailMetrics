@@ -1,0 +1,199 @@
+"""Render a page spec: resolve each panel, compute each plot.
+
+The single path from "a page is this document" to "here are the figures". Both the
+built-in example pages and anything the user builds go through it, which is what
+keeps the examples honest — if this path can't express a page, the page can't ship.
+
+What it deliberately does *not* do is draw anything. It returns chart IR, which the
+API hands straight to the browser as JSON — so presentation can change entirely
+without touching this file.
+"""
+
+import json
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
+
+from src.domain.charts.ir import PlotOutput
+from src.domain.dataset.resolved import ResolvedPanelData
+from src.domain.ports.activity_data import ActivityDataSource
+from src.domain.plots import base as plot_registry
+from src.domain.plots.base import EXPENSIVE, PlotDefinition
+from src.domain.spec.pages import PageSpec, PanelSpec, PlotSpec
+from src.domain.spec.params import coerce
+from src.translations import translate
+from src.usecases.base import UseCase
+from src.usecases.resolve_panel_data import ResolvePanelData, ResolvePanelDataInput
+
+
+@dataclass
+class RenderContext:
+    """Everything a render needs beyond the page itself.
+
+    ``data`` says where activities come from (in-memory streams, or a database);
+    the two caches are injected and expected to outlive one render: ``memo`` holds
+    streams, per-second series and fitted models, ``output_cache`` holds finished
+    plot outputs keyed by their inputs. Together they are why changing one
+    parameter re-renders instantly instead of re-crunching a decade of runs.
+    """
+
+    data: Optional[ActivityDataSource] = None
+    lang: str = "en"
+    mass_kg: Optional[float] = None
+    memo: Dict[Any, Any] = field(default_factory=dict)
+    output_cache: Dict[str, PlotOutput] = field(default_factory=dict)
+    # When set, an expensive plot with no cached result is reported as *pending*
+    # instead of computed, so the editor can offer an explicit refresh.
+    defer_expensive: bool = False
+    # Plot ids the user explicitly asked to compute this run.
+    force_compute: set = field(default_factory=set)
+
+
+@dataclass
+class PlotResult:
+    spec: PlotSpec
+    definition: Optional[PlotDefinition]
+    output: PlotOutput = field(default_factory=PlotOutput)
+    # Human-readable failure, shown in place of the plot rather than crashing.
+    error: Optional[str] = None
+    # Expensive and not computed yet — the editor shows a refresh button.
+    pending: bool = False
+    # Parameters after defaults were filled in; the form edits these.
+    params: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def title(self) -> str:
+        return self.spec.title or ""
+
+
+@dataclass
+class PanelResult:
+    spec: PanelSpec
+    resolved: Optional[ResolvedPanelData] = None
+    plots: List[PlotResult] = field(default_factory=list)
+    error: Optional[str] = None
+
+
+class RenderPage(UseCase):
+    """Resolve and compute a whole page, one panel at a time."""
+
+    def __init__(self, resolver: Optional[ResolvePanelData] = None):
+        self.resolver = resolver or ResolvePanelData()
+
+    def execute(self, page: PageSpec, context: RenderContext) -> List[PanelResult]:
+        return [self.render_panel(panel, context) for panel in page.panels]
+
+    def render_panel(self, panel: PanelSpec, context: RenderContext) -> PanelResult:
+        definitions = {
+            plot.id: plot_registry.get(plot.plot_type) for plot in panel.plots
+        }
+        needs_streams = any(
+            d.requires_streams for d in definitions.values() if d is not None
+        )
+
+        if context.data is None:
+            return PanelResult(spec=panel, error="no activity data source configured")
+
+        try:
+            resolved = self.resolver.execute(ResolvePanelDataInput(
+                source=panel.source,
+                data=context.data,
+                lang=context.lang,
+                mass_kg=context.mass_kg,
+                memo=context.memo,
+                require_streams=needs_streams,
+                selection_fallback_label=(
+                    panel.title.strip() or translate("panel.selection", context.lang)
+                ),
+            ))
+        except Exception as error:  # a bad spec must not take the page down
+            return PanelResult(spec=panel, error=str(error))
+
+        results = [
+            self.render_plot(panel, plot, definitions.get(plot.id), resolved, context)
+            for plot in panel.plots
+        ]
+        return PanelResult(spec=panel, resolved=resolved, plots=results)
+
+    def render_plot(
+        self,
+        panel: PanelSpec,
+        plot: PlotSpec,
+        definition: Optional[PlotDefinition],
+        resolved: ResolvedPanelData,
+        context: RenderContext,
+    ) -> PlotResult:
+        if definition is None:
+            return PlotResult(
+                spec=plot, definition=None,
+                error=translate("plot.unknown_type", context.lang).format(
+                    type=plot.plot_type),
+            )
+
+        params = coerce(definition.params, plot.params)
+        result = PlotResult(spec=plot, definition=definition, params=params)
+
+        if resolved.is_empty:
+            result.output = PlotOutput(
+                notes=[translate("panel.no_activities", context.lang)]
+            )
+            return result
+        if definition.requires_weight and context.mass_kg is None:
+            result.output = PlotOutput(
+                notes=[translate("races.weight_needed", context.lang)]
+            )
+            return result
+
+        signature = plot_signature(panel, plot, params, resolved, context)
+        cached = context.output_cache.get(signature)
+        if cached is not None:
+            result.output = cached
+            return result
+
+        deferred = (
+            context.defer_expensive
+            and definition.cost == EXPENSIVE
+            and plot.id not in context.force_compute
+        )
+        if deferred:
+            result.pending = True
+            return result
+
+        try:
+            output = definition.compute(resolved, params)
+        except Exception as error:
+            result.error = f"{type(error).__name__}: {error}"
+            return result
+
+        if resolved.dropped_streamless and definition.requires_streams:
+            output.notes.append(
+                translate("panel.dropped_streamless", context.lang).format(
+                    count=resolved.dropped_streamless)
+            )
+        context.output_cache[signature] = output
+        result.output = output
+        return result
+
+
+def plot_signature(
+    panel: PanelSpec,
+    plot: PlotSpec,
+    params: Dict[str, Any],
+    resolved: ResolvedPanelData,
+    context: RenderContext,
+) -> str:
+    """Stable cache key: everything that can change a plot's output.
+
+    Includes the resolved activity ids rather than the source spec alone, so a
+    freshly loaded history invalidates naturally while re-rendering the same page
+    twice does not recompute anything.
+    """
+    payload = {
+        "plot_type": plot.plot_type,
+        "params": params,
+        "source": panel.source.to_dict(),
+        "activities": sorted(resolved.activity_ids),
+        "groups": [(g.label, sorted(g.activity_ids)) for g in resolved.groups],
+        "mass_kg": context.mass_kg,
+        "lang": context.lang,
+    }
+    return json.dumps(payload, sort_keys=True, default=str)

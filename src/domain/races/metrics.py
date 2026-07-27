@@ -73,6 +73,12 @@ class RaceSeries:
     heartrate: np.ndarray
     power_w: Optional[np.ndarray] = None
     power_to_hr: Optional[np.ndarray] = None
+    # Raw (unadjusted) pace and the traces it derives from. Kept alongside GAP so
+    # a panel can plot any within-activity signal, not just the four the race
+    # comparator originally shipped.
+    pace_s_per_km: Optional[np.ndarray] = None
+    altitude_m: Optional[np.ndarray] = None
+    gradient_pct: Optional[np.ndarray] = None
 
 
 def gradient_adjustment_factor(elevation_gain_m_per_km: np.ndarray) -> np.ndarray:
@@ -103,7 +109,7 @@ def compute_power_series(
     Per-kg power is floored at 0.
 
     Returns ``None`` when ``mass_kg`` is missing — power needs the runner's
-    weight (set on the Home page), so the table/plots stay gated until then.
+    weight, so power-based metrics stay unavailable until it is set.
     """
     if mass_kg is None:
         return None
@@ -222,6 +228,9 @@ def compute_race(
         heartrate=heartrate_smoothed,
         power_w=power,
         power_to_hr=power_to_hr,
+        pace_s_per_km=np.clip(pace_smoothed, _MIN_PACE_S_PER_KM, _MAX_PACE_S_PER_KM),
+        altitude_m=altitude_smoothed[1:],
+        gradient_pct=gradient_pct,
     )
 
     metrics = _summary_metrics(

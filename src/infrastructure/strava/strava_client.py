@@ -37,7 +37,7 @@ class StravaClient(ActivityStreamSource):
     """Strava implementation of the ActivityStreamSource port.
 
     Takes a pre-authenticated stravalib.Client. The OAuth dance stays
-    in the caller (notebook / streamlit app / future API layer).
+    in the caller (the API's token service, or a notebook).
     """
 
     DEFAULT_STREAM_TYPES = ["time", "distance", "altitude", "heartrate"]
@@ -118,6 +118,27 @@ class StravaClient(ActivityStreamSource):
                 progress_callback(i + 1, total)
             time_module.sleep(self.throttle_seconds)
         return streams
+
+    def fetch_activity(
+        self, activity: dict, resolution: str = "high"
+    ) -> ActivityStream:
+        """Streams for one listed activity, degrading to a summary-only stream.
+
+        Takes a dict from :meth:`list_activities`. Strava won't serve streams for
+        manual entries and occasionally fails on old ones; those still carry usable
+        activity-level totals, so they come back streamless rather than lost.
+        """
+        activity_id = int(activity["id"])
+        try:
+            raw = self._fetch_raw_stream(activity_id, resolution=resolution)
+            return self._to_activity_stream(
+                activity_id,
+                activity["sport_type"],
+                raw,
+                start_date=activity.get("start_date"),
+            )
+        except Exception:
+            return self._summary_only_stream(activity)
 
     def fetch_single_stream(self, activity_id: int, resolution: str = "high") -> ActivityStream:
         stream = self._fetch_raw_stream(activity_id, resolution=resolution)
