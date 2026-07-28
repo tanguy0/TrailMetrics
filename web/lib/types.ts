@@ -157,6 +157,8 @@ export interface Axis {
   suffix: string | null;
   range: number[] | null;
   dtick: number | null;
+  /** Tints the axis to its series; set on dual-axis charts. */
+  color: string | null;
 }
 
 export interface Trace {
@@ -165,6 +167,8 @@ export interface Trace {
   y: (number | null)[];
   kind: TraceKind;
   color: string | null;
+  /** Which y-axis this series is measured against; only used when `y2_axis` is set. */
+  axis: "y" | "y2";
   dash: string;
   width: number;
   markers: boolean;
@@ -183,6 +187,12 @@ export interface ChartData {
   title: string;
   x_axis: Axis;
   y_axis: Axis;
+  /**
+   * A right-hand axis, present only when the chart carries two units at once
+   * (distance and climb per week, heart rate against pace). `null` keeps the
+   * figure single-axis, which is the normal case.
+   */
+  y2_axis: Axis | null;
   traces: Trace[];
   height: number;
   hover_mode: string;
@@ -257,6 +267,11 @@ export interface Athlete {
   display_name: string;
   profile_url: string | null;
   weight_kg: number | null;
+  // Self-reported: Strava's API carries neither. `age` is derived from
+  // `birthdate` server-side so every client agrees on it.
+  birthdate: string | null; // ISO date
+  height_cm: number | null;
+  age: number | null;
   activity_count: number;
   sport_types: string[];
   oldest_activity: string | null;
@@ -272,4 +287,79 @@ export interface ActivitySummary {
   distance_m: number;
   moving_s: number;
   label: string;
+}
+
+// --- Home screen -----------------------------------------------------------
+
+/** One activity as the Home widgets show it. Raw units; the browser formats. */
+export interface ActivityCard {
+  activity_id: number;
+  date: string | null;
+  sport_type: string;
+  has_streams: boolean;
+  distance_m: number | null;
+  elevation_gain_m: number | null;
+  moving_s: number | null;
+  avg_hr: number | null;
+}
+
+export interface HomeProfile {
+  activity_count: number;
+  oldest_activity: string | null;
+  newest_activity: string | null;
+  total_distance_m: number;
+  total_elevation_gain_m: number;
+  total_moving_s: number;
+  furthest_activity: ActivityCard | null;
+  longest_activity: ActivityCard | null;
+}
+
+export interface HomeHealth {
+  age: number | null;
+  birthdate: string | null;
+  weight_kg: number | null;
+  height_cm: number | null;
+  experience_years: number | null;
+  first_activity: string | null;
+}
+
+/** Fastest stored effort at one distance. Absent entirely when never covered. */
+export interface HomeRecord {
+  label: string;
+  seconds: number;
+  set_on: string | null;
+  activity_id: number;
+}
+
+export interface HomeSummary {
+  profile: HomeProfile;
+  health: HomeHealth;
+  records: HomeRecord[];
+  last_activity: ActivityCard | null;
+}
+
+/**
+ * The latest activity's route.
+ *
+ * `source` says where it came from: `stored` from the database, `strava` fetched
+ * just now and cached, `none` when the activity has no route (treadmill, manual
+ * entry), `unavailable` when Strava could not be reached.
+ */
+export interface RouteResult {
+  activity_id: number | null;
+  points: [number, number][];
+  source: "stored" | "strava" | "none" | "unavailable";
+}
+
+// --- UI strings ------------------------------------------------------------
+
+/**
+ * The app's own wording, translated server-side and keyed without the `ui.`
+ * prefix — `strings["nav.home"]`. There is no translation table in the browser;
+ * adding a language in `src/translations.py` covers the whole product.
+ */
+export interface UiStrings {
+  lang: string;
+  languages: Record<string, string>;
+  strings: Record<string, string>;
 }

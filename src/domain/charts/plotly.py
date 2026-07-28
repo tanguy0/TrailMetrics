@@ -46,6 +46,20 @@ def render_chart(chart: ChartData) -> go.Figure:
 
     _apply_axis(fig.update_xaxes, chart.x_axis)
     _apply_axis(fig.update_yaxes, chart.y_axis)
+    if chart.y2_axis is not None:
+        # Overlaid on the left axis and drawn on the right. `showgrid=False` is not
+        # cosmetic: two sets of gridlines at different intervals produce a mesh that
+        # makes both scales harder to read than either alone.
+        secondary = {
+            "title": {"text": _axis_title(chart.y2_axis)},
+            "overlaying": "y",
+            "side": "right",
+            "showgrid": False,
+            "zeroline": False,
+        }
+        # Axis kwargs win: they carry the coloured title when one is set.
+        secondary.update(_axis_kwargs(chart.y2_axis))
+        fig.update_layout(yaxis2=secondary)
     if chart.hover_mode:
         fig.update_layout(hovermode=chart.hover_mode)
     if any(t.kind is TraceKind.BAR for t in chart.traces):
@@ -61,6 +75,17 @@ def _axis_title(axis: Axis) -> str:
 
 def _apply_axis(update, axis: Axis) -> None:
     """Push one IR axis onto a Plotly axis (already themed by ``base_figure``)."""
+    kwargs = _axis_kwargs(axis)
+    if kwargs:
+        update(**kwargs)
+
+
+def _axis_kwargs(axis: Axis) -> dict:
+    """One IR axis as Plotly axis properties, independent of where they are applied.
+
+    Shared by the left axis (via ``update_yaxes``) and the overlaid right axis (which
+    has to be built inside ``layout.yaxis2``, since ``update_yaxes`` would hit both).
+    """
     kwargs: dict = {}
     if axis.kind is AxisKind.DURATION:
         # Durations ride on a date axis so ticks read as clock times.
@@ -83,8 +108,10 @@ def _apply_axis(update, axis: Axis) -> None:
         kwargs["ticksuffix"] = axis.suffix
     if axis.dtick is not None:
         kwargs["dtick"] = axis.dtick
-    if kwargs:
-        update(**kwargs)
+    if axis.color:
+        kwargs["title"] = dict(text=axis.title or "", font=dict(color=axis.color))
+        kwargs["tickfont"] = dict(color=axis.color)
+    return kwargs
 
 
 def _encode(values: Sequence[Any], axis: Axis) -> Any:
@@ -102,8 +129,9 @@ def _float_or_nan(value: Any) -> float:
 
 
 def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> None:
+    y_axis = _y_axis_for(trace, chart)
     x = _encode(trace.x, chart.x_axis)
-    y = _encode(trace.y, chart.y_axis)
+    y = _encode(trace.y, y_axis)
 
     common = dict(
         x=x,
@@ -113,6 +141,8 @@ def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> No
         showlegend=trace.show_legend,
         opacity=trace.opacity,
     )
+    if trace.axis == "y2" and chart.y2_axis is not None:
+        common["yaxis"] = "y2"
     if trace.hover_text is not None:
         common["customdata"] = list(trace.hover_text)
     if trace.hover_template:
@@ -148,6 +178,13 @@ def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> No
     fig.add_trace(go.Scatter(**scatter))
 
 
+def _y_axis_for(trace: Trace, chart: ChartData) -> Axis:
+    """The axis a trace is measured against — its values are encoded for that axis."""
+    if trace.axis == "y2" and chart.y2_axis is not None:
+        return chart.y2_axis
+    return chart.y_axis
+
+
 def _add_band(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> None:
     """Draw the translucent ±band ribbon behind a line, if the trace has one."""
     if trace.band_upper is None or trace.band_lower is None:
@@ -159,20 +196,21 @@ def _add_band(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> Non
 
     x = list(trace.x)
     ring_x = _encode(x + x[::-1], chart.x_axis)
-    ring_y = _encode(upper + lower[::-1], chart.y_axis)
-    fig.add_trace(
-        go.Scatter(
-            x=ring_x,
-            y=ring_y,
-            fill="toself",
-            fillcolor=rgba(color, _BAND_ALPHA),
-            line=dict(width=0),
-            hoverinfo="skip",
-            showlegend=False,
-            legendgroup=trace.legend_group or trace.name,
-            name=trace.name,
-        )
+    ring_y = _encode(upper + lower[::-1], _y_axis_for(trace, chart))
+    band = dict(
+        x=ring_x,
+        y=ring_y,
+        fill="toself",
+        fillcolor=rgba(color, _BAND_ALPHA),
+        line=dict(width=0),
+        hoverinfo="skip",
+        showlegend=False,
+        legendgroup=trace.legend_group or trace.name,
+        name=trace.name,
     )
+    if trace.axis == "y2" and chart.y2_axis is not None:
+        band["yaxis"] = "y2"
+    fig.add_trace(go.Scatter(**band))
 
 
 def render_charts(charts: List[ChartData]) -> List[go.Figure]:

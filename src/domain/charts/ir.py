@@ -61,6 +61,9 @@ class Axis:
     range: Optional[List[float]] = None
     # Force a tick every ``dtick`` units (used by the elapsed-months overlay).
     dtick: Optional[float] = None
+    # Tint the axis title and ticks to match the series measured against it. Set on
+    # dual-axis charts, where "which axis is this line on?" is otherwise a guess.
+    color: Optional[str] = None
 
 
 @dataclass
@@ -72,6 +75,9 @@ class Trace:
     y: List[Any] = field(default_factory=list)
     kind: TraceKind = TraceKind.LINE
     color: Optional[str] = None
+    # Which y-axis this series is measured against: "y" (left) or "y2" (right).
+    # Only meaningful when the chart defines a ``y2_axis``.
+    axis: str = "y"
     # matplotlib-style code ("-", "--", "-.", ":"); mapped to a Plotly dash.
     dash: str = "-"
     width: float = 2.4
@@ -93,11 +99,25 @@ class Trace:
 
 @dataclass
 class ChartData:
-    """One figure: axes plus the traces drawn on them."""
+    """One figure: axes plus the traces drawn on them.
+
+    ``y2_axis`` opts the figure into a **second, right-hand y-axis**, for the case
+    where one chart has to carry two quantities in different units — distance and
+    climb per week, heart rate against pace within a run. Traces then choose their
+    axis via :attr:`Trace.axis`.
+
+    Use it only when the comparison is the point. Two scales mean the reader cannot
+    trust where the series cross — that crossing is an artefact of how each axis
+    happens to be scaled, not a fact about the data. Where the quantities share a
+    unit, put them on one axis; where the shapes matter more than the relationship,
+    two charts are honest and a second axis is not.
+    """
 
     title: str = ""
     x_axis: Axis = field(default_factory=Axis)
     y_axis: Axis = field(default_factory=Axis)
+    # Present only for dual-unit charts; ``None`` leaves the figure single-axis.
+    y2_axis: Optional[Axis] = None
     traces: List[Trace] = field(default_factory=list)
     height: int = 460
     # "closest" | "x unified" — the latter suits stacked areas.

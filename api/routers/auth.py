@@ -15,6 +15,7 @@ any CORS credential juggling.
 
 import threading
 import time
+from datetime import date
 from typing import Dict, Optional, Tuple
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
@@ -81,9 +82,21 @@ class ExchangeRequest(BaseModel):
     code: str = Field(min_length=1, max_length=500)
 
 
-class WeightUpdate(BaseModel):
+class ProfileUpdate(BaseModel):
+    """A partial update of the athlete's own body fields.
+
+    Every field is optional *and* nullable, which are different things here: an
+    absent key leaves the stored value alone, an explicit ``null`` clears it. That
+    distinction is what lets one endpoint back three independently-edited widgets
+    without them overwriting each other.
+    """
+
     # Wide but sane bounds; power is unmodellable from a nonsense weight.
     weight_kg: Optional[float] = Field(default=None, ge=25, le=250)
+    birthdate: Optional[date] = None
+    height_cm: Optional[float] = Field(default=None, ge=100, le=250)
+
+    model_config = {"extra": "forbid"}
 
 
 @router.post("/strava/url")
@@ -139,18 +152,33 @@ def me(athlete: Athlete = Depends(current_athlete), lang: str = Depends(language
 
 @router.patch("/me")
 def update_me(
-    payload: WeightUpdate = Body(...),
+    payload: ProfileUpdate = Body(...),
     athlete: Athlete = Depends(current_athlete),
 ) -> dict:
-    """Set the body weight that unlocks the power metrics.
+    """Update the athlete's self-reported body fields.
 
-    Stored power is per-kilogram, so this takes effect immediately across the whole
-    history — no recomputation. The cached plot outputs do have to go, since their
-    numbers were scaled with the old weight.
+    Weight is the one with computational consequences: stored power is
+    per-kilogram, so a new weight takes effect across the whole history with no
+    recomputation — but the cached plot outputs have to go, since their numbers were
+    scaled with the old value. Birthdate and height feed no metric, so they leave
+    the cache alone.
     """
-    get_athlete_repository().set_weight(athlete.id, payload.weight_kg)
-    invalidate_caches(athlete.id)
-    athlete.weight_kg = payload.weight_kg
+    athletes = get_athlete_repository()
+    touched = payload.model_dump(exclude_unset=True)
+
+    if "weight_kg" in touched:
+        athletes.set_weight(athlete.id, payload.weight_kg)
+        athlete.weight_kg = payload.weight_kg
+        invalidate_caches(athlete.id)
+
+    if "birthdate" in touched or "height_cm" in touched:
+        # A partial update must not blank the field the client didn't mention.
+        birthdate = payload.birthdate if "birthdate" in touched else athlete.birthdate
+        height_cm = payload.height_cm if "height_cm" in touched else athlete.height_cm
+        athletes.set_body(athlete.id, birthdate, height_cm)
+        athlete.birthdate = birthdate
+        athlete.height_cm = height_cm
+
     return _me_payload(athlete)
 
 

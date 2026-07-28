@@ -61,6 +61,11 @@ function axisLayout(axis: Axis): Record<string, unknown> {
 
   if (axis.suffix) layout.ticksuffix = axis.suffix;
   if (axis.dtick != null) layout.dtick = axis.dtick;
+  // Tints the axis to its series, so a dual-axis chart says which line it measures.
+  if (axis.color) {
+    layout.title = { text: axis.title, font: { color: axis.color } };
+    layout.tickfont = { color: axis.color };
+  }
   return layout;
 }
 
@@ -69,16 +74,19 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
 
   chart.traces.forEach((trace, index) => {
     const color = trace.color || curvePalette[index % curvePalette.length];
+    // A trace's values are encoded against the axis it is actually measured on.
+    const onSecondary = trace.axis === "y2" && Boolean(chart.y2_axis);
+    const yAxis = onSecondary ? chart.y2_axis! : chart.y_axis;
     const x = encode(trace.x, chart.x_axis);
-    const y = encode(trace.y, chart.y_axis);
+    const y = encode(trace.y, yAxis);
 
     // The ±band goes first so the line draws on top of its own ribbon.
     if (trace.band_upper && trace.band_lower) {
       out.push({
         x: [...encode(trace.x, chart.x_axis), ...encode([...trace.x].reverse(), chart.x_axis)],
         y: [
-          ...encode(trace.band_upper, chart.y_axis),
-          ...encode([...trace.band_lower].reverse(), chart.y_axis),
+          ...encode(trace.band_upper, yAxis),
+          ...encode([...trace.band_lower].reverse(), yAxis),
         ],
         type: "scatter",
         fill: "toself",
@@ -88,6 +96,7 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
         showlegend: false,
         legendgroup: trace.legend_group || trace.name,
         name: trace.name,
+        ...(onSecondary ? { yaxis: "y2" } : {}),
       });
     }
 
@@ -98,6 +107,7 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
       legendgroup: trace.legend_group || trace.name,
       showlegend: trace.show_legend,
       opacity: trace.opacity,
+      ...(onSecondary ? { yaxis: "y2" } : {}),
     };
     if (trace.hover_text) common.customdata = trace.hover_text;
     if (trace.hover_template) common.hovertemplate = trace.hover_template;
@@ -145,12 +155,27 @@ function layoutFor(chart: ChartData): Record<string, unknown> {
       borderwidth: 1,
       font: { color: theme.text },
     },
-    margin: { l: 64, r: 20, t: 48, b: 48 },
+    // A right-hand axis needs room for its own ticks and title.
+    margin: { l: 64, r: chart.y2_axis ? 64 : 20, t: 48, b: 48 },
     height: chart.height,
-    hovermode: chart.hover_mode || "closest",
+    // On a dual-axis chart the shared x-value is the only thing the two series
+    // genuinely have in common, so read them together rather than one at a time.
+    hovermode: chart.y2_axis ? "x unified" : chart.hover_mode || "closest",
     hoverlabel: { bgcolor: theme.axesFace, font: { color: theme.text } },
     xaxis: axisLayout(chart.x_axis),
     yaxis: axisLayout(chart.y_axis),
+    ...(chart.y2_axis
+      ? {
+          yaxis2: {
+            ...axisLayout(chart.y2_axis),
+            overlaying: "y",
+            side: "right",
+            // One set of gridlines only: two at different intervals make a mesh
+            // that is harder to read than either scale alone.
+            showgrid: false,
+          },
+        }
+      : {}),
     ...(hasBars ? { barmode: stacked ? "stack" : "group" } : {}),
   };
 }

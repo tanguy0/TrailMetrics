@@ -21,6 +21,29 @@
 
   --radius: 10px;
   --gap: 1rem;
+
+  /*
+   * Widget accents. Four hues drawn from the chart palette above, so a tile and a
+   * trace of the same colour mean the same thing across the product.
+   *
+   * They are decoration, not an encoding: every tile carries a text label, so no
+   * meaning is lost when hue is unavailable. That label is also what licenses the
+   * one pair the palette validator flags — forest against terracotta separates
+   * poorly for protanopia, but they are the app's two brand colours and nothing
+   * here has to be decoded from hue alone.
+   *
+   * The `-tint` values are the accent at 10% over `--surface`, precomputed rather
+   * than composited so contrast is a fixed, checked number: body ink lands at
+   * ~14:1 on every tint and the muted labels at ~5.2:1.
+   */
+  --tone-forest: #2e6f40;
+  --tone-forest-tint: #eaefe7;
+  --tone-terracotta: #c65d3b;
+  --tone-terracotta-tint: #f9ede6;
+  --tone-blue: #3a6ea5;
+  --tone-blue-tint: #ebeff1;
+  --tone-plum: #8b3e8f;
+  --tone-plum-tint: #f3eaee;
 }
 
 * { box-sizing: border-box; }
@@ -52,18 +75,89 @@ h4 { font-size: 0.95rem; margin: 0 0 0.35rem; }
 .muted { color: var(--muted); font-size: 0.875rem; margin: 0.25rem 0; }
 .lede { font-size: 1.05rem; max-width: 60ch; }
 
-/* --- Layout --------------------------------------------------------------- */
+/* --- Shell & sidebar ------------------------------------------------------ */
 
-.topbar {
+.shell { display: flex; min-height: 100vh; }
+.shell__content { flex: 1; min-width: 0; }
+
+.sidebar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.65rem 1.25rem;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 15rem;
+  flex-shrink: 0;
+  padding: 1.1rem 0.9rem;
   background: var(--surface);
-  border-bottom: 1px solid var(--spine);
+  border-right: 1px solid var(--spine);
+  /* The rail stays put while a long page scrolls beside it. */
+  position: sticky;
+  top: 0;
+  height: 100vh;
 }
-.topbar__brand { font-weight: 700; text-decoration: none; color: var(--text); }
-.topbar__links { display: flex; gap: 1rem; font-size: 0.875rem; }
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 800;
+  font-size: 1.05rem;
+  padding: 0 0.35rem;
+}
+.sidebar__brand-mark { font-size: 1.35rem; }
+.sidebar__brand-name {
+  border-bottom: 3px solid var(--sunrise);
+  padding-bottom: 0.1rem;
+}
+
+.sidebar__nav { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.3rem; }
+.sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-left: 3px solid transparent;
+}
+.sidebar__link:hover { background: var(--surface-alt); }
+.sidebar__link--active {
+  background: var(--tone-forest-tint);
+  border-left-color: var(--primary);
+  color: var(--primary);
+}
+.sidebar__icon { font-size: 1.05rem; }
+
+.sidebar__signout {
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 0 0.6rem;
+}
+.sidebar__signout:hover { color: var(--danger); }
+
+@media (max-width: 720px) {
+  .shell { flex-direction: column; }
+  .sidebar {
+    width: auto;
+    height: auto;
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    border-right: none;
+    border-bottom: 1px solid var(--spine);
+  }
+  .sidebar__nav { display: flex; }
+  .sidebar__signout { margin-top: 0; margin-left: auto; }
+}
+
+/* --- Layout --------------------------------------------------------------- */
 
 .container { max-width: 1280px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
 .container--narrow { max-width: 720px; }
@@ -315,21 +409,275 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
 .filters summary { cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--primary); }
 .filters__body { display: flex; gap: 1.25rem; flex-wrap: wrap; padding-top: 0.5rem; }
 
-/* --- Pages screen --------------------------------------------------------- */
+/* --- Home screen ---------------------------------------------------------- */
 
-.stats { display: flex; gap: 0.75rem; flex-wrap: wrap; margin: 1rem 0; }
-.stat {
+.hero {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  margin-bottom: 1.25rem;
+}
+.hero__name {
+  font-size: 1.9rem;
+  border-bottom-width: 5px;
+}
+.hero__meta { color: var(--muted); font-size: 0.9rem; margin: 0.4rem 0 0; }
+.hero__avatar {
+  width: 3.75rem;
+  height: 3.75rem;
+  border-radius: 50%;
+  margin-left: auto;
+  border: 3px solid var(--sunrise);
+  object-fit: cover;
+}
+
+/* Profile beside Health. Everything below them runs the full width. */
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .home-grid { grid-template-columns: 1fr; }
+}
+
+.card-block {
   background: var(--surface);
   border: 1px solid var(--spine);
   border-radius: var(--radius);
-  padding: 0.5rem 0.85rem;
-  min-width: 8rem;
+  padding: 1rem 1.1rem 1.15rem;
+}
+/* A coloured spine per card, so the two columns read as different things. */
+.card-block--profile { border-top: 4px solid var(--tone-forest); }
+.card-block--health { border-top: 4px solid var(--tone-plum); }
+.card-block--records { border-top: 4px solid var(--sunrise); margin-bottom: var(--gap); }
+.card-block--sync { border-top: 4px solid var(--tone-blue); margin-bottom: var(--gap); }
+
+.card-block__title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 0.75rem;
+}
+.card-block__subtitle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  color: var(--text);
+  margin: 1.1rem 0 0.5rem;
+}
+.card-block__lede { color: var(--muted); font-size: 0.85rem; margin: -0.5rem 0 0.75rem; }
+
+/* --- Stat tiles ----------------------------------------------------------- */
+
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.6rem;
+}
+.tile-grid--two { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+
+.tile {
   display: flex;
   flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 8px;
+  /* Accent on the left edge; the tint carries the hue without touching the text. */
+  border-left: 4px solid var(--spine);
+  background: var(--surface-alt);
+  min-width: 0;
 }
-.stat__label { font-size: 0.75rem; color: var(--terracotta); font-weight: 600; }
-.stat__value { font-size: 1.2rem; font-weight: 800; color: var(--primary); }
-.stat__input { width: 6rem; margin-top: 0.15rem; }
+.tile__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+/* Values stay in ink: hue is the tile's accent, never the number itself. */
+.tile__value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.tile__unit { font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-left: 0.2rem; }
+.tile__footnote { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; }
+.tile__saving { font-weight: 500; text-transform: none; letter-spacing: 0; }
+.tile__unset { font-size: 0.95rem; font-weight: 600; color: var(--muted); }
+
+.tile--forest { border-left-color: var(--tone-forest); background: var(--tone-forest-tint); }
+.tile--moss { border-left-color: var(--moss); background: var(--tone-forest-tint); }
+.tile--terracotta {
+  border-left-color: var(--tone-terracotta);
+  background: var(--tone-terracotta-tint);
+}
+.tile--sunrise { border-left-color: var(--sunrise); background: var(--tone-terracotta-tint); }
+.tile--amber { border-left-color: var(--sunrise); background: var(--tone-terracotta-tint); }
+.tile--slate { border-left-color: var(--tone-blue); background: var(--tone-blue-tint); }
+.tile--teal { border-left-color: var(--tone-blue); background: var(--tone-blue-tint); }
+.tile--plum { border-left-color: var(--tone-plum); background: var(--tone-plum-tint); }
+.tile--rose { border-left-color: var(--tone-plum); background: var(--tone-plum-tint); }
+
+.tile--editable { cursor: text; }
+.tile__value--button {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  /* Signals "editable" without a permanent input box in every tile. */
+  border-bottom: 1px dashed var(--spine);
+  align-self: flex-start;
+}
+.tile__value--button:hover { border-bottom-color: var(--primary); }
+.tile__input { width: 100%; margin-top: 0.15rem; font-weight: 700; }
+
+/* --- Records -------------------------------------------------------------- */
+
+/* One tile per distance, across the full width — the numbers people look for. */
+.record-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.6rem;
+}
+.record {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: var(--tone-terracotta-tint);
+  border-left: 4px solid var(--sunrise);
+}
+.record__distance {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+.record__time {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.record__date { font-size: 0.7rem; color: var(--muted); }
+
+/* --- "Your data": import, latest activity, recent history (stacked) -------- */
+
+.data-stack {
+  display: grid;
+  gap: 1.1rem;
+  margin-top: 1rem;
+}
+.data-block {
+  border-top: 1px solid var(--surface-alt);
+  padding-top: 0.9rem;
+  min-width: 0;
+}
+.data-block__title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 0.6rem;
+}
+.data-block__lede {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: -0.35rem 0 0.75rem;
+  max-width: 80ch;
+}
+
+/* --- Route map ------------------------------------------------------------ */
+
+.route-map {
+  width: 100%;
+  margin-top: 0.85rem;
+  border: 1px solid var(--spine);
+  border-radius: 8px;
+  /* Leaflet paints tiles to the panel edges; clip them to the rounded corners. */
+  overflow: hidden;
+  /* Above the page background but below any dropdown. */
+  z-index: 0;
+}
+/* Leaflet's own chrome, brought into the app's palette. */
+.route-map .leaflet-container { background: var(--surface-alt); font: inherit; }
+.route-map .leaflet-control-attribution {
+  background: rgba(255, 253, 249, 0.82);
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+.route-map .leaflet-control-attribution a { color: var(--primary); }
+
+/* --- Last activity -------------------------------------------------------- */
+
+.last-activity__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.6rem;
+}
+.last-activity__sport {
+  font-weight: 700;
+  background: var(--tone-terracotta-tint);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.85rem;
+}
+.last-activity__date { font-size: 0.8rem; color: var(--muted); }
+
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+}
+.metric { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.metric__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+.metric__value {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Chart frame ---------------------------------------------------------- */
+
+.chart-frame {
+  border: 1px solid var(--surface-alt);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  background: var(--bg);
+  min-width: 0;
+}
+.chart-frame .chart__canvas { min-height: 320px; }
 
 .sync { margin: 1rem 0; }
 .sync__actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
@@ -372,3 +720,82 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   margin: 2rem 0;
 }
 .feature-list p { font-size: 0.875rem; color: var(--muted); }
+
+/* --- My Pages: the explainer ---------------------------------------------- */
+
+.explainer {
+  background: var(--surface);
+  border: 1px solid var(--spine);
+  border-top: 4px solid var(--tone-blue);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem 1.2rem;
+  margin: 1.25rem 0 2rem;
+}
+.explainer__title { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.35rem; }
+.explainer__lede { margin: 0 0 0.9rem; max-width: 70ch; color: var(--muted); }
+
+.step-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.7rem;
+}
+.step {
+  padding: 0.75rem 0.85rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--spine);
+  background: var(--surface-alt);
+}
+.step--forest { border-left-color: var(--tone-forest); background: var(--tone-forest-tint); }
+.step--terracotta {
+  border-left-color: var(--tone-terracotta);
+  background: var(--tone-terracotta-tint);
+}
+.step--sunrise { border-left-color: var(--sunrise); background: var(--tone-terracotta-tint); }
+.step__icon { font-size: 1.3rem; }
+.step__title { font-size: 0.92rem; font-weight: 700; color: var(--text); margin: 0.2rem 0 0.25rem; }
+.step__body { font-size: 0.82rem; color: var(--muted); margin: 0; }
+
+/* --- My Pages: the New page button ---------------------------------------- */
+
+.new-page {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 1.1rem 1.25rem;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  background: linear-gradient(
+    100deg,
+    var(--tone-forest-tint) 0%,
+    var(--surface) 55%,
+    var(--tone-terracotta-tint) 100%
+  );
+  border: 2px dashed var(--primary);
+  border-radius: var(--radius);
+}
+.new-page:hover {
+  border-style: solid;
+  box-shadow: 0 2px 10px rgba(46, 111, 64, 0.16);
+}
+.new-page:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+
+.new-page__plus {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.new-page__text { display: flex; flex-direction: column; gap: 0.1rem; }
+.new-page__label { font-size: 1.1rem; font-weight: 800; color: var(--primary); }
+.new-page__hint { font-size: 0.82rem; color: var(--muted); }

@@ -24,6 +24,26 @@ def _to_float(value) -> Optional[float]:
         return None
 
 
+def _summary_polyline(act) -> Optional[str]:
+    """The encoded route off a Strava activity, tolerating every shape it takes.
+
+    ``map`` is absent on manual entries, and stravalib has moved between attribute
+    and dict representations across versions — so this reads defensively rather
+    than assuming one.
+    """
+    activity_map = getattr(act, "map", None)
+    if activity_map is None:
+        return None
+    for name in ("summary_polyline", "polyline"):
+        value = (
+            activity_map.get(name) if isinstance(activity_map, dict)
+            else getattr(activity_map, name, None)
+        )
+        if value:
+            return str(value)
+    return None
+
+
 def _to_seconds(value) -> Optional[float]:
     """Coerce a duration field (``timedelta`` or number of seconds) to seconds."""
     if value is None:
@@ -71,6 +91,9 @@ class StravaClient(ActivityStreamSource):
                     "elevation_gain_m": _to_float(
                         getattr(act, "total_elevation_gain", None)
                     ),
+                    # The route, already on the summary — no extra request. Absent
+                    # for indoor activities and for manual entries.
+                    "summary_polyline": _summary_polyline(act),
                 }
             )
         return results
@@ -118,6 +141,15 @@ class StravaClient(ActivityStreamSource):
                 progress_callback(i + 1, total)
             time_module.sleep(self.throttle_seconds)
         return streams
+
+    def fetch_route_polyline(self, activity_id: int) -> Optional[str]:
+        """The encoded route for one activity, by id.
+
+        One request, used to fill in a route for an activity imported before routes
+        were stored — rather than re-importing a whole history to backfill them.
+        """
+        activity = self.client.get_activity(activity_id)
+        return _summary_polyline(activity)
 
     def fetch_activity(
         self, activity: dict, resolution: str = "high"

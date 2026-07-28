@@ -33,7 +33,7 @@ from src.domain.dataset.binning import (
     max_window_months,
     to_date,
 )
-from src.domain.dataset.metrics import metric_or_default
+from src.domain.dataset.metrics import NO_METRIC, metric_or_default, optional_metric
 from src.domain.dataset.resolved import DataLevel, ResolvedGroup, ResolvedPanelData
 from src.domain.plots.base import (
     PlotDefinition,
@@ -64,6 +64,15 @@ _CHART_KINDS = {
     "area": TraceKind.AREA,
 }
 
+# Dual-metric charts encode the *metric* in colour (see `_metric_traces`), so the
+# two need to be unmistakable and to match their axis tints. Both come from the
+# shared curve palette, so they agree with every other figure in the app.
+_PRIMARY_COLOR = series_color(0)
+_SECONDARY_COLOR = series_color(1)
+
+# Group identity moves to the dash pattern when colour is spent on the metric.
+_GROUP_DASHES = ["-", "--", "-.", ":"]
+
 
 PARAMS: List[ParamSpec] = [
     choice("metric", "param.metric", "distance_km",
@@ -72,6 +81,22 @@ PARAMS: List[ParamSpec] = [
     choice("aggregation", "param.aggregation", "sum",
            choices_from="aggregations",
            visible_when=when.metric_allows_agg("metric")),
+    # A second metric on the same figure, against its own right-hand axis. Both
+    # sub-controls stay hidden until one is actually chosen.
+    choice("metric2", "param.metric2", NO_METRIC,
+           choices_from="activity_metrics_optional", help_key="param.metric2.help"),
+    choice("aggregation2", "param.aggregation2", "sum",
+           choices_from="aggregations",
+           visible_when=when.all_of(
+               when.ne("metric2", NO_METRIC),
+               when.metric_allows_agg("metric2"),
+           )),
+    choice("chart2", "param.chart2", "line", choices=[
+        Choice("line", "param.chart.line"),
+        Choice("step", "param.chart.step"),
+        Choice("bar", "param.chart.bar"),
+        Choice("area", "param.chart.area"),
+    ], visible_when=when.ne("metric2", NO_METRIC)),
     choice("granularity", "param.granularity", "week", choices_from="granularities"),
     choice("x_mode", "param.x_mode", "calendar", choices=[
         Choice("calendar", "param.x_mode.calendar"),
@@ -119,8 +144,97 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
         cumulative = False
         notes.append(translate("plot.trend.cumulative_ignored", lang))
 
-    traces: List[Trace] = []
     split_by_sport = (params.get("split_by") or "none") == "sport_type"
+    smoothing = dict(
+        rolling_window=int(params.get("smooth_rolling") or 0) or None,
+        savgol_window=int(params.get("smooth_savgol") or 0) or None,
+    )
+
+    # Decided before drawing anything: the second metric changes how the *first*
+    # one is encoded, so it cannot be an afterthought.
+    metric2 = optional_metric(params.get("metric2"))
+    dual = metric2 is not None and metric2.key != metric.key
+
+    traces = _metric_traces(
+        resolved, metric, aggregation, granularity, x_mode, chart_kind,
+        cumulative=cumulative,
+        split_by_sport=split_by_sport,
+        markers=bool(params.get("markers", True)),
+        smoothing=smoothing,
+        lang=lang,
+        axis="y",
+        unify_color=_PRIMARY_COLOR if dual else None,
+    )
+
+    # The optional second metric, drawn against its own right-hand axis.
+    y2_axis = None
+    if dual:
+        aggregation2 = params.get("aggregation2") or metric2.default_agg
+        if metric2.is_fixed_agg:
+            aggregation2 = metric2.default_agg
+        chart_kind2 = _CHART_KINDS.get(params.get("chart2") or "line", TraceKind.LINE)
+
+        traces += _metric_traces(
+            resolved, metric2, aggregation2, granularity, x_mode, chart_kind2,
+            cumulative=cumulative,
+            split_by_sport=split_by_sport,
+            markers=bool(params.get("markers", True)),
+            smoothing=smoothing,
+            lang=lang,
+            axis="y2",
+            unify_color=_SECONDARY_COLOR,
+        )
+        y2_axis = metric_axis(metric2, lang)
+        y2_axis.color = _SECONDARY_COLOR
+
+    left_axis = metric_axis(metric, lang)
+    if dual:
+        # Only tint when there is a second axis to tell it apart from.
+        left_axis.color = _PRIMARY_COLOR
+
+    chart = ChartData(
+        title=_title(metric, lang, cumulative) if not dual
+        else f"{_title(metric, lang, cumulative)} · {metric_label(metric2, lang)}",
+        x_axis=_x_axis(resolved, x_mode, lang),
+        y_axis=left_axis,
+        y2_axis=y2_axis,
+        traces=traces,
+        caption=_caption(metric, aggregation, granularity, lang),
+    )
+    output = PlotOutput(charts=[chart], notes=notes)
+    if params.get("show_totals"):
+        output.tables.append(_totals_table(resolved, metric, aggregation, lang))
+    return output
+
+
+def _metric_traces(
+    resolved: ResolvedPanelData,
+    metric,
+    aggregation: str,
+    granularity: str,
+    x_mode: str,
+    chart_kind: TraceKind,
+    *,
+    cumulative: bool,
+    split_by_sport: bool,
+    markers: bool,
+    smoothing: Dict[str, Optional[int]],
+    lang: str,
+    axis: str,
+    unify_color: Optional[str] = None,
+) -> List[Trace]:
+    """Every series for one metric, bound to one y-axis.
+
+    Extracted so the primary and the optional second metric go through exactly the
+    same binning, cumulation and smoothing — the two cannot drift apart.
+
+    ``unify_color`` switches the encoding for the dual-metric case: instead of one
+    colour per group, every series of a metric takes that metric's colour and groups
+    are told apart by dash. On a dual-axis chart the reader's first question is which
+    axis a line is measured against, so colour has to answer that one — and it then
+    matches the tint on the axis itself.
+    """
+    traces: List[Trace] = []
     series_index = 0
 
     for group in resolved.groups:
@@ -143,39 +257,34 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
                     x_values = [0.0] + x_values
                     y_values = [0.0] + y_values
 
-            y_values = smooth_uniform_series(
-                y_values,
-                rolling_window=int(params.get("smooth_rolling") or 0) or None,
-                savgol_window=int(params.get("smooth_savgol") or 0) or None,
-            )
+            y_values = smooth_uniform_series(y_values, **smoothing)
 
-            color = (
-                series_color(series_index) if split_by_sport
-                else group_color(group.index)
-            )
             traces.append(Trace(
                 name=label,
                 x=x_values,
                 y=y_values,
                 kind=chart_kind,
-                color=color,
-                markers=bool(params.get("markers", True)) and chart_kind is not TraceKind.BAR,
+                color=(
+                    series_color(series_index) if split_by_sport
+                    else group_color(group.index)
+                ),
+                axis=axis,
+                markers=markers and chart_kind is not TraceKind.BAR,
                 hover_text=metric_hover_texts(metric, y_values),
                 hover_template=hover_template(_x_hover(x_mode, lang)),
             ))
             series_index += 1
 
-    chart = ChartData(
-        title=_title(metric, lang, cumulative),
-        x_axis=_x_axis(resolved, x_mode, lang),
-        y_axis=metric_axis(metric, lang),
-        traces=traces,
-        caption=_caption(metric, aggregation, granularity, lang),
-    )
-    output = PlotOutput(charts=[chart], notes=notes)
-    if params.get("show_totals"):
-        output.tables.append(_totals_table(resolved, metric, aggregation, lang))
-    return output
+    if unify_color is not None:
+        # Only in the two-metric case, so a single-metric chart keeps the group
+        # colours it has always had.
+        label = metric_label(metric, lang)
+        for index, trace in enumerate(traces):
+            trace.color = unify_color
+            trace.dash = _GROUP_DASHES[index % len(_GROUP_DASHES)]
+            # Name carries the metric, since colour now encodes it rather than group.
+            trace.name = label if len(traces) == 1 else f"{trace.name} · {label}"
+    return traces
 
 
 def _subsets(

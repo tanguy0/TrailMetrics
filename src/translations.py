@@ -482,6 +482,36 @@ TRANSLATIONS = {
         "graphiques qui en acceptent une.",
     },
     "param.aggregation": {"en": "Aggregation", "fr": "Agrégation"},
+    "param.metric2": {"en": "Second metric", "fr": "Seconde métrique"},
+    "param.metric2.none": {"en": "None", "fr": "Aucune"},
+    "param.metric2.help": {
+        "en": "Draws a second metric on the same chart, against its own axis on the "
+              "right. Useful when the two move together — distance and climb, heart "
+              "rate and pace. Because the two axes are scaled independently, where "
+              "the series cross means nothing; compare their shapes, not their "
+              "crossings.",
+        "fr": "Trace une seconde métrique sur le même graphique, avec son propre axe "
+              "à droite. Utile quand les deux évoluent ensemble — distance et "
+              "dénivelé, fréquence cardiaque et allure. Les deux axes étant mis à "
+              "l'échelle indépendamment, les croisements des courbes ne signifient "
+              "rien : comparez les formes, pas les intersections.",
+    },
+    "param.aggregation2": {
+        "en": "Second aggregation", "fr": "Agrégation de la seconde",
+    },
+    "param.chart2": {"en": "Second chart type", "fr": "Type de la seconde"},
+    "param.signal2": {"en": "Second signal", "fr": "Second signal"},
+    "param.signal2.help": {
+        "en": "Overlays a second signal on its own axis on the right — heart rate "
+              "against pace, say. Each signal takes one colour and each activity one "
+              "dash pattern. The two axes are scaled independently, so compare the "
+              "shapes rather than where the lines cross.",
+        "fr": "Superpose un second signal sur son propre axe à droite — par exemple "
+              "la fréquence cardiaque et l'allure. Chaque signal a une couleur, "
+              "chaque activité un style de trait. Les deux axes étant mis à "
+              "l'échelle indépendamment, comparez les formes plutôt que les "
+              "croisements.",
+    },
     "param.granularity": {"en": "Granularity", "fr": "Granularité"},
     "param.x_mode": {"en": "X axis", "fr": "Axe X"},
     "param.x_mode.calendar": {"en": "Calendar", "fr": "Calendrier"},
@@ -637,7 +667,176 @@ TRANSLATIONS = {
         "en": "Volume: distance and elevation", "fr": "Volume : distance et dénivelé",
     },
     "dash.ltp.panel.terrain": {"en": "Terrain", "fr": "Terrain"},
+
+    # --- Web app chrome ------------------------------------------------------
+    # Everything under `ui.` is shipped to the browser in one payload by
+    # `ui_strings_payload`, keyed on the part after the prefix. The web app holds no
+    # translation table of its own, so this block is the only place its wording
+    # lives — see the module docstring.
+    "ui.nav.home": {"en": "Home", "fr": "Accueil"},
+    "ui.nav.my_pages": {"en": "My Pages", "fr": "Mes pages"},
+    "ui.nav.sign_out": {"en": "Sign out", "fr": "Se déconnecter"},
+
+    "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},
+    "ui.common.not_set": {"en": "Not set", "fr": "Non renseigné"},
+    "ui.common.saving": {"en": "saving", "fr": "enregistrement"},
+    "ui.common.km": {"en": "km", "fr": "km"},
+    "ui.common.metres": {"en": "m", "fr": "m"},
+    "ui.common.kg": {"en": "kg", "fr": "kg"},
+    "ui.common.cm": {"en": "cm", "fr": "cm"},
+    "ui.common.years": {"en": "years", "fr": "ans"},
+
+    # Home — profile card
+    "ui.home.profile.title": {"en": "Profile", "fr": "Profil"},
+    "ui.home.profile.activities": {"en": "Activities", "fr": "Activités"},
+    "ui.home.profile.oldest": {"en": "First run", "fr": "Première sortie"},
+    "ui.home.profile.newest": {"en": "Latest run", "fr": "Dernière sortie"},
+    "ui.home.profile.total_distance": {"en": "Total distance", "fr": "Distance totale"},
+    "ui.home.profile.total_elevation": {"en": "Total climb", "fr": "Dénivelé total"},
+    "ui.home.profile.total_time": {"en": "Time on feet", "fr": "Temps de course"},
+    "ui.home.profile.furthest": {"en": "Furthest run", "fr": "Sortie la plus longue"},
+    "ui.home.profile.longest": {"en": "Longest run", "fr": "Sortie la plus durable"},
+    "ui.home.profile.records": {"en": "Current records", "fr": "Records actuels"},
+    "ui.home.profile.records_empty": {
+        "en": "No full-distance efforts yet — records appear once an activity covers "
+              "the distance.",
+        "fr": "Aucun effort complet pour l'instant — les records apparaissent dès "
+              "qu'une activité couvre la distance.",
+    },
+
+    # Home — health card
+    "ui.home.health.title": {"en": "Health", "fr": "Santé"},
+    "ui.home.health.age": {"en": "Age", "fr": "Âge"},
+    "ui.home.health.age_help": {
+        "en": "Set your date of birth — Strava does not share it.",
+        "fr": "Renseignez votre date de naissance — Strava ne la transmet pas.",
+    },
+    "ui.home.health.experience": {"en": "Years running", "fr": "Années de course"},
+    "ui.home.health.experience_help": {
+        "en": "Measured from your first recorded activity.",
+        "fr": "Calculé depuis votre première activité enregistrée.",
+    },
+    "ui.home.health.weight": {"en": "Weight", "fr": "Poids"},
+    "ui.home.health.weight_help": {
+        "en": "Unlocks the power metrics. Stored power is per kilogram, so a new "
+              "weight rescales your whole history at once.",
+        "fr": "Débloque les métriques de puissance. La puissance est stockée par "
+              "kilogramme : un nouveau poids réajuste tout l'historique d'un coup.",
+    },
+    "ui.home.health.height": {"en": "Height", "fr": "Taille"},
+
+    # Home — last activity and the weekly volume chart
+    "ui.home.last.title": {"en": "Last activity", "fr": "Dernière activité"},
+    "ui.home.last.empty": {
+        "en": "Nothing imported yet.", "fr": "Rien d'importé pour l'instant.",
+    },
+    "ui.home.last.distance": {"en": "Distance", "fr": "Distance"},
+    "ui.home.last.climb": {"en": "Climb", "fr": "Dénivelé"},
+    "ui.home.last.time": {"en": "Moving time", "fr": "Temps en mouvement"},
+    "ui.home.last.pace": {"en": "Pace", "fr": "Allure"},
+    "ui.home.last.heart_rate": {"en": "Avg HR", "fr": "FC moyenne"},
+    "ui.home.last.map_loading": {
+        "en": "Loading the route…", "fr": "Chargement du parcours…",
+    },
+    "ui.home.last.map_none": {
+        "en": "This activity has no GPS route — a treadmill run or a manual entry.",
+        "fr": "Cette activité n'a pas de tracé GPS — tapis de course ou saisie "
+              "manuelle.",
+    },
+    "ui.home.last.map_unavailable": {
+        "en": "The route could not be fetched from Strava just now.",
+        "fr": "Le parcours n'a pas pu être récupéré depuis Strava pour le moment.",
+    },
+    "ui.home.recent.title": {"en": "Recent History", "fr": "Historique récent"},
+    "ui.home.recent.subtitle": {
+        "en": "Distance and climb per week over the last 20 weeks. Each has its own "
+              "axis — distance on the left, climb on the right — so compare the "
+              "shapes rather than where the two meet.",
+        "fr": "Distance et dénivelé par semaine sur les 20 dernières semaines. "
+              "Chacun a son axe — distance à gauche, dénivelé à droite — comparez "
+              "donc les formes plutôt que les points de rencontre.",
+    },
+
+    # Home — importing from Strava
+    "ui.home.import.title": {"en": "Your data", "fr": "Vos données"},
+    "ui.home.import.first": {"en": "Import my activities", "fr": "Importer mes activités"},
+    "ui.home.import.more": {
+        "en": "Import new activities", "fr": "Importer les nouvelles activités",
+    },
+    "ui.home.import.again": {"en": "Re-import everything", "fr": "Tout réimporter"},
+    "ui.home.import.again_help": {
+        "en": "Re-fetch and recompute everything. Slow, and spends the Strava rate "
+              "limit.",
+        "fr": "Tout retélécharger et recalculer. Lent, et consomme le quota Strava.",
+    },
+    "ui.home.import.running": {"en": "Importing from Strava…", "fr": "Import depuis Strava…"},
+    "ui.home.import.failed": {"en": "Last import failed", "fr": "Dernier import échoué"},
+    "ui.home.import.last": {"en": "Last import", "fr": "Dernier import"},
+    "ui.home.import.empty": {
+        "en": "Import your activities to start building pages — every plot works off "
+              "that data.",
+        "fr": "Importez vos activités pour commencer à construire des pages — tous "
+              "les graphiques s'appuient sur ces données.",
+    },
+
+    # My Pages
+    "ui.pages.title": {"en": "My Pages", "fr": "Mes pages"},
+    "ui.pages.how.title": {"en": "How pages work", "fr": "Comment fonctionnent les pages"},
+    "ui.pages.how.body": {
+        "en": "A page is yours to assemble. You add panels; each panel takes one data "
+              "source and as many plots as you like over it.",
+        "fr": "Une page se construit. Vous ajoutez des panneaux ; chaque panneau "
+              "prend une source de données et autant de graphiques que vous voulez.",
+    },
+    "ui.pages.how.step1.title": {"en": "1. Pick a data source", "fr": "1. Choisir des données"},
+    "ui.pages.how.step1.body": {
+        "en": "Specific activities, one date range, or several named periods to "
+              "compare side by side.",
+        "fr": "Des activités précises, une période, ou plusieurs périodes nommées à "
+              "comparer côte à côte.",
+    },
+    "ui.pages.how.step2.title": {"en": "2. Add plots", "fr": "2. Ajouter des graphiques"},
+    "ui.pages.how.step2.body": {
+        "en": "Any metric, at any granularity, as a trend, distribution, scatter or "
+              "table. Each plot brings its own form.",
+        "fr": "N'importe quelle métrique, à n'importe quelle granularité : tendance, "
+              "distribution, nuage de points ou tableau. Chaque graphique amène son "
+              "propre formulaire.",
+    },
+    "ui.pages.how.step3.title": {"en": "3. Keep it", "fr": "3. La conserver"},
+    "ui.pages.how.step3.body": {
+        "en": "A page is saved as a document, so it reopens exactly as you left it.",
+        "fr": "Une page est enregistrée comme un document : elle se rouvre exactement "
+              "comme vous l'avez laissée.",
+    },
+    "ui.pages.examples.title": {"en": "Examples", "fr": "Exemples"},
+    "ui.pages.examples.help": {
+        "en": "Built from the same panels and plots you get. Open one to read it, or "
+              "duplicate it to make it yours.",
+        "fr": "Construits avec les mêmes panneaux et graphiques que les vôtres. "
+              "Ouvrez-en un pour le lire, ou dupliquez-le pour l'adapter.",
+    },
+    "ui.pages.mine.title": {"en": "My pages", "fr": "Mes pages"},
+    "ui.pages.mine.empty": {
+        "en": "None yet. Start from scratch below, or duplicate an example above.",
+        "fr": "Aucune pour l'instant. Partez de zéro ci-dessous, ou dupliquez un "
+              "exemple ci-dessus.",
+    },
+    "ui.pages.new.button": {"en": "New page", "fr": "Nouvelle page"},
+    "ui.pages.new.hint": {
+        "en": "Start from an empty page and add your first panel.",
+        "fr": "Commencez avec une page vide et ajoutez votre premier panneau.",
+    },
+    "ui.pages.new.prompt": {"en": "Name your page", "fr": "Nommez votre page"},
+    "ui.pages.new.default_name": {"en": "My analysis", "fr": "Mon analyse"},
+    "ui.pages.panel_count.one": {"en": "{count} panel", "fr": "{count} panneau"},
+    "ui.pages.panel_count.many": {"en": "{count} panels", "fr": "{count} panneaux"},
+    "ui.pages.plot_count.one": {"en": "{count} plot", "fr": "{count} graphique"},
+    "ui.pages.plot_count.many": {"en": "{count} plots", "fr": "{count} graphiques"},
 }
+
+UI_PREFIX = "ui."
+
 
 def translate(key: str, lang: str = DEFAULT_LANG) -> str:
     """Return the ``lang`` string for ``key``.
@@ -649,3 +848,16 @@ def translate(key: str, lang: str = DEFAULT_LANG) -> str:
     if entry is None:
         return key
     return entry.get(lang) or entry.get("en") or key
+
+
+def ui_strings(lang: str = DEFAULT_LANG) -> dict:
+    """Every ``ui.*`` string for ``lang``, keyed without the prefix.
+
+    The web app's whole vocabulary in one object, so it can look up
+    ``strings["nav.home"]`` without shipping a translation table of its own.
+    """
+    return {
+        key[len(UI_PREFIX):]: translate(key, lang)
+        for key in TRANSLATIONS
+        if key.startswith(UI_PREFIX)
+    }
