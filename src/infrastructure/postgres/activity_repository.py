@@ -51,12 +51,19 @@ class PostgresActivityRepository(ActivityRepository):
         if not rows:
             return 0
         columns = ["athlete_id", "activity_id", "start_date", "sport_type",
-                   "has_streams", *_SCALAR_COLUMNS, "features", "feature_version"]
+                   "has_streams", *_SCALAR_COLUMNS, "features", "feature_version",
+                   "summary_polyline"]
         placeholders = ", ".join(["%s"] * len(columns))
         updates = ", ".join(
             f"{name} = excluded.{name}"
             for name in ("start_date", "sport_type", "has_streams",
                          *_SCALAR_COLUMNS, "features", "feature_version")
+        )
+        # The route is *coalesced* rather than overwritten: a re-featurize passes no
+        # polyline, and that must not erase one already fetched on demand.
+        updates += (
+            ", summary_polyline = coalesce(excluded.summary_polyline, "
+            "activities.summary_polyline)"
         )
         sql = (
             f"insert into activities ({', '.join(columns)}) "
@@ -83,6 +90,24 @@ class PostgresActivityRepository(ActivityRepository):
             *[_clean(row.get(name)) for name in _SCALAR_COLUMNS],
             json.dumps(generated),
             FEATURE_VERSION,
+            row.get("summary_polyline") or None,
+        )
+
+    def route_polyline(self, athlete_id: int, activity_id: int) -> Optional[str]:
+        row = self.db.fetch_one(
+            "select summary_polyline from activities "
+            "where athlete_id = %s and activity_id = %s",
+            (athlete_id, activity_id),
+        )
+        return row["summary_polyline"] if row else None
+
+    def set_route_polyline(
+        self, athlete_id: int, activity_id: int, polyline: Optional[str]
+    ) -> None:
+        self.db.execute(
+            "update activities set summary_polyline = %s, updated_at = now() "
+            "where athlete_id = %s and activity_id = %s",
+            (polyline, athlete_id, activity_id),
         )
 
     def set_stream_object(

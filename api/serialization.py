@@ -11,10 +11,11 @@ Python side is worth more here than JavaScript convention: it removes an entire
 class of mapping bug.
 """
 
+from datetime import date
 from typing import Any, Dict, List, Optional
 
 from src.domain.dataset.binning import GRANULARITIES
-from src.domain.dataset.metrics import ACTIVITY_METRICS, AGGREGATIONS
+from src.domain.dataset.metrics import ACTIVITY_METRICS, AGGREGATIONS, NO_METRIC
 from src.domain.plots import all_plots
 from src.domain.progress.models import GRADIENT_BAND_KEYS, PR_DISTANCES
 from src.domain.ports.activity_data import ActivitySummary
@@ -81,6 +82,12 @@ def _providers(lang: str) -> Dict[str, List[Dict[str, str]]]:
     ]
     return {
         "activity_metrics": metrics,
+        # For the "plot a second metric too" controls: same list, plus an explicit
+        # opt-out, so a single-metric chart stays the default.
+        "activity_metrics_optional": [
+            {"value": NO_METRIC, "label": translate("param.metric2.none", lang)},
+            *metrics,
+        ],
         "aggregations": [
             {"value": agg, "label": translate(f"agg.{agg}", lang)}
             for agg in AGGREGATIONS
@@ -165,6 +172,10 @@ def athlete_payload(
         "display_name": athlete.display_name,
         "profile_url": athlete.profile_url,
         "weight_kg": athlete.weight_kg,
+        "birthdate": athlete.birthdate.isoformat() if athlete.birthdate else None,
+        "height_cm": athlete.height_cm,
+        # Derived here rather than in the browser so every client agrees on it.
+        "age": athlete.age_on(date.today()),
         "activity_count": activity_count,
         "sport_types": sport_types,
         "oldest_activity": oldest.isoformat() if oldest else None,

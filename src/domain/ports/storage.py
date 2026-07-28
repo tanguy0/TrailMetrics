@@ -16,24 +16,39 @@ something genuinely needs per-second data.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 
 @dataclass
 class Athlete:
-    """An account, keyed by Strava's athlete id."""
+    """An account, keyed by Strava's athlete id.
+
+    ``birthdate`` and ``height_cm`` are self-reported: Strava's API carries neither,
+    so they are only ever set from this app. Storing a birthdate rather than an age
+    keeps the derived value correct without anyone re-typing it every year.
+    """
 
     id: int
     firstname: str = ""
     lastname: str = ""
     weight_kg: Optional[float] = None
     profile_url: Optional[str] = None
+    birthdate: Optional[date] = None
+    height_cm: Optional[float] = None
 
     @property
     def display_name(self) -> str:
         name = f"{self.firstname} {self.lastname}".strip()
         return name or f"Athlete {self.id}"
+
+    def age_on(self, today: date) -> Optional[int]:
+        """Completed years as of ``today``, or ``None`` when no birthdate is set."""
+        if self.birthdate is None:
+            return None
+        born = self.birthdate
+        had_birthday = (today.month, today.day) >= (born.month, born.day)
+        return today.year - born.year - (0 if had_birthday else 1)
 
 
 @dataclass
@@ -74,6 +89,15 @@ class AthleteRepository(ABC):
     @abstractmethod
     def set_weight(self, athlete_id: int, weight_kg: Optional[float]) -> None:
         ...
+
+    @abstractmethod
+    def set_body(
+        self,
+        athlete_id: int,
+        birthdate: Optional[date],
+        height_cm: Optional[float],
+    ) -> None:
+        """Set the self-reported fields Strava does not provide."""
 
     @abstractmethod
     def save_credentials(self, athlete_id: int, credentials: StravaCredentials) -> None:
@@ -126,6 +150,16 @@ class ActivityRepository(ABC):
     @abstractmethod
     def stream_object(self, athlete_id: int, activity_id: int) -> Optional[str]:
         ...
+
+    @abstractmethod
+    def route_polyline(self, athlete_id: int, activity_id: int) -> Optional[str]:
+        """The activity's encoded route, or ``None`` if it has none stored."""
+
+    @abstractmethod
+    def set_route_polyline(
+        self, athlete_id: int, activity_id: int, polyline: Optional[str]
+    ) -> None:
+        """Record a route fetched after the activity was first imported."""
 
 
 class StreamStore(ABC):

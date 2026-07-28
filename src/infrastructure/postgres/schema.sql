@@ -34,6 +34,11 @@ create table if not exists athletes (
     updated_at    timestamptz not null default now()
 );
 
+-- Strava exposes neither of these, so the athlete types them in once. Birthdate
+-- rather than age: an age column is wrong within a year of being written.
+alter table athletes add column if not exists birthdate date;
+alter table athletes add column if not exists height_cm double precision;
+
 -- Strava tokens, encrypted application-side (Fernet) before they get here.
 create table if not exists strava_credentials (
     athlete_id        bigint primary key references athletes(id) on delete cascade,
@@ -88,6 +93,12 @@ create table if not exists activities (
 
     primary key (athlete_id, activity_id)
 );
+
+-- The route as a Google-encoded polyline, from Strava's activity summary.
+-- Deliberately NOT part of the feature row: it is metadata for drawing a map, not
+-- a quantity anything aggregates over, so it stays out of the numeric frame the
+-- plots read. Nullable — older imports predate it, and indoor runs have no route.
+alter table activities add column if not exists summary_polyline text;
 
 -- Selection queries are always "this athlete, ordered by date".
 create index if not exists activities_athlete_date_idx

@@ -11,12 +11,15 @@
 import type {
   ActivitySummary,
   Athlete,
+  HomeSummary,
   PageSpec,
   PageSummary,
   PanelResult,
   PanelSpec,
   Registry,
+  RouteResult,
   SyncStatus,
+  UiStrings,
 } from "./types";
 
 const LANG = process.env.NEXT_PUBLIC_LANG || "en";
@@ -77,15 +80,46 @@ export function getRegistry(): Promise<Registry> {
   return registryCache;
 }
 
+// --- UI strings ------------------------------------------------------------
+
+let uiStringsCache: Promise<UiStrings> | null = null;
+
+/** The app's wording, translated. Static per language, so fetched once. */
+export function getUiStrings(): Promise<UiStrings> {
+  uiStringsCache ??= request<UiStrings>("/ui-strings");
+  return uiStringsCache;
+}
+
 // --- Athlete ---------------------------------------------------------------
 
 export const getAthlete = () => request<Athlete>("/auth/me");
 
-export const setWeight = (weightKg: number | null) =>
+/**
+ * Patch the athlete's own body fields.
+ *
+ * Only the keys passed are sent, and the server leaves absent keys alone — so the
+ * three widgets can be edited independently without overwriting each other. An
+ * explicit `null` still clears a field.
+ */
+export const updateProfile = (
+  changes: Partial<Pick<Athlete, "weight_kg" | "birthdate" | "height_cm">>,
+) =>
   request<Athlete>("/auth/me", {
     method: "PATCH",
-    body: JSON.stringify({ weight_kg: weightKg }),
+    body: JSON.stringify(changes),
   });
+
+// --- Home ------------------------------------------------------------------
+
+export const getHomeSummary = () => request<HomeSummary>("/home/summary");
+
+/**
+ * The latest activity's route. Separate from the summary because it may have to
+ * call Strava for an activity imported before routes were stored, and the cards
+ * must not wait on that.
+ */
+export const getLastActivityRoute = () =>
+  request<RouteResult>("/home/last-activity/route");
 
 // --- Activities ------------------------------------------------------------
 

@@ -65,6 +65,16 @@ _X_AXES = {
     "distance": ("distance_m", "plot.races.x.distance", 1.0 / 1000.0, "km"),
 }
 
+# Sentinel for "one signal only", matching NO_METRIC's role in metric_trend.
+NO_SIGNAL = "none"
+
+# Dashes distinguish the *activities* once colour is spent on the signal.
+_ACTIVITY_DASHES = ["-", "--", "-.", ":"]
+
+# One colour per signal on a dual-axis chart, matching each axis's tint.
+_PRIMARY_COLOR = series_color(0)
+_SECONDARY_COLOR = series_color(1)
+
 
 def _filter_group(key: str, label_key: str, default: FilterConfig) -> ParamSpec:
     """Two windows per signal; 0 disables that stage."""
@@ -82,6 +92,12 @@ PARAMS: List[ParamSpec] = [
     choice("signal", "param.signal", "gap_pace", choices=[
         Choice(key, f"signal.{key}") for key in SIGNALS
     ]),
+    # A second signal on the same figure, against its own right-hand axis: heart
+    # rate against pace is the reason this exists, but any pair works.
+    choice("signal2", "param.signal2", NO_SIGNAL, choices=[
+        Choice(NO_SIGNAL, "param.metric2.none"),
+        *[Choice(key, f"signal.{key}") for key in SIGNALS],
+    ], help_key="param.signal2.help"),
     choice("x_axis", "param.x_axis", "time", choices=[
         Choice("time", "races.xaxis.time"),
         Choice("distance", "races.xaxis.distance"),
@@ -131,6 +147,89 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     smoothing = _smoothing_from(params.get("smoothing") or {})
     smoothing_key = _smoothing_key(smoothing)
 
+    # A second signal changes how the first is coloured, so resolve it up front.
+    signal2_key = params.get("signal2") or NO_SIGNAL
+    dual = signal2_key != NO_SIGNAL and signal2_key != signal_key
+    signal2 = SIGNALS.get(signal2_key) if dual else None
+    if signal2 is not None and signal2[4] and resolved.mass_kg is None:
+        # The second signal needs a weight we do not have: drop it with a note
+        # rather than failing the whole plot, which the first signal doesn't need.
+        notes.append(weight_note(lang))
+        signal2 = None
+        dual = False
+
+    traces = _signal_traces(
+        resolved, activity_ids, attribute, x_attribute, x_scale, x_unit,
+        value_kind, decimals, as_speed=as_speed,
+        smoothing=smoothing, smoothing_key=smoothing_key,
+        axis="y",
+        unify_color=_PRIMARY_COLOR if dual else None,
+        signal_label=translate(f"signal.{signal_key}", lang),
+    )
+
+    y2_axis = None
+    if signal2 is not None:
+        attribute2, y_label_key2, value_kind2, decimals2, _ = signal2
+        # `as_speed` belongs to the primary signal's control; the second signal is
+        # always drawn in its own natural unit.
+        traces += _signal_traces(
+            resolved, activity_ids, attribute2, x_attribute, x_scale, x_unit,
+            value_kind2, decimals2, as_speed=False,
+            smoothing=smoothing, smoothing_key=smoothing_key,
+            axis="y2",
+            unify_color=_SECONDARY_COLOR,
+            signal_label=translate(f"signal.{signal2_key}", lang),
+        )
+        y2_axis = _y_axis(translate(y_label_key2, lang), value_kind2, False, decimals2)
+        y2_axis.color = _SECONDARY_COLOR
+
+    if not traces:
+        return empty_output(translate("plot.metric_unavailable", lang).format(
+            metric=translate(f"signal.{signal_key}", lang)))
+
+    y_title = translate("plot.races.gap_speed.y", lang) if as_speed \
+        else translate(y_label_key, lang)
+    left_axis = _y_axis(y_title, value_kind, as_speed, decimals)
+    title = translate(f"signal.{signal_key}", lang)
+    if y2_axis is not None:
+        left_axis.color = _PRIMARY_COLOR
+        title = f"{title} · {translate(f'signal.{signal2_key}', lang)}"
+
+    chart = ChartData(
+        title=title,
+        x_axis=Axis(title=translate(x_label_key, lang), kind=AxisKind.LINEAR,
+                    tick_format=",.1f"),
+        y_axis=left_axis,
+        y2_axis=y2_axis,
+        traces=traces,
+        height=420,
+    )
+    return PlotOutput(charts=[chart], notes=notes)
+
+
+def _signal_traces(
+    resolved: ResolvedPanelData,
+    activity_ids: List[int],
+    attribute: str,
+    x_attribute: str,
+    x_scale: float,
+    x_unit: str,
+    value_kind: str,
+    decimals: int,
+    *,
+    as_speed: bool,
+    smoothing: SmoothingParams,
+    smoothing_key: tuple,
+    axis: str,
+    unify_color: Optional[str],
+    signal_label: str,
+) -> List[Trace]:
+    """One line per activity for a single signal, bound to one y-axis.
+
+    With two signals, colour has to say *which signal* a line is — that is the
+    question a dual-axis chart raises — so activities are told apart by dash and the
+    trace name carries both. With one signal, per-activity colours are kept.
+    """
     traces: List[Trace] = []
     for index, activity_id in enumerate(activity_ids):
         series = _series_for(resolved, activity_id, smoothing, smoothing_key)
@@ -145,12 +244,15 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
         x = np.asarray(getattr(series, x_attribute), dtype=float) * x_scale
         y = 3600.0 / values if as_speed else values
 
+        name = resolved.activity_label(activity_id)
         traces.append(Trace(
-            name=resolved.activity_label(activity_id),
+            name=f"{name} · {signal_label}" if unify_color else name,
             x=x.tolist(),
             y=[None if not np.isfinite(v) else float(v) for v in y],
             kind=TraceKind.LINE,
-            color=series_color(index),
+            color=unify_color or series_color(index),
+            axis=axis,
+            dash=_ACTIVITY_DASHES[index % len(_ACTIVITY_DASHES)] if unify_color else "-",
             width=2.2,
             hover_text=_hover_texts(y, value_kind, as_speed, decimals),
             hover_template=(
@@ -158,22 +260,7 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
                 "<extra>%{fullData.name}</extra>"
             ),
         ))
-
-    if not traces:
-        return empty_output(translate("plot.metric_unavailable", lang).format(
-            metric=translate(f"signal.{signal_key}", lang)))
-
-    y_title = translate("plot.races.gap_speed.y", lang) if as_speed \
-        else translate(y_label_key, lang)
-    chart = ChartData(
-        title=translate(f"signal.{signal_key}", lang),
-        x_axis=Axis(title=translate(x_label_key, lang), kind=AxisKind.LINEAR,
-                    tick_format=",.1f"),
-        y_axis=_y_axis(y_title, value_kind, as_speed, decimals),
-        traces=traces,
-        height=420,
-    )
-    return PlotOutput(charts=[chart], notes=notes)
+    return traces
 
 
 def _y_axis(title: str, value_kind: str, as_speed: bool, decimals: int) -> Axis:

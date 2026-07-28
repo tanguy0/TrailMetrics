@@ -158,6 +158,10 @@ class SyncAthleteActivities(UseCase):
         row = build_activity_features(stream)
         if row is None:
             return False
+        # Route metadata rides along on the row rather than through the feature
+        # builder: it is a string for drawing a map, not a quantity to aggregate,
+        # so it has no place in the numeric feature frame.
+        row["summary_polyline"] = activity.get("summary_polyline")
         batch.append(row)
 
         # Only activities that really have per-second data get a blob.

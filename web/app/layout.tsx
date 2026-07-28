@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 
+import { Sidebar } from "@/components/Sidebar";
+import { lang, readSession } from "@/lib/session";
+import { loadStrings } from "@/lib/strings.server";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -8,20 +12,27 @@ export const metadata: Metadata = {
     "Build your own running-data analysis pages: pick a data source, add the plots you want.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // The rail is navigation between an athlete's own screens, so it only exists
+  // once there is a session — the sign-in page has nowhere to navigate to.
+  const signedIn = Boolean(await readSession());
+  const strings = signedIn ? await loadStrings() : {};
+
   return (
-    <html lang="en">
+    <html lang={lang()}>
       <body>
-        <nav className="topbar">
-          <a className="topbar__brand" href="/pages">
-            🏔️ TrailMetrics
-          </a>
-          <div className="topbar__links">
-            <a href="/pages">My pages</a>
-            <a href="/api/auth/logout">Sign out</a>
+        {signedIn ? (
+          <div className="shell">
+            <Sidebar strings={strings} />
+            <div className="shell__content">{children}</div>
           </div>
-        </nav>
-        {children}
+        ) : (
+          children
+        )}
       </body>
     </html>
   );

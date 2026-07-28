@@ -5,7 +5,7 @@ a Supabase dashboard session — cannot be replayed against Strava. The key come
 from configuration and never leaves this process.
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -28,7 +28,9 @@ class PostgresAthleteRepository(AthleteRepository):
 
     def upsert(self, athlete: Athlete) -> Athlete:
         # Weight is intentionally not overwritten: the athlete sets it in this app,
-        # and re-authenticating with Strava must not wipe it.
+        # and re-authenticating with Strava must not wipe it. Birthdate and height
+        # are not in the insert list at all — they only ever come from this app, so
+        # a re-auth has nothing to say about them.
         row = self.db.fetch_one(
             """
             insert into athletes (id, firstname, lastname, profile_url, weight_kg)
@@ -38,7 +40,8 @@ class PostgresAthleteRepository(AthleteRepository):
                 lastname = excluded.lastname,
                 profile_url = excluded.profile_url,
                 updated_at = now()
-            returning id, firstname, lastname, profile_url, weight_kg
+            returning id, firstname, lastname, profile_url, weight_kg,
+                      birthdate, height_cm
             """,
             (athlete.id, athlete.firstname, athlete.lastname,
              athlete.profile_url, athlete.weight_kg),
@@ -47,8 +50,8 @@ class PostgresAthleteRepository(AthleteRepository):
 
     def get(self, athlete_id: int) -> Optional[Athlete]:
         row = self.db.fetch_one(
-            "select id, firstname, lastname, profile_url, weight_kg "
-            "from athletes where id = %s",
+            "select id, firstname, lastname, profile_url, weight_kg, "
+            "birthdate, height_cm from athletes where id = %s",
             (athlete_id,),
         )
         return _athlete(row) if row else None
@@ -57,6 +60,18 @@ class PostgresAthleteRepository(AthleteRepository):
         self.db.execute(
             "update athletes set weight_kg = %s, updated_at = now() where id = %s",
             (weight_kg, athlete_id),
+        )
+
+    def set_body(
+        self,
+        athlete_id: int,
+        birthdate: Optional[date],
+        height_cm: Optional[float],
+    ) -> None:
+        self.db.execute(
+            "update athletes set birthdate = %s, height_cm = %s, "
+            "updated_at = now() where id = %s",
+            (birthdate, height_cm, athlete_id),
         )
 
     # --- Credentials -------------------------------------------------------
@@ -150,6 +165,8 @@ def _athlete(row) -> Athlete:
         lastname=row["lastname"] or "",
         profile_url=row["profile_url"],
         weight_kg=row["weight_kg"],
+        birthdate=row["birthdate"],
+        height_cm=row["height_cm"],
     )
 
 

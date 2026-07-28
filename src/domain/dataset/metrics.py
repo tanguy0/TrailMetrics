@@ -31,6 +31,10 @@ from src.domain.progress.models import GRADIENT_BANDS, PR_DISTANCES
 # Aggregations offered for column metrics.
 AGGREGATIONS: Tuple[str, ...] = ("sum", "mean", "median", "max", "min", "count")
 
+# Sentinel for "no second metric". A real value rather than an empty string so it
+# survives a round-trip through a saved page spec and a <select> unambiguously.
+NO_METRIC = "none"
+
 # value_kind values.
 NUMBER = "number"
 DURATION = "duration"   # seconds, ticked as h:mm:ss
@@ -287,6 +291,18 @@ def get_metric(key: str) -> Optional[ActivityMetric]:
 def metric_or_default(key: Optional[str], fallback: str = "distance_km") -> ActivityMetric:
     """Never raise on a stale saved metric key — fall back to a sane default."""
     return ACTIVITY_METRICS.get(key or "") or ACTIVITY_METRICS[fallback]
+
+
+def optional_metric(key: Optional[str]) -> Optional[ActivityMetric]:
+    """A metric for an *opt-in* selector, or ``None`` when the user chose none.
+
+    Distinct from :func:`metric_or_default` on purpose: for a second, optional
+    series, an unrecognised or absent key means "don't draw it" rather than
+    "fall back to distance", which would silently invent a series.
+    """
+    if not key or key == NO_METRIC:
+        return None
+    return ACTIVITY_METRICS.get(key)
 
 
 def allowed_aggregations(metric: ActivityMetric) -> Tuple[str, ...]:

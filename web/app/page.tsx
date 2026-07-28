@@ -14,7 +14,7 @@ export default async function Home({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  if (await readSession()) redirect("/pages");
+  if (await readSession()) redirect("/home");
   const { error } = await searchParams;
 
   return (
