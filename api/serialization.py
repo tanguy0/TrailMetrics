@@ -52,6 +52,9 @@ def _plot_definition(definition, lang: str) -> Dict[str, Any]:
         "series_level": definition.series_level,
         "requires_streams": definition.requires_streams,
         "requires_weight": definition.requires_weight,
+        # False for content blocks (prose, an image): the client hides the data-source
+        # affordances that mean nothing for them.
+        "requires_data": definition.requires_data,
         "cost": definition.cost,
         "params": [param.to_dict(lang) for param in definition.params],
     }
@@ -174,6 +177,10 @@ def athlete_payload(
         "weight_kg": athlete.weight_kg,
         "birthdate": athlete.birthdate.isoformat() if athlete.birthdate else None,
         "height_cm": athlete.height_cm,
+        "email": athlete.email,
+        # Derived rather than left to the client to infer from a null email, so
+        # "have they answered?" has one definition.
+        "needs_email": athlete.needs_email,
         # Derived here rather than in the browser so every client agrees on it.
         "age": athlete.age_on(date.today()),
         "activity_count": activity_count,
@@ -196,14 +203,16 @@ def page_payload(page: PageSpec) -> Dict[str, Any]:
 
 
 def page_summary_payload(page: PageSpec) -> Dict[str, Any]:
-    """Enough to list pages without shipping every panel."""
+    """Enough to list analyses without shipping every panel."""
     return {
         "id": page.id,
         "name": page.name,
         "description": page.description,
         "icon": page.icon,
         "builtin_key": page.builtin_key,
-        "is_builtin": page.is_builtin,
+        # One of the analyses every athlete gets: editable like any other, but the
+        # client hides Delete for it.
+        "is_default": page.is_default,
         "panel_count": len(page.panels),
         "plot_count": sum(len(panel.plots) for panel in page.panels),
     }

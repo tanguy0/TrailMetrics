@@ -25,6 +25,30 @@ from src.usecases.base import UseCase
 from src.usecases.resolve_panel_data import ResolvePanelData, ResolvePanelDataInput
 
 
+class OutputCache:
+    """Finished plot outputs, keyed by render signature.
+
+    A class rather than a bare dict so the store can be *replaced*: the API backs it
+    with Postgres as well as memory, which is what lets an expensive fit survive a
+    restart. Kept in the use-case layer because the renderer is the only thing that
+    knows when an output is complete — but the interface is deliberately two methods,
+    so an implementation needs nothing from this module.
+
+    ``set`` takes the plot type alongside the output. It is not part of the key; it
+    is there so a persistent implementation can record *what* it stored, which is
+    the difference between a debuggable cache table and an opaque one.
+    """
+
+    def __init__(self, store: Optional[Dict[str, PlotOutput]] = None):
+        self._store: Dict[str, PlotOutput] = store if store is not None else {}
+
+    def get(self, signature: str) -> Optional[PlotOutput]:
+        return self._store.get(signature)
+
+    def set(self, signature: str, plot_type: str, output: PlotOutput) -> None:
+        self._store[signature] = output
+
+
 @dataclass
 class RenderContext:
     """Everything a render needs beyond the page itself.
@@ -40,12 +64,18 @@ class RenderContext:
     lang: str = "en"
     mass_kg: Optional[float] = None
     memo: Dict[Any, Any] = field(default_factory=dict)
-    output_cache: Dict[str, PlotOutput] = field(default_factory=dict)
+    output_cache: OutputCache = field(default_factory=OutputCache)
     # When set, an expensive plot with no cached result is reported as *pending*
     # instead of computed, so the editor can offer an explicit refresh.
     defer_expensive: bool = False
     # Plot ids the user explicitly asked to compute this run.
     force_compute: set = field(default_factory=set)
+    # Recompute everything and overwrite what was cached. This is the "recompute"
+    # action: a cache keyed on its inputs is right almost always, and the exception
+    # is a fit the athlete wants to run again anyway (new data at the edge of a
+    # window, a changed body weight, a suspect curve). Cheaper than any scheme for
+    # guessing when that is true.
+    refresh: bool = False
 
 
 @dataclass
@@ -132,7 +162,7 @@ class RenderPage(UseCase):
         params = coerce(definition.params, plot.params)
         result = PlotResult(spec=plot, definition=definition, params=params)
 
-        if resolved.is_empty:
+        if resolved.is_empty and definition.requires_data:
             result.output = PlotOutput(
                 notes=[translate("panel.no_activities", context.lang)]
             )
@@ -144,7 +174,7 @@ class RenderPage(UseCase):
             return result
 
         signature = plot_signature(panel, plot, params, resolved, context)
-        cached = context.output_cache.get(signature)
+        cached = None if context.refresh else context.output_cache.get(signature)
         if cached is not None:
             result.output = cached
             return result
@@ -153,6 +183,7 @@ class RenderPage(UseCase):
             context.defer_expensive
             and definition.cost == EXPENSIVE
             and plot.id not in context.force_compute
+            and not context.refresh
         )
         if deferred:
             result.pending = True
@@ -169,7 +200,7 @@ class RenderPage(UseCase):
                 translate("panel.dropped_streamless", context.lang).format(
                     count=resolved.dropped_streamless)
             )
-        context.output_cache[signature] = output
+        context.output_cache.set(signature, plot.plot_type, output)
         result.output = output
         return result
 

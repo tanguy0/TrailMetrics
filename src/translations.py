@@ -106,6 +106,12 @@ TRANSLATIONS = {
         "fr": "Couleur = groupe de la source · style de trait = modèle et zone de "
         "fréquence cardiaque · tirets = courbes de référence.",
     },
+    "gap.caption.per_year": {
+        "en": "One colour per calendar year, both models. A year whose curve sits "
+        "lower cost you less pace per metre of climb.",
+        "fr": "Une couleur par année civile, les deux modèles. Une année dont la "
+        "courbe est plus basse vous a coûté moins d'allure par mètre de dénivelé.",
+    },
     "gap.caption.intensity": {
         "en": "The same fit, split by heart-rate band — how the cost of climbing "
         "changes with intensity.",
@@ -177,8 +183,8 @@ TRANSLATIONS = {
 
     # --- Long-term progress labels (records, bands, sections) ---------------
     "page.ltp.title": {
-        "en": "📈 Long-Term Progress",
-        "fr": "📈 Progression long terme",
+        "en": "Long-Term Progress",
+        "fr": "Progression long terme",
     },
     "ltp.intro": {
         "en": "Season-over-season trends across your **entire** history (runs and "
@@ -301,6 +307,7 @@ TRANSLATIONS = {
     "plotcat.models": {"en": "Models", "fr": "Modèles"},
     "plotcat.explore": {"en": "Exploration", "fr": "Exploration"},
     "plotcat.tables": {"en": "Tables", "fr": "Tableaux"},
+    "plotcat.content": {"en": "Text & images", "fr": "Texte et images"},
 
     "plot.metric_trend.label": {"en": "Metric over time", "fr": "Métrique dans le temps"},
     "plot.metric_trend.description": {
@@ -370,6 +377,19 @@ TRANSLATIONS = {
     },
     "plot.data_table.title": {"en": "Activities", "fr": "Activités"},
 
+    "plot.text_block.label": {"en": "Text", "fr": "Texte"},
+    "plot.text_block.description": {
+        "en": "A block of your own text — a title, a comment, what you concluded. "
+        "Reads no activity data.",
+        "fr": "Un bloc de texte libre — un titre, un commentaire, votre conclusion. "
+        "N'utilise aucune donnée d'activité.",
+    },
+    "plot.image_block.label": {"en": "Image", "fr": "Image"},
+    "plot.image_block.description": {
+        "en": "An image in the panel: upload one, or point at a URL.",
+        "fr": "Une image dans le panneau : téléversez-la, ou indiquez une URL.",
+    },
+
     # --- Shared plot messages ------------------------------------------------
     "plot.no_data": {
         "en": "No data for this selection.", "fr": "Aucune donnée pour cette sélection.",
@@ -437,6 +457,9 @@ TRANSLATIONS = {
     "metric.max_hr": {"en": "Max heart rate", "fr": "Fréquence cardiaque max"},
     "metric.avg_power_w": {"en": "Average power", "fr": "Puissance moyenne"},
     "metric.power_to_hr": {"en": "Power-to-HR", "fr": "Puissance / FC"},
+    "metric.relative_effort": {
+        "en": "Relative Effort (Strava)", "fr": "Effort relatif (Strava)",
+    },
     "metric.best.1_km": {"en": "Best 1 km", "fr": "Meilleur 1 km"},
     "metric.best.3_km": {"en": "Best 3 km", "fr": "Meilleur 3 km"},
     "metric.best.5_km": {"en": "Best 5 km", "fr": "Meilleur 5 km"},
@@ -633,6 +656,49 @@ TRANSLATIONS = {
     "param.hr_band.min": {"en": "Min bpm", "fr": "FC min"},
     "param.hr_band.max": {"en": "Max bpm", "fr": "FC max"},
 
+    # Content blocks (text, image) — shared alignment and tone vocabularies first.
+    "param.align.left": {"en": "Left", "fr": "À gauche"},
+    "param.align.center": {"en": "Centered", "fr": "Centré"},
+    "param.tone.none": {"en": "None", "fr": "Aucune"},
+    "param.tone.forest": {"en": "Green", "fr": "Vert"},
+    "param.tone.terracotta": {"en": "Clay", "fr": "Terre cuite"},
+    "param.tone.sunrise": {"en": "Amber", "fr": "Ambre"},
+    "param.tone.plum": {"en": "Plum", "fr": "Prune"},
+
+    "param.text.body": {"en": "Text", "fr": "Texte"},
+    "param.text.body.help": {
+        "en": "Line breaks are kept. Your own words, in your own language — this is "
+        "the one string in the app that is never translated.",
+        "fr": "Les retours à la ligne sont conservés. Vos propres mots, dans votre "
+        "langue — c'est le seul texte de l'application qui n'est jamais traduit.",
+    },
+    "param.text.variant": {"en": "Style", "fr": "Style"},
+    "param.text.variant.body": {"en": "Paragraph", "fr": "Paragraphe"},
+    "param.text.variant.lede": {"en": "Intro", "fr": "Introduction"},
+    "param.text.variant.heading": {"en": "Heading", "fr": "Titre"},
+    "param.text.variant.quote": {"en": "Quote", "fr": "Citation"},
+    "param.text.align": {"en": "Alignment", "fr": "Alignement"},
+    "param.text.tone": {"en": "Highlight", "fr": "Mise en avant"},
+
+    "param.image.src": {"en": "Image", "fr": "Image"},
+    "param.image.src.help": {
+        "en": "Upload a file (PNG, JPEG, WebP or GIF, up to 4 MB) or paste a URL.",
+        "fr": "Téléversez un fichier (PNG, JPEG, WebP ou GIF, jusqu'à 4 Mo) ou "
+        "collez une URL.",
+    },
+    "param.image.caption": {"en": "Caption", "fr": "Légende"},
+    "param.image.alt": {"en": "Alt text", "fr": "Texte alternatif"},
+    "param.image.alt.help": {
+        "en": "What the image shows, for anyone who cannot see it.",
+        "fr": "Ce que montre l'image, pour qui ne peut pas la voir.",
+    },
+    "param.image.width": {"en": "Width (%)", "fr": "Largeur (%)"},
+    "param.image.width.help": {
+        "en": "Share of the panel's width.",
+        "fr": "Part de la largeur du panneau.",
+    },
+    "param.image.align": {"en": "Alignment", "fr": "Alignement"},
+
     # --- GAP plot messages ---------------------------------------------------
     "gap.group_no_splits": {
         "en": "{label}: no usable split found — the activities may be too short or "
@@ -658,6 +724,7 @@ TRANSLATIONS = {
     # --- Built-in example pages ---------------------------------------------
     "dash.window.all_history": {"en": "All history", "fr": "Tout l'historique"},
     "dash.gap.panel.curves": {"en": "GAP curves", "fr": "Courbes GAP"},
+    "dash.gap.panel.per_year": {"en": "One curve per year", "fr": "Une courbe par an"},
     "dash.gap.panel.intensity": {"en": "By intensity", "fr": "Par intensité"},
     "dash.races.panel.selection": {
         "en": "Selected workouts", "fr": "Séances sélectionnées",
@@ -674,12 +741,16 @@ TRANSLATIONS = {
     # translation table of its own, so this block is the only place its wording
     # lives — see the module docstring.
     "ui.nav.home": {"en": "Home", "fr": "Accueil"},
-    "ui.nav.my_pages": {"en": "My Pages", "fr": "Mes pages"},
+    "ui.nav.analysis": {"en": "Analysis", "fr": "Analysis"},
     "ui.nav.sign_out": {"en": "Sign out", "fr": "Se déconnecter"},
 
     "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},
     "ui.common.not_set": {"en": "Not set", "fr": "Non renseigné"},
     "ui.common.saving": {"en": "saving", "fr": "enregistrement"},
+    "ui.common.not_saved": {
+        "en": "Not saved — check the value.",
+        "fr": "Non enregistré — vérifiez la valeur.",
+    },
     "ui.common.km": {"en": "km", "fr": "km"},
     "ui.common.metres": {"en": "m", "fr": "m"},
     "ui.common.kg": {"en": "kg", "fr": "kg"},
@@ -747,6 +818,23 @@ TRANSLATIONS = {
         "en": "The route could not be fetched from Strava just now.",
         "fr": "Le parcours n'a pas pu être récupéré depuis Strava pour le moment.",
     },
+    "ui.home.form.title": {"en": "Recent form", "fr": "Forme récente"},
+    "ui.home.form.subtitle": {
+        "en": "Power per heartbeat, weekly, smoothed over four weeks. It rises when "
+              "the same effort buys you more pace — and unlike raw pace it does not "
+              "care whether the week was hilly or flat.",
+        "fr": "Puissance par battement, par semaine, lissée sur quatre semaines. "
+              "Elle monte quand le même effort vous rapporte plus d'allure — et "
+              "contrairement à l'allure brute, elle ne dépend pas du relief de la "
+              "semaine.",
+    },
+    "ui.home.form.needs_weight": {
+        "en": "Power is modelled from your body mass, so this chart needs your "
+              "weight — set it on the Health card above.",
+        "fr": "La puissance est modélisée à partir de votre masse corporelle : ce "
+              "graphique a besoin de votre poids — renseignez-le dans la carte "
+              "Santé ci-dessus.",
+    },
     "ui.home.recent.title": {"en": "Recent History", "fr": "Historique récent"},
     "ui.home.recent.subtitle": {
         "en": "Distance and climb per week over the last 20 weeks. Each has its own "
@@ -780,12 +868,14 @@ TRANSLATIONS = {
     },
 
     # My Pages
-    "ui.pages.title": {"en": "My Pages", "fr": "Mes pages"},
-    "ui.pages.how.title": {"en": "How pages work", "fr": "Comment fonctionnent les pages"},
+    "ui.pages.title": {"en": "Analysis", "fr": "Analysis"},
+    "ui.pages.how.title": {
+        "en": "How an analysis works", "fr": "Comment fonctionne une analyse",
+    },
     "ui.pages.how.body": {
-        "en": "A page is yours to assemble. You add panels; each panel takes one data "
-              "source and as many plots as you like over it.",
-        "fr": "Une page se construit. Vous ajoutez des panneaux ; chaque panneau "
+        "en": "An analysis is yours to assemble. You add panels; each panel takes one "
+              "data source and as many plots as you like over it.",
+        "fr": "Une analyse se construit. Vous ajoutez des panneaux ; chaque panneau "
               "prend une source de données et autant de graphiques que vous voulez.",
     },
     "ui.pages.how.step1.title": {"en": "1. Pick a data source", "fr": "1. Choisir des données"},
@@ -805,34 +895,97 @@ TRANSLATIONS = {
     },
     "ui.pages.how.step3.title": {"en": "3. Keep it", "fr": "3. La conserver"},
     "ui.pages.how.step3.body": {
-        "en": "A page is saved as a document, so it reopens exactly as you left it.",
-        "fr": "Une page est enregistrée comme un document : elle se rouvre exactement "
-              "comme vous l'avez laissée.",
+        "en": "An analysis is saved as a document, so it reopens exactly as you left "
+              "it. The three you start with work the same way — edit them freely.",
+        "fr": "Une analyse est enregistrée comme un document : elle se rouvre "
+              "exactement comme vous l'avez laissée. Les trois analyses fournies "
+              "fonctionnent pareil — modifiez-les librement.",
     },
-    "ui.pages.examples.title": {"en": "Examples", "fr": "Exemples"},
-    "ui.pages.examples.help": {
-        "en": "Built from the same panels and plots you get. Open one to read it, or "
-              "duplicate it to make it yours.",
-        "fr": "Construits avec les mêmes panneaux et graphiques que les vôtres. "
-              "Ouvrez-en un pour le lire, ou dupliquez-le pour l'adapter.",
-    },
-    "ui.pages.mine.title": {"en": "My pages", "fr": "Mes pages"},
-    "ui.pages.mine.empty": {
-        "en": "None yet. Start from scratch below, or duplicate an example above.",
-        "fr": "Aucune pour l'instant. Partez de zéro ci-dessous, ou dupliquez un "
-              "exemple ci-dessus.",
-    },
-    "ui.pages.new.button": {"en": "New page", "fr": "Nouvelle page"},
+    "ui.pages.new.button": {"en": "New analysis", "fr": "Nouvelle analyse"},
     "ui.pages.new.hint": {
-        "en": "Start from an empty page and add your first panel.",
-        "fr": "Commencez avec une page vide et ajoutez votre premier panneau.",
+        "en": "Start from an empty analysis and add your first panel.",
+        "fr": "Partez d'une analyse vide et ajoutez votre premier panneau.",
     },
-    "ui.pages.new.prompt": {"en": "Name your page", "fr": "Nommez votre page"},
+    "ui.pages.new.prompt": {"en": "Name your analysis", "fr": "Nommez votre analyse"},
     "ui.pages.new.default_name": {"en": "My analysis", "fr": "Mon analyse"},
+    # The header of one analysis.
+    "ui.page.recompute": {"en": "Recompute", "fr": "Recalculer"},
+    "ui.page.duplicate": {"en": "Duplicate", "fr": "Dupliquer"},
+    "ui.page.delete": {"en": "Delete", "fr": "Supprimer"},
+    "ui.page.add_panel": {"en": "Add a panel", "fr": "Ajouter un panneau"},
+    "ui.page.default": {"en": "Default", "fr": "Par défaut"},
+    "ui.page.default_help": {
+        "en": "This analysis ships with the app, so it cannot be deleted. Everything "
+              "else about it is editable — duplicate it if you want a version you can "
+              "remove.",
+        "fr": "Cette analyse est fournie avec l'application : elle ne peut pas être "
+              "supprimée. Tout le reste est modifiable — dupliquez-la si vous voulez "
+              "une version que vous pouvez supprimer.",
+    },
+
     "ui.pages.panel_count.one": {"en": "{count} panel", "fr": "{count} panneau"},
     "ui.pages.panel_count.many": {"en": "{count} panels", "fr": "{count} panneaux"},
     "ui.pages.plot_count.one": {"en": "{count} plot", "fr": "{count} graphique"},
     "ui.pages.plot_count.many": {"en": "{count} plots", "fr": "{count} graphiques"},
+
+    # Email — asked for once, right after the first sign-in.
+    "ui.email.title": {
+        "en": "One last thing: your email", "fr": "Une dernière chose : votre email",
+    },
+    "ui.email.body": {
+        "en": "Strava does not share email addresses, so we have to ask. It is how "
+              "we reach you about your account and about what changes in the app.",
+        "fr": "Strava ne communique pas les adresses email, nous devons donc vous la "
+              "demander. C'est ainsi que nous vous joignons au sujet de votre compte "
+              "et des évolutions de l'application.",
+    },
+    "ui.email.label": {"en": "Email address", "fr": "Adresse email"},
+    "ui.email.placeholder": {"en": "you@example.com", "fr": "vous@exemple.com"},
+    "ui.email.submit": {"en": "Continue", "fr": "Continuer"},
+    "ui.email.invalid": {
+        "en": "That does not look like an email address.",
+        "fr": "Cela ne ressemble pas à une adresse email.",
+    },
+    "ui.email.missing": {
+        "en": "We still need your email address.",
+        "fr": "Il nous manque encore votre adresse email.",
+    },
+    "ui.email.provide": {"en": "Add it now", "fr": "L'ajouter maintenant"},
+    "ui.home.health.email": {"en": "Email", "fr": "Email"},
+
+    # Import — the automatic pass that runs when you connect.
+    "ui.home.import.auto": {
+        "en": "Checking Strava for new activities…",
+        "fr": "Recherche de nouvelles activités sur Strava…",
+    },
+    "ui.home.import.auto_help": {
+        "en": "New activities are imported automatically when you open the app. The "
+              "buttons are there for when you want to force it.",
+        "fr": "Les nouvelles activités sont importées automatiquement à l'ouverture "
+              "de l'application. Les boutons sont là si vous voulez forcer l'import.",
+    },
+
+    # Background computation of the expensive plots.
+    "ui.precompute.title": {"en": "Models", "fr": "Modèles"},
+    "ui.precompute.running": {
+        "en": "Fitting your GAP models in the background…",
+        "fr": "Ajustement de vos modèles GAP en arrière-plan…",
+    },
+    "ui.precompute.help": {
+        "en": "The GAP curves are model fits over your per-second data. They are "
+              "computed once, per year of history, and kept — so the example page "
+              "opens already drawn.",
+        "fr": "Les courbes GAP sont des ajustements de modèles sur vos données "
+              "seconde par seconde. Elles sont calculées une fois, par année "
+              "d'historique, puis conservées — la page d'exemple s'ouvre donc déjà "
+              "tracée.",
+    },
+    "ui.precompute.done": {"en": "Models ready", "fr": "Modèles prêts"},
+    "ui.precompute.failed": {
+        "en": "Could not finish fitting the models",
+        "fr": "Impossible de terminer l'ajustement des modèles",
+    },
+
 }
 
 UI_PREFIX = "ui."

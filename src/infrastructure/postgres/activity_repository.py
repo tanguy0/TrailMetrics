@@ -28,6 +28,7 @@ FEATURE_VERSION = 1
 _SCALAR_COLUMNS = [
     "distance_m", "elevation_gain_m", "moving_s", "elapsed_s", "gap_distance_m",
     "avg_hr", "max_hr", "avg_power_w_per_kg", "power_to_hr_per_kg",
+    "relative_effort",
 ]
 
 _SUMMARY_COLUMNS = [
@@ -108,6 +109,30 @@ class PostgresActivityRepository(ActivityRepository):
             "update activities set summary_polyline = %s, updated_at = now() "
             "where athlete_id = %s and activity_id = %s",
             (polyline, athlete_id, activity_id),
+        )
+
+    def set_relative_efforts(
+        self, athlete_id: int, values: Sequence[Tuple[int, Optional[float]]]
+    ) -> int:
+        """Update Relative Effort on rows that already exist.
+
+        This is what backfills the column on a history imported before it existed.
+        Relative Effort rides on Strava's *activity list*, which a sync walks anyway,
+        so refreshing every stored activity costs no extra request — whereas
+        re-featurizing them all would cost one per activity and blow the rate limit.
+
+        ``coalesce`` so a value Strava has stopped reporting (an activity whose heart
+        rate was removed) does not erase the number we already have.
+        """
+        cleaned = [(_clean(value), athlete_id, int(activity_id))
+                   for activity_id, value in values if _clean(value) is not None]
+        if not cleaned:
+            return 0
+        return self.db.execute_many(
+            "update activities "
+            "set relative_effort = coalesce(%s, relative_effort), updated_at = now() "
+            "where athlete_id = %s and activity_id = %s",
+            cleaned,
         )
 
     def set_stream_object(

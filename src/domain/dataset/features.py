@@ -68,6 +68,10 @@ STORED_COLUMNS: List[str] = (
         "distance_m", "elevation_gain_m", "moving_s", "elapsed_s",
         "gap_distance_m", "avg_hr", "max_hr",
         "avg_power_w_per_kg", "power_to_hr_per_kg",
+        # Strava's Relative Effort. The one column that is *reported* rather than
+        # computed here — it comes off the activity summary, because Strava derives
+        # it from the athlete's own heart-rate zones, which its API does not expose.
+        "relative_effort",
     ]
     + [band_column(key) for key, _, _ in GRADIENT_BANDS]
     + [best_column(label) for label, _ in PR_DISTANCES]
@@ -192,6 +196,7 @@ def build_activity_features(
         "sport_type": sport_name(stream.sport_type),
         "has_streams": True,
         "elapsed_s": float(time[-1] - time[0]),
+        "relative_effort": _optional_float(stream.summary_relative_effort),
     }
 
     # Gradient, elevation gain and GAP all derive from a *smoothed* altitude
@@ -278,12 +283,29 @@ def _summary_only_row(stream: ActivityStream) -> Optional[Dict[str, Any]]:
         "max_hr": np.nan,
         "avg_power_w_per_kg": np.nan,
         "power_to_hr_per_kg": np.nan,
+        # Reported by Strava, so it survives even with no per-second data.
+        "relative_effort": _optional_float(stream.summary_relative_effort),
     }
     for key, _, _ in GRADIENT_BANDS:
         row[band_column(key)] = np.nan
     for label, _ in PR_DISTANCES:
         row[best_column(label)] = np.nan
     return row
+
+
+def _optional_float(value: Any) -> float:
+    """A float, or ``NaN`` for anything unusable.
+
+    NaN rather than ``None`` because the feature frame is numeric: a ``None`` in a
+    float column makes pandas fall back to ``object`` dtype and every downstream
+    aggregation on it silently changes behaviour.
+    """
+    if value is None:
+        return np.nan
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return np.nan
 
 
 def sport_name(sport_type) -> str:

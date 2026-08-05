@@ -109,6 +109,12 @@ class EfficiencyGapModel(GapModel):
         flat_mask = (
             (elevation_gains > self.DEFAULT_FLAT_RANGE[0])
             & (elevation_gains < self.DEFAULT_FLAT_RANGE[1])
+            # Only samples that can actually produce an efficiency. The preprocessor
+            # already drops non-finite input, but this is the divisor for *every*
+            # bucket in the fit: one NaN here makes `median` NaN and every curve this
+            # model returns NaN with it, which is far too much damage for one bad
+            # sample. Cheap guard, catastrophic failure mode.
+            & np.isfinite(efficiencies)
         )
 
         if np.sum(flat_mask) > self.MIN_FLAT_SAMPLES:

@@ -28,9 +28,9 @@ class PostgresAthleteRepository(AthleteRepository):
 
     def upsert(self, athlete: Athlete) -> Athlete:
         # Weight is intentionally not overwritten: the athlete sets it in this app,
-        # and re-authenticating with Strava must not wipe it. Birthdate and height
-        # are not in the insert list at all — they only ever come from this app, so
-        # a re-auth has nothing to say about them.
+        # and re-authenticating with Strava must not wipe it. Birthdate, height and
+        # email are not in the insert list at all — they only ever come from this
+        # app, so a re-auth has nothing to say about them.
         row = self.db.fetch_one(
             """
             insert into athletes (id, firstname, lastname, profile_url, weight_kg)
@@ -41,7 +41,7 @@ class PostgresAthleteRepository(AthleteRepository):
                 profile_url = excluded.profile_url,
                 updated_at = now()
             returning id, firstname, lastname, profile_url, weight_kg,
-                      birthdate, height_cm
+                      birthdate, height_cm, email
             """,
             (athlete.id, athlete.firstname, athlete.lastname,
              athlete.profile_url, athlete.weight_kg),
@@ -51,7 +51,7 @@ class PostgresAthleteRepository(AthleteRepository):
     def get(self, athlete_id: int) -> Optional[Athlete]:
         row = self.db.fetch_one(
             "select id, firstname, lastname, profile_url, weight_kg, "
-            "birthdate, height_cm from athletes where id = %s",
+            "birthdate, height_cm, email from athletes where id = %s",
             (athlete_id,),
         )
         return _athlete(row) if row else None
@@ -72,6 +72,15 @@ class PostgresAthleteRepository(AthleteRepository):
             "update athletes set birthdate = %s, height_cm = %s, "
             "updated_at = now() where id = %s",
             (birthdate, height_cm, athlete_id),
+        )
+
+    def set_email(self, athlete_id: int, email: Optional[str]) -> None:
+        # Empty string and NULL both mean "not answered"; store one of them so
+        # `needs_email` has a single case to check.
+        cleaned = (email or "").strip() or None
+        self.db.execute(
+            "update athletes set email = %s, updated_at = now() where id = %s",
+            (cleaned, athlete_id),
         )
 
     # --- Credentials -------------------------------------------------------
@@ -167,6 +176,7 @@ def _athlete(row) -> Athlete:
         weight_kg=row["weight_kg"],
         birthdate=row["birthdate"],
         height_cm=row["height_cm"],
+        email=row.get("email"),
     )
 
 

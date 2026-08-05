@@ -41,7 +41,10 @@ async function forward(request: NextRequest, path: string[]): Promise<Response> 
     response = await fetch(target, {
       method: request.method,
       headers,
-      body: hasBody ? await request.text() : undefined,
+      // `arrayBuffer` rather than `text`: an image upload is multipart with binary
+      // parts, and decoding it as text corrupts the bytes. JSON survives this
+      // unchanged, so there is no reason to branch on the content type.
+      body: hasBody ? await request.arrayBuffer() : undefined,
       // The proxy is the caching boundary; let the API decide freshness.
       cache: "no-store",
     });

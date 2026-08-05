@@ -36,7 +36,6 @@ export interface PlotSpec {
   plot_type: string;
   params: Record<string, unknown>;
   title: string | null;
-  collapsed: boolean;
 }
 
 export interface PanelSpec {
@@ -46,7 +45,6 @@ export interface PanelSpec {
   source: DataSourceSpec;
   plots: PlotSpec[];
   columns: number;
-  collapsed: boolean;
 }
 
 export interface PageSpec {
@@ -55,6 +53,12 @@ export interface PageSpec {
   name: string;
   description: string;
   icon: string;
+  /**
+   * Which default analysis this is, or `null` for one the athlete created.
+   *
+   * Set on the three analyses everyone starts with. They are stored, editable pages
+   * like any other; the key means only that they cannot be deleted.
+   */
   builtin_key: string | null;
   panels: PanelSpec[];
 }
@@ -65,7 +69,8 @@ export interface PageSummary {
   description: string;
   icon: string;
   builtin_key: string | null;
-  is_builtin: boolean;
+  /** Ships with the app: editable, but not deletable. */
+  is_default: boolean;
   panel_count: number;
   plot_count: number;
 }
@@ -77,6 +82,10 @@ export type ParamKind =
   | "int"
   | "float"
   | "text"
+  /** Multi-line text: a paragraph, not a label. */
+  | "textarea"
+  /** An image URL, paired with an upload control. */
+  | "image"
   | "choice"
   | "multichoice"
   | "group"
@@ -120,6 +129,8 @@ export interface PlotDefinition {
   series_level: "group" | "activity";
   requires_streams: boolean;
   requires_weight: boolean;
+  /** False for content blocks (prose, an image): they read no activity data. */
+  requires_data: boolean;
   cost: "cheap" | "expensive";
   params: ParamSpec[];
 }
@@ -220,10 +231,35 @@ export interface TableData {
   caption: string | null;
 }
 
+/**
+ * Prose inside a panel.
+ *
+ * The one string in the app that arrives untranslated: it is what the athlete
+ * typed, not something `src/translations.py` knows about.
+ */
+export interface TextBlock {
+  text: string;
+  variant: "body" | "lede" | "heading" | "quote";
+  align: "left" | "center";
+  tone: "none" | "forest" | "terracotta" | "sunrise" | "plum";
+}
+
+/** An image in a panel. `src` is an external URL or `/api/proxy/assets/{id}`. */
+export interface ImageBlock {
+  src: string;
+  alt: string;
+  caption: string | null;
+  /** Share of the panel's width, 10–100. */
+  width_pct: number;
+  align: "left" | "center";
+}
+
 export interface PlotOutput {
   charts: ChartData[];
   tables: TableData[];
   notes: string[];
+  texts: TextBlock[];
+  images: ImageBlock[];
 }
 
 // --- Render results --------------------------------------------------------
@@ -260,6 +296,29 @@ export interface SyncStatus {
   last_synced_at: string | null;
 }
 
+/**
+ * Progress of the background pass that fits the expensive plots.
+ *
+ * Same shape as `SyncStatus`, because it is the same pattern: work too long for one
+ * request, started by the client and polled.
+ */
+export interface PrecomputeStatus {
+  status: "idle" | "running" | "done" | "error";
+  done: number;
+  total: number;
+  message: string;
+  finished_at: string | null;
+}
+
+/** One uploaded image, as `POST /assets` returns it. */
+export interface AssetUpload {
+  id: string;
+  content_type: string;
+  byte_size: number;
+  /** What an image block's `src` should hold. */
+  url: string;
+}
+
 export interface Athlete {
   id: number;
   firstname: string;
@@ -267,10 +326,13 @@ export interface Athlete {
   display_name: string;
   profile_url: string | null;
   weight_kg: number | null;
-  // Self-reported: Strava's API carries neither. `age` is derived from
+  // Self-reported: Strava's API carries none of these. `age` is derived from
   // `birthdate` server-side so every client agrees on it.
   birthdate: string | null; // ISO date
   height_cm: number | null;
+  email: string | null;
+  /** Server's verdict on whether the email question has been answered. */
+  needs_email: boolean;
   age: number | null;
   activity_count: number;
   sport_types: string[];

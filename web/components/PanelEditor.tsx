@@ -38,6 +38,12 @@ interface Props {
   newest: string | null;
   editable: boolean;
   initialResult?: PanelResult;
+  /**
+   * Bumped by the page's "Recompute" button. A counter rather than a boolean: the
+   * request is "recompute *now*", which has to be able to happen twice, and a
+   * boolean that is already true would produce no change to react to.
+   */
+  refreshToken?: number;
 }
 
 export function PanelEditor({
@@ -52,29 +58,62 @@ export function PanelEditor({
   newest,
   editable,
   initialResult,
+  refreshToken = 0,
 }: Props) {
   const [result, setResult] = useState<PanelResult | undefined>(initialResult);
   const [loading, setLoading] = useState(!initialResult);
   const [failure, setFailure] = useState<string | null>(null);
   const [forced, setForced] = useState<string[]>([]);
-  const [showSource, setShowSource] = useState(false);
+  /**
+   * Which plots have their settings showing. Session state, deliberately not stored.
+   *
+   * Reopening an analysis should show the analysis, not the machinery that produced
+   * it — a page of six plots with every parameter form expanded buries the figures
+   * you came back for. Starting empty also means toggling a form no longer edits the
+   * document, so it no longer triggers an autosave.
+   */
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const toggleSettings = (plotId: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (!next.delete(plotId)) next.add(plotId);
+      return next;
+    });
+  // Open from the start when the panel has nothing to show *and* picking is the point:
+  // an empty hand-picked selection is a page waiting on the reader, so put the control
+  // in front of them instead of behind a button they have to discover. This is what
+  // the Race Comparator opens to on a fresh account.
+  const [showSource, setShowSource] = useState(
+    () =>
+      editable &&
+      panel.source.mode === "activities" &&
+      panel.source.activity_ids.length === 0,
+  );
 
   // Serialized spec as the render trigger: structural identity changes on every
-  // keystroke, but the *content* is what the server cares about.
+  // keystroke, but the *content* is what the server cares about. `refreshToken` is
+  // in the key so asking for a recompute re-runs this even though nothing was edited.
   const signature = useMemo(
-    () => JSON.stringify({ panel, forced }),
-    [panel, forced],
+    () => JSON.stringify({ panel, forced, refreshToken }),
+    [panel, forced, refreshToken],
   );
 
   const inFlight = useRef<AbortController | null>(null);
+  // The highest token already acted on, so a recompute applies to the render it
+  // triggered and not to every later edit.
+  const servedRefresh = useRef(0);
 
   useEffect(() => {
+    const refresh = refreshToken > servedRefresh.current;
+    servedRefresh.current = refreshToken;
+    // A recompute is what the athlete just clicked; debouncing it would only make
+    // the button feel broken.
     const timer = setTimeout(() => {
       inFlight.current?.abort();
       const controller = new AbortController();
       inFlight.current = controller;
       setLoading(true);
-      renderPanel(panel, forced, controller.signal)
+      renderPanel(panel, forced, controller.signal, refresh)
         .then((response) => {
           setResult(response.panel);
           setFailure(null);
@@ -86,7 +125,7 @@ export function PanelEditor({
           );
         })
         .finally(() => !controller.signal.aborted && setLoading(false));
-    }, DEBOUNCE_MS);
+    }, refresh ? 0 : DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,13 +150,14 @@ export function PanelEditor({
     if (!definition) return;
     const params: Record<string, unknown> = {};
     for (const spec of definition.params) params[spec.key] = spec.default;
+    const id = newId("plot");
     onChange({
       ...panel,
-      plots: [
-        ...panel.plots,
-        { id: newId("plot"), plot_type: plotType, params, title: null, collapsed: false },
-      ],
+      plots: [...panel.plots, { id, plot_type: plotType, params, title: null }],
     });
+    // Open the form for a plot just added: choosing to add it *is* the intent to
+    // configure it. Reopening the page later starts it closed like everything else.
+    setExpanded((current) => new Set(current).add(id));
   };
 
   const movePlot = (index: number, direction: -1 | 1) => {
@@ -167,7 +207,9 @@ export function PanelEditor({
             <select
               className="select--small"
               value={panel.columns}
-              onChange={(event) => onChange({ ...panel, columns: Number(event.target.value) })}
+              onChange={(event) =>
+                onChange({ ...panel, columns: Number(event.target.value) })
+              }
               aria-label="Columns"
             >
               <option value={1}>1 column</option>
@@ -194,7 +236,11 @@ export function PanelEditor({
               </>
             )}
             {onRemove && (
-              <button type="button" className="button button--danger button--small" onClick={onRemove}>
+              <button
+                type="button"
+                className="button button--danger button--small"
+                onClick={onRemove}
+              >
                 Delete panel
               </button>
             )}
@@ -225,21 +271,32 @@ export function PanelEditor({
           const plotResult = resultsByPlot.get(plot.id);
           // Tables read badly in a narrow column, so they always span the grid.
           const spans = !plotResult || plotResult.output.tables.length > 0;
+          // A content block *is* the page's prose. Reading it, the type label and the
+          // catalogue description are noise around a paragraph — so they stay in the
+          // editor and disappear once the page is being read.
+          const isContent = definition ? !definition.requires_data : false;
+          const chrome = editable || !isContent;
           return (
             <article
               key={plot.id}
-              className={`plot-card ${spans ? "plot-card--wide" : ""}`}
+              className={[
+                "plot-card",
+                spans ? "plot-card--wide" : "",
+                isContent ? "plot-card--content" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
             >
               <header className="plot-card__header">
-                <h3>{plot.title || definition?.label || plot.plot_type}</h3>
+                {chrome && <h3>{plot.title || definition?.label || plot.plot_type}</h3>}
                 {editable && (
                   <div className="plot-card__actions">
                     <button
                       type="button"
                       className="button button--ghost button--small"
-                      onClick={() => updatePlot(plot.id, { collapsed: !plot.collapsed })}
+                      onClick={() => toggleSettings(plot.id)}
                     >
-                      {plot.collapsed ? "Settings" : "Hide settings"}
+                      {expanded.has(plot.id) ? "Hide settings" : "Settings"}
                     </button>
                     <button
                       type="button"
@@ -273,9 +330,13 @@ export function PanelEditor({
                 )}
               </header>
 
-              {definition && <p className="muted">{definition.description}</p>}
+              {/* The catalogue description helps while choosing a plot; above the
+                  author's own paragraph it just repeats what the block obviously is. */}
+              {definition && !isContent && (
+                <p className="muted">{definition.description}</p>
+              )}
 
-              {editable && !plot.collapsed && definition && (
+              {editable && expanded.has(plot.id) && definition && (
                 <ParamForm
                   specs={definition.params}
                   values={plot.params}

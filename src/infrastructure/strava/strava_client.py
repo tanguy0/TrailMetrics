@@ -94,6 +94,10 @@ class StravaClient(ActivityStreamSource):
                     # The route, already on the summary — no extra request. Absent
                     # for indoor activities and for manual entries.
                     "summary_polyline": _summary_polyline(act),
+                    # Strava's Relative Effort, its training-load score. Also on the
+                    # summary, so a whole history costs nothing extra to collect.
+                    # None when the activity has no heart rate.
+                    "relative_effort": _to_float(getattr(act, "suffer_score", None)),
                 }
             )
         return results
@@ -168,6 +172,7 @@ class StravaClient(ActivityStreamSource):
                 activity["sport_type"],
                 raw,
                 start_date=activity.get("start_date"),
+                relative_effort=activity.get("relative_effort"),
             )
         except Exception:
             return self._summary_only_stream(activity)
@@ -191,6 +196,7 @@ class StravaClient(ActivityStreamSource):
         sport_type: str,
         raw: dict,
         start_date: Optional[datetime] = None,
+        relative_effort: Optional[float] = None,
     ) -> ActivityStream:
         # time + distance are required (they define the activity); altitude and
         # heartrate are optional — when absent (no GPS / no HR sensor) they're
@@ -217,6 +223,7 @@ class StravaClient(ActivityStreamSource):
             altitude=altitude,
             heartrate=heartrate,
             start_date=start_date,
+            summary_relative_effort=relative_effort,
         )
 
     @staticmethod
@@ -235,4 +242,5 @@ class StravaClient(ActivityStreamSource):
             summary_distance_m=act.get("distance_m"),
             summary_moving_time_s=act.get("moving_time_s"),
             summary_elevation_gain_m=act.get("elevation_gain_m"),
+            summary_relative_effort=act.get("relative_effort"),
         )

@@ -6,8 +6,10 @@ from src.domain.charts.ir import (
     CellFormat,
     ChartData,
     Column,
+    ImageBlock,
     PlotOutput,
     TableData,
+    TextBlock,
     Trace,
     TraceKind,
 )
@@ -18,8 +20,10 @@ __all__ = [
     "CellFormat",
     "ChartData",
     "Column",
+    "ImageBlock",
     "PlotOutput",
     "TableData",
+    "TextBlock",
     "Trace",
     "TraceKind",
 ]

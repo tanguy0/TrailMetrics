@@ -1,4 +1,5 @@
 import { PageWorkspace } from "@/components/PageWorkspace";
+import { loadStrings } from "@/lib/strings.server";
 
 export default async function EditPage({
   params,
@@ -6,5 +7,7 @@ export default async function EditPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <PageWorkspace pageId={id} />;
+  // Read server-side and passed in, like every other screen: fetching in the browser
+  // would flash untranslated keys on first paint.
+  return <PageWorkspace pageId={id} strings={await loadStrings()} />;
 }

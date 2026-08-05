@@ -1,9 +1,9 @@
 # TrailMetrics
 
-A data-science workbench for running data. The user builds the pages: pick a data
-source, then add the plots you want over it.
+A data-science workbench for running data. The athlete builds the analyses: pick a
+data source, then add the plots you want over it.
 
-The organising idea is that **a page is data, not code**:
+The organising idea is that **an analysis is data, not code**:
 
 ```
 PageSpec ──< PanelSpec ──< PlotSpec
@@ -16,12 +16,18 @@ PageSpec ──< PanelSpec ──< PlotSpec
 * a **plot** is a registry entry with a declarative parameter schema, so its form —
   including sub-parameters that only appear when relevant — is generated, never written.
 
-Because a page is a serializable document, "the user built this", "the app ships this
-as an example" and "this lives in a database" are all the same mechanism. The three
-example pages (Personalized GAP Simulator, Race Comparator, Long-Term Progress) are
-`PageSpec`s assembled in [`src/dashboards/`](src/dashboards/) from the same panels and
-plots a user gets. If an example needs something the builder cannot express, the
-builder is missing a feature.
+Because an analysis is a serializable document, "the athlete built this" and "the app
+ships this to everyone" are the same mechanism. The three **default analyses**
+(Personalized GAP Simulator, Race Comparator, Long-Term Progress) are `PageSpec`s
+assembled in [`src/dashboards/`](src/dashboards/) from the same panels and plots
+anyone gets, then **stored per athlete** on first use. They are edited in place like
+any other analysis; the only thing that marks them is that they cannot be deleted.
+
+They were briefly generated per request and served read-only, on the theory that they
+were examples to duplicate. That failed the Race Comparator outright — it *is* a
+hand-picked set of workouts, and a read-only page cannot be given one — which is the
+clearest argument for the current model: if a shipped analysis needs something the
+builder cannot express, the builder is missing a feature.
 
 ## Architecture
 
@@ -52,10 +58,13 @@ a parameter schema, a data level, and a pure `compute`. Nothing else. It never r
 and never reads request state.
 
 **4. Chart IR** — [`src/domain/charts/ir.py`](src/domain/charts/ir.py). `compute`
-returns traces, axes and tables as data, not figures. One renderer draws it
-([Python](src/domain/charts/plotly.py) for notebooks,
+returns traces, axes, tables, prose and images as data, not figures. One renderer
+draws it ([Python](src/domain/charts/plotly.py) for notebooks,
 [TypeScript](web/components/ChartView.tsx) for the web app), so palette, duration axes
 and hover styling are defined once and every new plot type inherits them.
+
+The IR round-trips: `PlotOutput.to_dict()` / `from_dict()` are inverses, which is what
+lets a computed output be *stored* — see "Computed once" below.
 
 ### Extension points
 
@@ -65,6 +74,31 @@ and hover styling are defined once and every new plot type inherits them.
   metric-taking plot, at every granularity, in every chart form, with no frontend change.
 * **A new plot type** → one module in [`src/domain/plots/`](src/domain/plots/) plus a
   `register(...)` call. `/registry` picks it up and the UI renders its form.
+
+Panel content that is *not* data goes through the same door: `text_block` and
+`image_block` are ordinary registry entries with `requires_data=False`, so a page can
+carry its own commentary and images while being edited, stored and reordered by
+exactly the same machinery as a chart. A page is a document, so it has to be able to
+say what it found.
+
+### Computed once
+
+One plot type fits models rather than aggregating rows, and per-second data behind it
+makes that slow. Two mechanisms keep it off the reader's critical path:
+
+* **Outputs are persisted** in `plot_outputs`, keyed by a hash of the render signature
+  — plot type, coerced parameters, source spec, *resolved activity ids*, body mass,
+  language. Because the activity ids are in the key, importing a run invalidates by
+  construction: the same page yields a different key and the stale row is never read.
+  A cold worker then serves a fitted GAP page in milliseconds instead of refitting it.
+* **`POST /precompute`** fills that cache in the background, rendering the athlete's
+  stored analyses exactly as a browser would, skipping panels with no expensive plot
+  in them. The web app fires it on connect, so the GAP analysis opens already drawn.
+  It is safe to call every time — a pass over a full cache is a read.
+
+`Recompute` on a page (`refresh: true` on `/render`) ignores both caches, refits, and
+overwrites. That is the escape hatch instead of a scheme for guessing when a cached
+fit has gone stale.
 
 ## Repository layout
 
@@ -84,7 +118,7 @@ TrailMetrics/
 │   │   ├── postgres/               # schema.sql + repositories
 │   │   └── storage/                # stream blobs (Supabase Storage / local disk)
 │   ├── usecases/                   # resolve_panel_data, render_page, sync, …
-│   └── dashboards/                 # the built-in example PageSpecs
+│   └── dashboards/                 # the default analyses, as PageSpecs
 ├── api/                            # FastAPI compute service
 ├── web/                            # Next.js app (Vercel)
 └── notebook/                       # exploratory notebooks
@@ -101,8 +135,8 @@ docker run -d --name tm-pg -e POSTGRES_PASSWORD=tm -e POSTGRES_DB=trailmetrics \
 
 # 2. Compute API
 pip install -r requirements-compute.txt -r requirements-api.txt
-cp .env.example .env && python -m api.keys   # paste the three secrets into .env
-set -a && . ./.env && set +a
+cp .env.example .env.local && python -m api.keys   # paste the three secrets into .env.local
+set -a && . ./.env.local && set +a
 uvicorn api.main:app --reload --port 8000
 
 # 3. Web app
@@ -144,6 +178,14 @@ The analytics primitives it shared (`gap/`, `races/metrics.py`, `races/smoothing
 * **Power is stored per kilogram.** The model `P = m·v·(Cr + g·s)` is linear in body
   mass, so a stored row is valid for any weight and changing yours rescales the whole
   history instantly instead of invalidating it.
+* **Relative Effort is reported, not computed.** Strava derives its training-load
+  score from the athlete's own heart-rate zones, which its API does not expose — so
+  `relative_effort` is read off the activity *listing* rather than from the streams.
+  That listing is walked by every sync anyway, which is why
+  `set_relative_efforts` can refresh the whole history for free, and why a column
+  added after an import backfills on the next sync instead of needing a re-import.
+* **Strava returns no email address**, under any scope. The app asks for one at
+  `/welcome`, immediately after the first sign-in, and stores it on `athletes.email`.
 * **Activities without per-second streams** (manual entries, activities Strava won't
   serve) still get a feature row from the activity summary, so they count in volume
   trends. Plots that need full traces skip them *and say how many they skipped*.
@@ -151,6 +193,17 @@ The analytics primitives it shared (`gap/`, `races/metrics.py`, `races/smoothing
   gradient changes sign. Barometric traces are smooth enough for this; with GPS-grade
   altitude jitter (σ ≈ 0.4 m) it discards nearly every split. Worth revisiting if GAP
   curves ever come back empty on real data.
+* **Both GAP models need heart rate**, and it is the constraint that decides whether a
+  curve exists at all. The efficiency model normalises every gradient bucket by the
+  median efficiency (`HR / speed`) of the flat band, and the auto-learning model can
+  only learn an adjustment where a climbing section shares a heart rate with a flat
+  one. So an activity recorded without an HR strap contributes nothing, and the
+  preprocessor drops it — a year with no HR data produces no curve, and the plot says
+  so rather than drawing an empty axis. This is also why the GAP analysis includes
+  road runs: they are where the flat reference samples come from.
+* **Road runs are included in the GAP analysis on purpose.** See the comment on
+  `_DEFAULT_SPORTS` in [`gap_simulator.py`](src/dashboards/gap_simulator.py) — excluding
+  them starves the flat reference both models calibrate against.
 
 ## Running the notebooks
 

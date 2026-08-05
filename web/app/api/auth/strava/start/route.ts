@@ -13,8 +13,10 @@ import { apiBaseUrl, appUrl } from "@/lib/session";
 export async function GET(request: NextRequest) {
   const redirectUri = `${appUrl()}/api/auth/strava/callback`;
   // Where to land after login; kept relative so it can't be used as an open redirect.
-  const next = request.nextUrl.searchParams.get("next") || "/pages";
-  const state = next.startsWith("/") ? next : "/pages";
+  // Home rather than the page list: it is where the import, the profile and the
+  // recent-form charts are, which is what a returning athlete opens the app for.
+  const next = request.nextUrl.searchParams.get("next") || "/home";
+  const state = next.startsWith("/") ? next : "/home";
 
   try {
     const response = await fetch(`${apiBaseUrl()}/auth/strava/url`, {

@@ -82,12 +82,19 @@ class ExchangeRequest(BaseModel):
     code: str = Field(min_length=1, max_length=500)
 
 
+# Deliberately permissive: "something@something.something", no dots-in-local-part
+# rules, no TLD list. A stricter pattern rejects real addresses, and the only thing
+# this validation can honestly promise is that the value is shaped like an email —
+# whether it *works* is a question only a sent message answers.
+_EMAIL_PATTERN = r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$"
+
+
 class ProfileUpdate(BaseModel):
-    """A partial update of the athlete's own body fields.
+    """A partial update of the athlete's own self-reported fields.
 
     Every field is optional *and* nullable, which are different things here: an
     absent key leaves the stored value alone, an explicit ``null`` clears it. That
-    distinction is what lets one endpoint back three independently-edited widgets
+    distinction is what lets one endpoint back several independently-edited widgets
     without them overwriting each other.
     """
 
@@ -95,6 +102,7 @@ class ProfileUpdate(BaseModel):
     weight_kg: Optional[float] = Field(default=None, ge=25, le=250)
     birthdate: Optional[date] = None
     height_cm: Optional[float] = Field(default=None, ge=100, le=250)
+    email: Optional[str] = Field(default=None, max_length=254, pattern=_EMAIL_PATTERN)
 
     model_config = {"extra": "forbid"}
 
@@ -139,6 +147,10 @@ def exchange(payload: ExchangeRequest) -> dict:
         "session_token": token,
         "expires_in_days": settings.session_ttl_days,
         "athlete": {"id": athlete.id, "display_name": athlete.display_name},
+        # Strava returns no email address, so the app has to ask. Reported here
+        # rather than discovered later so the web app can route a brand-new athlete
+        # straight to the question instead of letting them wander past it.
+        "needs_email": athlete.needs_email,
     }
     _remember_exchange(payload.code, response)
     return response
@@ -178,6 +190,10 @@ def update_me(
         athletes.set_body(athlete.id, birthdate, height_cm)
         athlete.birthdate = birthdate
         athlete.height_cm = height_cm
+
+    if "email" in touched:
+        athletes.set_email(athlete.id, payload.email)
+        athlete.email = payload.email
 
     return _me_payload(athlete)
 

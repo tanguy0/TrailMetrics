@@ -32,12 +32,15 @@ class RenderPageRequest(BaseModel):
     force_plot_ids: List[str] = Field(default_factory=list)
     # Compute everything up front, ignoring the cost hint.
     compute_all: bool = False
+    # Recompute and overwrite the cache — the "recompute" button.
+    refresh: bool = False
 
 
 class RenderPanelRequest(BaseModel):
     panel: Dict[str, Any]
     force_plot_ids: List[str] = Field(default_factory=list)
     compute_all: bool = False
+    refresh: bool = False
 
 
 @router.post("/render")
@@ -51,6 +54,7 @@ def render_page(
         athlete, lang,
         defer_expensive=not payload.compute_all,
         force_plot_ids=set(payload.force_plot_ids),
+        refresh=payload.refresh,
     )
     results = _renderer.execute(page, context)
     return {
@@ -71,6 +75,7 @@ def render_panel(
         athlete, lang,
         defer_expensive=not payload.compute_all,
         force_plot_ids=set(payload.force_plot_ids),
+        refresh=payload.refresh,
     )
     result = _renderer.render_panel(panel, context)
     return {"panel": panel_payload(result)}

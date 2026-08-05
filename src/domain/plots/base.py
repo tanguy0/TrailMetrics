@@ -49,6 +49,10 @@ class PlotDefinition:
     series_level: str = SERIES_BY_GROUP
     requires_streams: bool = False
     requires_weight: bool = False
+    # False for plot types whose output comes from their parameters alone (prose, an
+    # image). Without this a text block in a panel that selects nothing would render
+    # as "no activities in this selection", which is true and useless.
+    requires_data: bool = True
     cost: str = CHEAP
     # Shown in the "add plot" picker to group related types.
     category_key: str = "plotcat.general"

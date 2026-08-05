@@ -4,14 +4,19 @@
                     └── DataSourceSpec
 
 This is the load-bearing idea of the app: a page is a serializable document, not
-code. Once that holds, "the user builds a page by hand", "the app ships example
-pages" and "pages live in a database" are the same mechanism — a built-in page is
-just a :class:`PageSpec` constructed in :mod:`src.dashboards` instead of loaded
-from a repository, and every page renders through one path.
+code. Once that holds, "the athlete built this by hand" and "the app ships this to
+everyone" are the same mechanism — the three default analyses are
+:class:`PageSpec`\\ s assembled in :mod:`src.dashboards`, then *stored* per athlete
+like anything they build, and every analysis renders through one path.
 
 ``schema_version`` is stamped on save so a future migration can upgrade stored
 documents; plot parameters survive schema drift on their own via
 :func:`src.domain.spec.params.coerce`.
+
+Note what is deliberately **not** in here: whether a plot's settings are showing.
+That is a property of one reader's current session, not of the document — reopening an
+analysis should show the analysis rather than the machinery, and storing it would also
+mean opening a form counted as editing the page.
 """
 
 from dataclasses import dataclass, field
@@ -37,7 +42,6 @@ class PlotSpec:
     # Overrides the plot type's default heading when set.
     title: Optional[str] = None
     id: str = field(default_factory=lambda: new_id("plot"))
-    collapsed: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -45,7 +49,6 @@ class PlotSpec:
             "plot_type": self.plot_type,
             "params": dict(self.params),
             "title": self.title,
-            "collapsed": self.collapsed,
         }
 
     @staticmethod
@@ -55,7 +58,6 @@ class PlotSpec:
             params=dict(raw.get("params") or {}),
             title=raw.get("title"),
             id=str(raw.get("id") or new_id("plot")),
-            collapsed=bool(raw.get("collapsed", False)),
         )
 
 
@@ -70,7 +72,6 @@ class PanelSpec:
     columns: int = 1
     description: str = ""
     id: str = field(default_factory=lambda: new_id("panel"))
-    collapsed: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -80,7 +81,6 @@ class PanelSpec:
             "source": self.source.to_dict(),
             "plots": [p.to_dict() for p in self.plots],
             "columns": self.columns,
-            "collapsed": self.collapsed,
         }
 
     @staticmethod
@@ -92,7 +92,6 @@ class PanelSpec:
             plots=[PlotSpec.from_dict(p) for p in (raw.get("plots") or [])],
             columns=int(raw.get("columns") or 1),
             id=str(raw.get("id") or new_id("panel")),
-            collapsed=bool(raw.get("collapsed", False)),
         )
 
 
@@ -100,10 +99,16 @@ class PanelSpec:
 class PageSpec:
     """A whole page: an ordered list of panels.
 
-    ``builtin_key`` is set on the example pages that ship with the app (the GAP
-    simulator, race comparator and long-term progress). They render through the
-    same path as user pages but are not editable in place — the user duplicates
-    one to get an editable copy, which is what makes them useful as examples.
+    ``builtin_key`` marks one of the **default analyses** every athlete starts with
+    (the GAP simulator, race comparator and long-term progress). It names *which*
+    default this is, so seeding can tell whether the athlete already has it.
+
+    A default analysis is an ordinary stored page in every respect that matters: it
+    lives in the same table, renders through the same path, and is edited with the
+    same controls. The key buys it exactly one thing — it cannot be deleted, because
+    it is part of what the product ships. Earlier these were generated per request and
+    read-only, which made them examples nobody could use: the race comparator needs a
+    hand-picked selection, and a read-only page cannot be given one.
     """
 
     name: str
@@ -115,7 +120,8 @@ class PageSpec:
     icon: str = "📊"
 
     @property
-    def is_builtin(self) -> bool:
+    def is_default(self) -> bool:
+        """One of the analyses every athlete gets. Editable, but not deletable."""
         return self.builtin_key is not None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -142,10 +148,10 @@ class PageSpec:
         )
 
     def copy_as_custom(self, name: str) -> "PageSpec":
-        """An editable clone with fresh ids and no built-in link.
+        """A clone with fresh ids and no default-analysis link.
 
-        This is the "duplicate this example" action: the user gets a real page of
-        their own, pre-filled with a working analysis they can pull apart.
+        Duplicating a default gives an ordinary analysis — deletable, and free to
+        diverge — which is how someone keeps a variant without giving up the original.
         """
         clone = PageSpec.from_dict(self.to_dict())
         clone.name = name

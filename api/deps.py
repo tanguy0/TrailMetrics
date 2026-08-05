@@ -24,16 +24,23 @@ from src.domain.ports.storage import (
     AthleteRepository,
     StreamStore,
 )
+from src.domain.charts.ir import PlotOutput
 from src.infrastructure.postgres.activity_repository import PostgresActivityRepository
 from src.infrastructure.postgres.athlete_repository import PostgresAthleteRepository
 from src.infrastructure.postgres.page_repository import PostgresPageRepository
+from src.infrastructure.postgres.plot_output_repository import (
+    PostgresPlotOutputRepository,
+)
 from src.infrastructure.postgres.pool import Database
+from src.infrastructure.postgres.precompute_repository import (
+    PostgresPrecomputeRepository,
+)
 from src.infrastructure.postgres.stored_activity_data import StoredActivityData
 from src.infrastructure.storage.local_stream_store import LocalStreamStore
 from src.infrastructure.storage.supabase_stream_store import SupabaseStreamStore
 from src.infrastructure.strava.token_service import StravaTokenService
 from src.translations import DEFAULT_LANG, LANGUAGES
-from src.usecases.render_page import RenderContext
+from src.usecases.render_page import OutputCache, RenderContext
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +116,14 @@ def get_page_repository(athlete_id: int) -> PageRepository:
     return PostgresPageRepository(get_database(), athlete_id)
 
 
+def get_plot_output_repository(athlete_id: int) -> PostgresPlotOutputRepository:
+    return PostgresPlotOutputRepository(get_database(), athlete_id)
+
+
+def get_precompute_repository(athlete_id: int) -> PostgresPrecomputeRepository:
+    return PostgresPrecomputeRepository(get_database(), athlete_id)
+
+
 # --- Per-athlete caches ----------------------------------------------------
 
 @dataclass
@@ -139,8 +154,54 @@ def get_caches(athlete_id: int) -> AthleteCaches:
 
 
 def invalidate_caches(athlete_id: int) -> None:
-    """Drop an athlete's warm state — call whenever their stored data changes."""
+    """Drop an athlete's warm state — call whenever their stored data changes.
+
+    Only the in-process state: the stored outputs in ``plot_outputs`` are keyed by
+    the resolved activity ids, so new data produces new keys and the old rows are
+    simply never read again. Deleting them is a separate, explicit act (the
+    "recompute" action), not a side effect of importing a run.
+    """
     _caches.pop(athlete_id, None)
+
+
+class PersistentOutputCache(OutputCache):
+    """Plot outputs in memory, backed by Postgres.
+
+    Memory answers the editor's rapid re-renders; Postgres answers the case memory
+    cannot — a fresh worker, or a page opened days after the fit — so an expensive
+    curve is computed once per athlete rather than once per process.
+
+    Database failures are swallowed on purpose. This is a cache: a read that fails
+    is a miss, and a write that fails costs the *next* reader a recomputation. Either
+    is strictly better than failing a render over it.
+    """
+
+    def __init__(self, athlete_id: int, store: Dict[str, PlotOutput]):
+        super().__init__(store)
+        self.athlete_id = athlete_id
+
+    def get(self, signature: str) -> Optional[PlotOutput]:
+        hit = super().get(signature)
+        if hit is not None:
+            return hit
+        try:
+            stored = get_plot_output_repository(self.athlete_id).get(signature)
+        except Exception as error:
+            logger.warning("could not read cached output: %s", error)
+            return None
+        if stored is not None:
+            # Promote into memory so the next render in this process is free.
+            super().set(signature, "", stored)
+        return stored
+
+    def set(self, signature: str, plot_type: str, output: PlotOutput) -> None:
+        super().set(signature, plot_type, output)
+        try:
+            get_plot_output_repository(self.athlete_id).put(
+                signature, plot_type, output
+            )
+        except Exception as error:
+            logger.warning("could not store computed output: %s", error)
 
 
 # --- Request-scoped -------------------------------------------------------
@@ -203,12 +264,22 @@ def render_context_for(
     *,
     defer_expensive: bool = True,
     force_plot_ids: Optional[set] = None,
+    refresh: bool = False,
 ) -> RenderContext:
     """A render context sharing this athlete's warm caches.
 
     ``defer_expensive`` leaves model fits uncomputed until asked for, so opening a
     page never blocks on an XGBoost fit the reader may not even scroll to.
+    ``refresh`` does the opposite: recompute and overwrite, which is what the
+    "recompute" action asks for.
     """
+    if refresh:
+        # The output cache is not the only memory: `memo` holds the fitted models and
+        # the per-second series those outputs were built from. Recomputing without
+        # dropping it would replay the same fit and return the same numbers, which
+        # would make the button look broken.
+        invalidate_caches(athlete.id)
+
     caches = get_caches(athlete.id)
     caches.trim()
     return RenderContext(
@@ -216,7 +287,8 @@ def render_context_for(
         lang=lang,
         mass_kg=athlete.weight_kg,
         memo=caches.memo,
-        output_cache=caches.outputs,
+        output_cache=PersistentOutputCache(athlete.id, caches.outputs),
         defer_expensive=defer_expensive,
         force_compute=set(force_plot_ids or ()),
+        refresh=refresh,
     )

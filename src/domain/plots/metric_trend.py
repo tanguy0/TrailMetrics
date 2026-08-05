@@ -155,6 +155,15 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     metric2 = optional_metric(params.get("metric2"))
     dual = metric2 is not None and metric2.key != metric.key
 
+    # Power is stored per kilogram, so without a body weight its columns are all NaN
+    # and every bin drops out. The chart would then be empty for a reason that has
+    # nothing to do with the athlete's training, so say which it is. Checked here
+    # rather than by `requires_weight` on the definition, because it depends on the
+    # metric chosen, not on the plot type.
+    if any(m is not None and m.needs_weight for m in (metric, metric2)) \
+            and resolved.mass_kg is None:
+        notes.append(translate("races.weight_needed", lang))
+
     traces = _metric_traces(
         resolved, metric, aggregation, granularity, x_mode, chart_kind,
         cumulative=cumulative,

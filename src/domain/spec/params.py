@@ -35,6 +35,8 @@ class ParamKind(str, Enum):
     INT = "int"
     FLOAT = "float"
     TEXT = "text"
+    TEXTAREA = "textarea"        # multi-line text; a paragraph, not a label
+    IMAGE = "image"              # an image URL, with an upload control beside it
     CHOICE = "choice"            # single value from ``choices``
     MULTICHOICE = "multichoice"  # list of values from ``choices``
     GROUP = "group"              # nested dict shaped by ``children``
@@ -294,7 +296,7 @@ def _coerce_scalar(spec: ParamSpec, raw: Any) -> Any:
             return float(raw)
         if spec.kind is ParamKind.MULTICHOICE:
             return list(raw) if isinstance(raw, (list, tuple)) else [raw]
-        if spec.kind is ParamKind.TEXT:
+        if spec.kind in (ParamKind.TEXT, ParamKind.TEXTAREA, ParamKind.IMAGE):
             return str(raw)
     except (TypeError, ValueError):
         return spec.default
@@ -332,6 +334,18 @@ def number(key: str, label_key: str, default: float, **kw) -> ParamSpec:
 
 def text(key: str, label_key: str, default: str = "", **kw) -> ParamSpec:
     return ParamSpec(key=key, kind=ParamKind.TEXT, label_key=label_key,
+                     default=default, **kw)
+
+
+def textarea(key: str, label_key: str, default: str = "", **kw) -> ParamSpec:
+    """Multi-line text. Same value as :func:`text`, a different control."""
+    return ParamSpec(key=key, kind=ParamKind.TEXTAREA, label_key=label_key,
+                     default=default, **kw)
+
+
+def image(key: str, label_key: str, default: str = "", **kw) -> ParamSpec:
+    """An image URL. The client pairs the field with an upload button."""
+    return ParamSpec(key=key, kind=ParamKind.IMAGE, label_key=label_key,
                      default=default, **kw)
 
 
