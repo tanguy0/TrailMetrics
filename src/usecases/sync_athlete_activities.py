@@ -58,6 +58,8 @@ class SyncAthleteActivitiesOutput:
     skipped: int = 0
     failed: int = 0
     total_seen: int = 0
+    # Already-stored activities whose Relative Effort was refreshed from the listing.
+    refreshed: int = 0
 
 
 class SyncAthleteActivities(UseCase):
@@ -110,6 +112,10 @@ class SyncAthleteActivities(UseCase):
 
         result.total_seen = len(listed)
         result.skipped = len(listed) - len(pending)
+        # Reported values ride on the listing we just walked, so refreshing them for
+        # activities we already have is free — and it is what backfills a column
+        # added after the history was first imported.
+        result.refreshed = self._refresh_reported(athlete_id, listed, known)
         total = len(pending)
         self._report(athlete_id, SyncState(
             status="running", done=0, total=total, message="importing",
@@ -174,6 +180,34 @@ class SyncAthleteActivities(UseCase):
                 # the activity itself — the feature row is already good.
                 logger.warning("stream upload failed for %s: %s", activity_id, error)
         return True
+
+    # --- Reported values on already-stored activities ----------------------
+
+    def _refresh_reported(
+        self, athlete_id: int, listed: Sequence[dict], known: set
+    ) -> int:
+        """Update Relative Effort on activities we already have.
+
+        Strava computes Relative Effort from the athlete's own heart-rate zones, so
+        it can only be *read*, never derived here — and it can change after the fact
+        (Strava recomputes it when zones are edited). Since it arrives on the listing
+        this sync already walked, keeping it current costs one UPDATE and no API
+        call, which is what makes it worth doing on every sync instead of only at
+        import time.
+        """
+        values = [
+            (int(act["id"]), act.get("relative_effort"))
+            for act in listed
+            if int(act["id"]) in known and act.get("relative_effort") is not None
+        ]
+        if not values:
+            return 0
+        try:
+            return self.activities.set_relative_efforts(athlete_id, values)
+        except Exception as error:
+            # A cosmetic refresh must never fail an import.
+            logger.warning("could not refresh relative effort: %s", error)
+            return 0
 
     # --- Persistence -------------------------------------------------------
 

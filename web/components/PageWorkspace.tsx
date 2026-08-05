@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * A whole page: load it, render it, edit it, save it.
+ * One analysis: load it, render it, edit it, save it.
  *
- * Used for both a user's own pages and the built-in examples. Examples render
- * through exactly the same component in read-only mode — if this workspace can't
- * express one, the example is lying about what the builder can do. The only
- * difference is that an example offers "Duplicate" instead of saving in place.
+ * Every analysis goes through here, including the three every athlete starts with.
+ * There is no read-only mode: a default analysis is a stored page like any other and
+ * is edited in place. It differs in exactly one way — no Delete, because it ships with
+ * the app — and "Duplicate" is how you get a version you can remove or diverge.
  *
  * Autosave is debounced and driven by the serialized spec, so it fires on real
  * content changes rather than on every keystroke's re-render.
@@ -16,39 +16,42 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { PanelEditor, newId } from "./PanelEditor";
+import { ProgressBar } from "./ProgressBar";
 import {
   ApiError,
   deletePage,
-  duplicateBuiltin,
   duplicatePage,
   getAthlete,
-  getBuiltinPage,
   getPage,
+  getPrecomputeStatus,
   getRegistry,
   listActivities,
   savePage,
 } from "@/lib/api";
+import { translator, type Strings } from "@/lib/strings";
 import type {
   ActivitySummary,
   Athlete,
   PageSpec,
   PanelSpec,
+  PrecomputeStatus,
   Registry,
 } from "@/lib/types";
 
 const AUTOSAVE_MS = 1200;
+const PRECOMPUTE_POLL_MS = 3000;
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 export function PageWorkspace({
   pageId,
-  builtinKey,
+  strings,
 }: {
-  pageId?: string;
-  builtinKey?: string;
+  pageId: string;
+  strings: Strings;
 }) {
+  const t = translator(strings);
   const router = useRouter();
-  const readOnly = Boolean(builtinKey);
 
   const [spec, setSpec] = useState<PageSpec | null>(null);
   const [registry, setRegistry] = useState<Registry | null>(null);
@@ -57,6 +60,8 @@ export function PageWorkspace({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Incremented by "Recompute"; every panel re-renders ignoring what was cached.
+  const [refreshToken, setRefreshToken] = useState(0);
 
   // --- Load ---------------------------------------------------------------
 
@@ -67,7 +72,7 @@ export function PageWorkspace({
         const [loadedRegistry, loadedAthlete, page] = await Promise.all([
           getRegistry(),
           getAthlete(),
-          builtinKey ? getBuiltinPage(builtinKey) : getPage(pageId!),
+          getPage(pageId),
         ]);
         if (cancelled) return;
         setRegistry(loadedRegistry);
@@ -90,7 +95,7 @@ export function PageWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [builtinKey, pageId, router]);
+  }, [pageId, router]);
 
   // --- Autosave -----------------------------------------------------------
 
@@ -99,7 +104,7 @@ export function PageWorkspace({
   const savedSignature = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!spec || readOnly) return;
+    if (!spec) return;
     if (savedSignature.current === null) {
       savedSignature.current = signature;
       return;
@@ -121,7 +126,7 @@ export function PageWorkspace({
     }, AUTOSAVE_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature, readOnly]);
+  }, [signature]);
 
   // --- Panel operations ---------------------------------------------------
 
@@ -154,7 +159,6 @@ export function PageWorkspace({
               : blankSource(athlete),
             plots: [],
             columns: 1,
-            collapsed: false,
           },
         ],
       };
@@ -179,14 +183,13 @@ export function PageWorkspace({
 
   const duplicate = async () => {
     if (!spec) return;
-    const copy = builtinKey
-      ? await duplicateBuiltin(builtinKey, `${spec.name} (mine)`)
-      : await duplicatePage(spec.id, `${spec.name} (copy)`);
+    const copy = await duplicatePage(spec.id, `${spec.name} (copy)`);
     router.push(`/pages/${copy.id}`);
   };
 
+  // Absent for a default analysis; the server refuses those too.
   const remove = async () => {
-    if (!spec || readOnly) return;
+    if (!spec || spec.builtin_key) return;
     if (!window.confirm(`Delete “${spec.name}”? This cannot be undone.`)) return;
     await deletePage(spec.id);
     router.push("/pages");
@@ -214,45 +217,48 @@ export function PageWorkspace({
       <header className="page-header">
         <div className="page-header__title">
           <span className="page-header__icon">{spec.icon}</span>
-          {readOnly ? (
-            <h1>{spec.name}</h1>
-          ) : (
-            <input
-              className="page-header__name"
-              value={spec.name}
-              onChange={(event) => setSpec({ ...spec, name: event.target.value })}
-              aria-label="Page name"
-            />
-          )}
+          <input
+            className="page-header__name"
+            value={spec.name}
+            onChange={(event) => setSpec({ ...spec, name: event.target.value })}
+            aria-label="Analysis name"
+          />
         </div>
 
         <div className="page-header__actions">
-          {readOnly ? (
-            <>
-              <span className="tag">Example — read only</span>
-              <button type="button" className="button" onClick={duplicate}>
-                Duplicate to my pages
-              </button>
-            </>
+          <SaveBadge state={saveState} error={saveError} />
+          <button
+            type="button"
+            className="button button--ghost"
+            onClick={() => setRefreshToken((token) => token + 1)}
+            title="Ignore what was computed before and fit everything again."
+          >
+            ↻ {t("page.recompute")}
+          </button>
+          <button type="button" className="button button--ghost" onClick={duplicate}>
+            {t("page.duplicate")}
+          </button>
+          {/* A default analysis ships with the app, so there is nothing to delete it
+              back to. Duplicating gives a copy that *can* be removed. */}
+          {spec.builtin_key ? (
+            <span className="tag" title={t("page.default_help")}>
+              {t("page.default")}
+            </span>
           ) : (
-            <>
-              <SaveBadge state={saveState} error={saveError} />
-              <button type="button" className="button button--ghost" onClick={duplicate}>
-                Duplicate
-              </button>
-              <button type="button" className="button button--danger" onClick={remove}>
-                Delete
-              </button>
-            </>
+            <button type="button" className="button button--danger" onClick={remove}>
+              {t("page.delete")}
+            </button>
           )}
         </div>
       </header>
 
       {spec.description && <p className="page-description">{spec.description}</p>}
 
+      <PrecomputeNotice spec={spec} registry={registry} strings={strings} />
+
       {athlete.weight_kg == null && (
         <p className="note">
-          Set your weight on the <a href="/pages">pages screen</a> to unlock the power
+          Set your weight on the <a href="/home">Home screen</a> to unlock the power
           and power-to-heart-rate metrics.
         </p>
       )}
@@ -262,23 +268,101 @@ export function PageWorkspace({
           key={panel.id}
           panel={panel}
           onChange={(next) => updatePanel(panel.id, next)}
-          onMove={readOnly ? undefined : (direction) => movePanel(index, direction)}
-          onRemove={readOnly ? undefined : () => removePanel(panel.id)}
+          onMove={(direction) => movePanel(index, direction)}
+          onRemove={() => removePanel(panel.id)}
           registry={registry}
           activities={activities}
           sportTypes={athlete.sport_types}
           oldest={athlete.oldest_activity}
           newest={athlete.newest_activity}
-          editable={!readOnly}
+          editable
+          refreshToken={refreshToken}
         />
       ))}
 
-      {!readOnly && (
-        <button type="button" className="button button--wide" onClick={addPanel}>
-          Add a panel
-        </button>
-      )}
+      <button type="button" className="button button--wide" onClick={addPanel}>
+        {t("page.add_panel")}
+      </button>
     </main>
+  );
+}
+
+/**
+ * Progress of the background model fits, shown on a page that has some.
+ *
+ * This lives here rather than on Home because it is only actionable next to the
+ * curves it is producing: "fitting your GAP models" above a volume chart is noise,
+ * and above an empty GAP panel it is the explanation for why the panel is empty.
+ *
+ * Which pages qualify is read from the registry (`cost === "expensive"`), not from a
+ * hard-coded page key — so a new model-fitting plot type gets this for free, and a
+ * page that has none never shows it.
+ */
+function PrecomputeNotice({
+  spec,
+  registry,
+  strings,
+}: {
+  spec: PageSpec;
+  registry: Registry;
+  strings: Strings;
+}) {
+  const t = translator(strings);
+  const [status, setStatus] = useState<PrecomputeStatus | null>(null);
+
+  const hasExpensivePlot = useMemo(() => {
+    const expensive = new Set(
+      registry.plots.filter((d) => d.cost === "expensive").map((d) => d.key),
+    );
+    return spec.panels.some((panel) =>
+      panel.plots.some((plot) => expensive.has(plot.plot_type)),
+    );
+  }, [spec, registry.plots]);
+
+  // Poll while it runs. Kept keyed on the *status* rather than on a timer that always
+  // runs, so a page whose fits are already cached makes exactly one request.
+  const running = status?.status === "running";
+  useEffect(() => {
+    if (!hasExpensivePlot) return;
+    let live = true;
+    const read = () =>
+      getPrecomputeStatus()
+        .then((next) => live && setStatus(next))
+        .catch(() => undefined);
+    read();
+    if (!running) return () => { live = false; };
+    const timer = setInterval(read, PRECOMPUTE_POLL_MS);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [hasExpensivePlot, running]);
+
+  if (!hasExpensivePlot || !status) return null;
+
+  if (status.status === "error") {
+    return (
+      <p className="note note--error">
+        {t("precompute.failed")}: {status.message}
+      </p>
+    );
+  }
+  if (status.status !== "running") return null;
+
+  return (
+    <div className="page-precompute">
+      <ProgressBar
+        tone="sunrise"
+        value={status.done}
+        total={status.total}
+        label={t("precompute.running")}
+        // The server's message names the panel being fitted, which is the only thing
+        // that changes during the minutes the counter does not. The static
+        // explanation is the fallback, not the headline.
+        detail={status.message || t("precompute.help")}
+      />
+      <p className="muted">{t("precompute.help")}</p>
+    </div>
   );
 }
 

@@ -17,11 +17,11 @@ export function Sidebar({ strings }: { strings: Strings }) {
 
   const items = [
     { href: "/home", label: t("nav.home"), icon: "🏠" },
-    { href: "/pages", label: t("nav.my_pages"), icon: "📊" },
+    { href: "/pages", label: t("nav.analysis"), icon: "📊" },
   ];
 
   return (
-    <nav className="sidebar" aria-label={t("nav.my_pages")}>
+    <nav className="sidebar" aria-label={t("nav.analysis")}>
       <a className="sidebar__brand" href="/home">
         <span className="sidebar__brand-mark">🏔️</span>
         <span className="sidebar__brand-name">TrailMetrics</span>

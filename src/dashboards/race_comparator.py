@@ -60,7 +60,14 @@ def build_race_comparator(oldest: date, newest: date, lang: str = "en") -> PageS
                     filters=ActivityFilter(),
                 ),
                 plots=plots,
-                columns=2,
+                # One plot per row, not two.
+                #
+                # These are per-second traces of several activities at once, and each
+                # legend entry is a full activity label ("2026-07-27 · TrailRun ·
+                # 9.96 km · 51:28"). In a half-width card the legend takes more room
+                # than the figure and the trace is squeezed into a third of the space —
+                # which is the part you are here to read.
+                columns=1,
             ),
         ],
     )

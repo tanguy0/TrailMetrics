@@ -9,8 +9,9 @@
  * plot type or a parameter is a backend-only change.
  */
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
+import { uploadAsset } from "@/lib/api";
 import { evaluateCondition } from "@/lib/conditions";
 import type { Choice, MetricInfo, ParamSpec } from "@/lib/types";
 
@@ -151,6 +152,24 @@ function ParamField(props: FieldProps) {
         />
       )}
 
+      {spec.kind === "textarea" && (
+        <textarea
+          id={id}
+          className="param__textarea"
+          rows={4}
+          value={value == null ? "" : String(value)}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+
+      {spec.kind === "image" && (
+        <ImageField
+          id={id}
+          value={value == null ? "" : String(value)}
+          onChange={onChange}
+        />
+      )}
+
       {spec.kind === "choice" && (
         <select
           id={id}
@@ -175,6 +194,89 @@ function ParamField(props: FieldProps) {
       )}
 
       {spec.help && <p className="param__help">{spec.help}</p>}
+    </div>
+  );
+}
+
+/**
+ * An image parameter: upload a file, or point at a URL.
+ *
+ * Both write the same thing — a URL string — so the stored parameter has one shape
+ * and the plot type never learns that uploading exists. An upload just happens to
+ * produce a URL served by this app.
+ */
+function ImageField({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: unknown) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    setUploading(true);
+    setFailure(null);
+    try {
+      const asset = await uploadAsset(file);
+      onChange(asset.url);
+    } catch (error) {
+      // The server's message is the useful one — it names the real limit or the
+      // rejected type rather than "upload failed".
+      setFailure((error as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="image-field">
+      <div className="image-field__actions">
+        <label className="button button--ghost button--small">
+          {uploading ? "Uploading…" : "Upload"}
+          {/* The file input itself is hidden: a <label>-wrapped input styles as a
+              button, where a bare one cannot be. */}
+          <input
+            className="image-field__file"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            disabled={uploading}
+            onChange={(event) => {
+              upload(event.target.files?.[0]);
+              // Cleared so re-picking the same file fires `change` again.
+              event.target.value = "";
+            }}
+          />
+        </label>
+        {value && (
+          <button
+            type="button"
+            className="button button--ghost button--small"
+            onClick={() => onChange("")}
+          >
+            Remove
+          </button>
+        )}
+      </div>
+
+      <input
+        id={id}
+        type="text"
+        placeholder="…or paste an image URL"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+
+      {failure && <p className="note note--error">{failure}</p>}
+      {value && (
+        // A thumbnail here rather than only in the output: an image that fails to
+        // load says so while the URL is still in front of you.
+        <img className="image-field__preview" src={value} alt="" />
+      )}
     </div>
   );
 }

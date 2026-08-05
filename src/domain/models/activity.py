@@ -30,3 +30,8 @@ class ActivityStream:
     summary_distance_m: Optional[float] = None
     summary_moving_time_s: Optional[float] = None
     summary_elevation_gain_m: Optional[float] = None
+    # Strava's Relative Effort (``suffer_score``) — its training-load score for the
+    # session. Carried on the summary rather than derived from the streams: it is
+    # computed by Strava from heart rate against the athlete's own zones, which we
+    # do not have. ``None`` for activities without heart rate.
+    summary_relative_effort: Optional[float] = None

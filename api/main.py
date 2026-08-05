@@ -18,7 +18,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.config import get_settings
-from api.routers import activities, auth, home, pages, registry, render
+from api.routers import (
+    activities,
+    assets,
+    auth,
+    home,
+    pages,
+    precompute,
+    registry,
+    render,
+)
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -86,6 +95,8 @@ app.include_router(activities.router)
 app.include_router(pages.router)
 app.include_router(render.router)
 app.include_router(home.router)
+app.include_router(precompute.router)
+app.include_router(assets.router)
 
 
 @app.get("/health", tags=["ops"])

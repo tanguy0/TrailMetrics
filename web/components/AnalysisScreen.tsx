@@ -1,34 +1,42 @@
 "use client";
 
 /**
- * My Pages: how pages work, the built-in examples, then the athlete's own pages.
+ * Analysis: every analysis this athlete has, then a button to add one.
  *
- * The "New page" button sits at the bottom of the *My pages* section rather than in
- * a header, so the reading order matches the order someone actually needs it in:
- * understand the idea, see it done three times, then make one.
+ * One list, not two. The three analyses the product ships are seeded into the
+ * athlete's own pages the first time this screen loads, so they sit in the same grid
+ * as everything else and are edited the same way — the only thing that marks them is
+ * a badge saying they cannot be deleted.
+ *
+ * They used to live in a separate "Examples" section, read-only, to be duplicated
+ * before use. That was the wrong model: it made the Race Comparator unusable (it needs
+ * a hand-picked selection, and a read-only page cannot be given one) and it asked
+ * every athlete to make a copy of something before it could tell them anything.
+ *
+ * The "add" button sits *below* the grid rather than in the header, so the reading
+ * order matches the order it is needed in: see what you have, then make another.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { ApiError, createPage, listBuiltinPages, listPages } from "@/lib/api";
+import { ApiError, createPage, listPages } from "@/lib/api";
 import { plural, translator, type Strings, type Translate } from "@/lib/strings";
 import type { PageSummary } from "@/lib/types";
 
-export function PagesScreen({ strings }: { strings: Strings }) {
+export function AnalysisScreen({ strings }: { strings: Strings }) {
   const t = translator(strings);
   const router = useRouter();
 
   const [pages, setPages] = useState<PageSummary[] | null>(null);
-  const [examples, setExamples] = useState<PageSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [mine, builtin] = await Promise.all([listPages(), listBuiltinPages()]);
-      setPages(mine.pages);
-      setExamples(builtin.pages);
+      // This call is also what seeds the defaults, server-side, on a fresh account.
+      const { pages: listed } = await listPages();
+      setPages(listed);
       setError(null);
     } catch (caught) {
       if (caught instanceof ApiError && caught.isUnauthorized) {
@@ -43,7 +51,7 @@ export function PagesScreen({ strings }: { strings: Strings }) {
     load();
   }, [load]);
 
-  const newPage = async () => {
+  const newAnalysis = async () => {
     const name = window.prompt(t("pages.new.prompt"), t("pages.new.default_name"));
     if (!name) return;
     setCreating(true);
@@ -88,36 +96,20 @@ export function PagesScreen({ strings }: { strings: Strings }) {
         </div>
       </section>
 
-      <h2>{t("pages.examples.title")}</h2>
-      <p className="muted">{t("pages.examples.help")}</p>
-      <div className="card-grid">
-        {examples.map((page) => (
-          <PageCard
-            key={page.builtin_key}
-            page={page}
-            href={`/pages/builtin/${page.builtin_key}`}
-            t={t}
-          />
-        ))}
-      </div>
-
-      <h2>{t("pages.mine.title")}</h2>
       {pages === null ? (
         <p className="muted">{t("common.loading")}</p>
-      ) : pages.length ? (
+      ) : (
         <div className="card-grid">
           {pages.map((page) => (
-            <PageCard key={page.id} page={page} href={`/pages/${page.id}`} t={t} />
+            <AnalysisCard key={page.id} page={page} t={t} />
           ))}
         </div>
-      ) : (
-        <p className="muted">{t("pages.mine.empty")}</p>
       )}
 
       <button
         type="button"
         className="new-page"
-        onClick={newPage}
+        onClick={newAnalysis}
         disabled={creating}
       >
         <span className="new-page__plus" aria-hidden="true">+</span>
@@ -130,22 +122,22 @@ export function PagesScreen({ strings }: { strings: Strings }) {
   );
 }
 
-function PageCard({
-  page,
-  href,
-  t,
-}: {
-  page: PageSummary;
-  href: string;
-  t: Translate;
-}) {
+function AnalysisCard({ page, t }: { page: PageSummary; t: Translate }) {
   return (
-    <a className="card" href={href}>
+    <a className="card" href={`/pages/${page.id}`}>
       <span className="card__icon">{page.icon}</span>
       <span className="card__title">{page.name}</span>
       <span className="card__meta">
         {plural(t, "pages.panel_count", page.panel_count)} ·{" "}
         {plural(t, "pages.plot_count", page.plot_count)}
+        {/* Only says what is *unusual* about it — that it cannot be removed. Everything
+            else about a default analysis is the same as any other. */}
+        {page.is_default && (
+          <>
+            {" · "}
+            <span className="card__badge">{t("page.default")}</span>
+          </>
+        )}
       </span>
       {page.description && <span className="card__description">{page.description}</span>}
     </a>

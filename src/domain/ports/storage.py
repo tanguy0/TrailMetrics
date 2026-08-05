@@ -24,8 +24,8 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 class Athlete:
     """An account, keyed by Strava's athlete id.
 
-    ``birthdate`` and ``height_cm`` are self-reported: Strava's API carries neither,
-    so they are only ever set from this app. Storing a birthdate rather than an age
+    ``birthdate``, ``height_cm`` and ``email`` are self-reported: Strava's API
+    carries none of them, under any scope. Storing a birthdate rather than an age
     keeps the derived value correct without anyone re-typing it every year.
     """
 
@@ -36,11 +36,18 @@ class Athlete:
     profile_url: Optional[str] = None
     birthdate: Optional[date] = None
     height_cm: Optional[float] = None
+    # Asked for once, right after the first sign-in. ``None`` for an account that has
+    # not answered yet, which is what the app's first-run prompt keys on.
+    email: Optional[str] = None
 
     @property
     def display_name(self) -> str:
         name = f"{self.firstname} {self.lastname}".strip()
         return name or f"Athlete {self.id}"
+
+    @property
+    def needs_email(self) -> bool:
+        return not (self.email or "").strip()
 
     def age_on(self, today: date) -> Optional[int]:
         """Completed years as of ``today``, or ``None`` when no birthdate is set."""
@@ -100,6 +107,10 @@ class AthleteRepository(ABC):
         """Set the self-reported fields Strava does not provide."""
 
     @abstractmethod
+    def set_email(self, athlete_id: int, email: Optional[str]) -> None:
+        """Set the athlete's email address, which Strava never provides."""
+
+    @abstractmethod
     def save_credentials(self, athlete_id: int, credentials: StravaCredentials) -> None:
         ...
 
@@ -146,6 +157,18 @@ class ActivityRepository(ABC):
         self, athlete_id: int, activity_id: int, object_path: Optional[str]
     ) -> None:
         """Record where an activity's raw streams were stored."""
+
+    @abstractmethod
+    def set_relative_efforts(
+        self, athlete_id: int, values: Sequence[Tuple[int, Optional[float]]]
+    ) -> int:
+        """Update Strava's Relative Effort on rows that already exist.
+
+        Separate from :meth:`upsert_rows` because it is a *reported* value that
+        arrives with the activity list, not a computed one: refreshing it for a whole
+        history needs no per-activity request, which is what makes backfilling it
+        affordable.
+        """
 
     @abstractmethod
     def stream_object(self, athlete_id: int, activity_id: int) -> Optional[str]:

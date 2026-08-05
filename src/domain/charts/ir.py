@@ -21,7 +21,7 @@ ISO-8601 strings, so :meth:`PlotOutput.to_dict` can hand the whole thing to
 ``json.dumps``.
 """
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from datetime import date, datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence
@@ -131,6 +131,53 @@ class ChartData:
 
 
 @dataclass
+class TextBlock:
+    """Prose inside a panel, so a page can carry its own commentary.
+
+    A page is a document, and a document that can only hold figures forces its
+    reasoning into chart titles. This is the smallest thing that fixes that: text
+    the author typed, rendered as-is.
+
+    ``text`` is **not** translated — unlike every other string in the IR it comes
+    from the athlete, not from :mod:`src.translations`, so it is passed through
+    verbatim in whatever language they wrote it.
+    """
+
+    text: str = ""
+    # "body" | "lede" | "heading" | "quote" — presentation intent, resolved by the
+    # renderer, so the author picks meaning rather than a font size.
+    variant: str = "body"
+    align: str = "left"   # left | center
+    tone: str = "none"    # none | forest | terracotta | sunrise | plum
+
+    @property
+    def is_empty(self) -> bool:
+        return not self.text.strip()
+
+
+@dataclass
+class ImageBlock:
+    """One image inside a panel — a course profile, a photo, a screenshot.
+
+    ``src`` is a URL the browser can load: either an external address or an
+    app-relative ``/assets/{id}`` path for a file the athlete uploaded. Keeping it
+    a plain URL rather than embedded bytes is what stops a page document from
+    growing to megabytes.
+    """
+
+    src: str = ""
+    alt: str = ""
+    caption: Optional[str] = None
+    # Share of the panel's width, 10–100. A photo rarely wants the full column.
+    width_pct: int = 100
+    align: str = "left"  # left | center
+
+    @property
+    def is_empty(self) -> bool:
+        return not self.src.strip()
+
+
+@dataclass
 class CellFormat:
     """How to render one table column's values."""
 
@@ -166,27 +213,60 @@ class TableData:
 
 @dataclass
 class PlotOutput:
-    """Everything one plot produced: figures, tables and any caveats to show.
+    """Everything one plot produced: figures, tables, prose, images, caveats.
 
     ``notes`` carries already-translated messages — "power needs your weight",
     "not enough samples in this HR band" — which the app renders as info boxes so
     a partial result explains itself instead of silently showing nothing.
+
+    ``texts`` and ``images`` are what let a page hold its own commentary. They ride
+    in the same envelope as charts on purpose: a plot type that produces prose is
+    then an ordinary registry entry, edited by the same generated form and stored
+    in the same document, rather than a second kind of panel content.
     """
 
     charts: List[ChartData] = field(default_factory=list)
     tables: List[TableData] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
+    texts: List[TextBlock] = field(default_factory=list)
+    images: List[ImageBlock] = field(default_factory=list)
 
     @property
     def is_empty(self) -> bool:
         return (
             all(c.is_empty for c in self.charts)
             and all(t.is_empty for t in self.tables)
+            and all(t.is_empty for t in self.texts)
+            and all(i.is_empty for i in self.images)
         )
 
     def to_dict(self) -> Dict[str, Any]:
         """JSON-ready payload (enums → values, datetimes → ISO strings)."""
         return _jsonable(asdict(self))
+
+    @staticmethod
+    def from_dict(raw: Dict[str, Any]) -> "PlotOutput":
+        """Rebuild an output from :meth:`to_dict` — the inverse, and load-bearing.
+
+        Without it, a computed output can only ever be cached in the process that
+        produced it. With it, an expensive fit survives a restart in Postgres and a
+        page opens with the curve already drawn (see
+        ``src.infrastructure.postgres.plot_output_repository``).
+
+        Lossy in exactly one way, deliberately: a ``datetime`` x-value comes back as
+        the ISO string it was serialized to. Both renderers treat a date axis's
+        values as opaque, so nothing downstream can tell.
+        """
+        raw = raw or {}
+        return PlotOutput(
+            charts=[_chart_from_dict(c) for c in (raw.get("charts") or [])],
+            tables=[_table_from_dict(t) for t in (raw.get("tables") or [])],
+            notes=[str(n) for n in (raw.get("notes") or [])],
+            texts=[_dataclass_from_dict(TextBlock, t) for t in (raw.get("texts") or [])],
+            images=[
+                _dataclass_from_dict(ImageBlock, i) for i in (raw.get("images") or [])
+            ],
+        )
 
 
 def _jsonable(value: Any) -> Any:
@@ -201,6 +281,50 @@ def _jsonable(value: Any) -> Any:
     if isinstance(value, float) and value != value:  # NaN → null
         return None
     return value
+
+
+def _dataclass_from_dict(cls, raw: Optional[Dict[str, Any]]):
+    """Build ``cls`` from a payload, ignoring keys it no longer declares.
+
+    Tolerating unknown keys is what lets a cached output outlive a change to the
+    IR: an entry written by an older version loads with its extra fields dropped
+    rather than raising, exactly as :func:`src.domain.spec.params.coerce` does for
+    stored plot parameters.
+    """
+    known = {f.name for f in fields(cls)}
+    return cls(**{k: v for k, v in (raw or {}).items() if k in known})
+
+
+def _axis_from_dict(raw: Optional[Dict[str, Any]]) -> Axis:
+    axis = _dataclass_from_dict(Axis, raw)
+    axis.kind = AxisKind(axis.kind)
+    return axis
+
+
+def _chart_from_dict(raw: Dict[str, Any]) -> ChartData:
+    chart = _dataclass_from_dict(ChartData, raw)
+    chart.x_axis = _axis_from_dict(raw.get("x_axis"))
+    chart.y_axis = _axis_from_dict(raw.get("y_axis"))
+    chart.y2_axis = (
+        _axis_from_dict(raw["y2_axis"]) if raw.get("y2_axis") is not None else None
+    )
+    chart.traces = []
+    for payload in raw.get("traces") or []:
+        trace = _dataclass_from_dict(Trace, payload)
+        trace.kind = TraceKind(trace.kind)
+        chart.traces.append(trace)
+    return chart
+
+
+def _table_from_dict(raw: Dict[str, Any]) -> TableData:
+    table = _dataclass_from_dict(TableData, raw)
+    table.columns = []
+    for payload in raw.get("columns") or []:
+        column = _dataclass_from_dict(Column, payload)
+        column.format = _dataclass_from_dict(CellFormat, payload.get("format"))
+        table.columns.append(column)
+    table.rows = [dict(row) for row in (raw.get("rows") or [])]
+    return table
 
 
 def empty_output(note: str) -> PlotOutput:

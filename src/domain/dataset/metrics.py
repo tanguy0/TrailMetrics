@@ -234,6 +234,16 @@ def _intensity_metrics() -> List[ActivityMetric]:
             allowed_aggs=("mean", "median", "max", "min"), decimals=2,
             higher_is_better=True, needs_streams=True, needs_weight=True,
         ),
+        # Strava's Relative Effort — its training-load score for a session.
+        # Summed over a week it is training load; averaged it is typical session
+        # intensity, so both aggregations are offered and neither is "better":
+        # more load is not an achievement, which is why `higher_is_better` is None.
+        ActivityMetric(
+            key="relative_effort", label_key="metric.relative_effort", unit="",
+            column="relative_effort", default_agg="sum",
+            allowed_aggs=("sum", "mean", "median", "max", "min", "count"),
+            decimals=0,
+        ),
     ]
 
 

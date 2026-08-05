@@ -17,7 +17,11 @@ class PageRepository(ABC):
 
     @abstractmethod
     def list_pages(self) -> List[PageSpec]:
-        """Every stored page, in a stable order (most recently saved last)."""
+        """Every stored page: the default analyses first, then the athlete's own."""
+
+    @abstractmethod
+    def default_keys(self) -> set:
+        """``builtin_key`` values already stored, so seeding can skip them."""
 
     @abstractmethod
     def get(self, page_id: str) -> Optional[PageSpec]:
@@ -29,4 +33,4 @@ class PageRepository(ABC):
 
     @abstractmethod
     def delete(self, page_id: str) -> None:
-        ...
+        """Delete a page. A default analysis is not deletable and stays."""

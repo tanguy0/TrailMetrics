@@ -39,6 +39,12 @@ create table if not exists athletes (
 alter table athletes add column if not exists birthdate date;
 alter table athletes add column if not exists height_cm double precision;
 
+-- Strava's API does not return an email address under any scope, so this is asked
+-- for once, right after the first sign-in (see api/routers/auth.py). Nullable
+-- because every existing account predates it; the app gates on it being set rather
+-- than on the column being NOT NULL, which would lock those accounts out.
+alter table athletes add column if not exists email text;
+
 -- Strava tokens, encrypted application-side (Fernet) before they get here.
 create table if not exists strava_credentials (
     athlete_id        bigint primary key references athletes(id) on delete cascade,
@@ -94,6 +100,14 @@ create table if not exists activities (
     primary key (athlete_id, activity_id)
 );
 
+-- Strava's Relative Effort (its `suffer_score`) — the training-load score for the
+-- session. Added rather than baked into the create above so an existing deployment
+-- converges without a migration step. It is *reported*, not computed: Strava derives
+-- it from the athlete's own heart-rate zones, which the API does not expose, so it
+-- is refreshed from the activity listing on every sync (see
+-- `set_relative_efforts`) rather than recomputed from stored streams.
+alter table activities add column if not exists relative_effort double precision;
+
 -- The route as a Google-encoded polyline, from Strava's activity summary.
 -- Deliberately NOT part of the feature row: it is metadata for drawing a map, not
 -- a quantity anything aggregates over, so it stays out of the numeric frame the
@@ -126,3 +140,82 @@ create table if not exists pages (
 
 create index if not exists pages_athlete_updated_idx
     on pages (athlete_id, updated_at desc);
+
+-- Which default analysis this row is, or NULL for one the athlete created.
+--
+-- Every athlete is seeded with the three analyses the product ships. They are normal
+-- pages — edited in place, saved like any other — and this column buys them exactly
+-- one property: they cannot be deleted. Denormalized out of the spec so seeding can
+-- ask "does this athlete already have the GAP one?" in one indexed query.
+alter table pages add column if not exists builtin_key text;
+
+-- Idempotent seeding, enforced by the database rather than by a careful caller: two
+-- concurrent first-page-loads cannot produce two GAP analyses.
+create unique index if not exists pages_athlete_builtin_key_idx
+    on pages (athlete_id, builtin_key) where builtin_key is not null;
+
+-- --- Computed plot outputs -------------------------------------------------
+
+-- A finished plot output, keyed by everything that could change it.
+--
+-- The app already memoizes outputs in the API process. That is enough for editing
+-- a page, and useless for the expensive ones: a GAP curve is a model fit over
+-- per-second data, and losing it on every deploy means the athlete waits for it
+-- again. Persisting it turns "wait for the fit" into "the page opens drawn".
+--
+-- `signature` is a hash of the render signature (plot type, coerced parameters,
+-- source spec, resolved activity ids, body mass, language) — see
+-- `src.usecases.render_page.plot_signature`. Because the resolved activity ids are
+-- in it, importing a new run invalidates by construction: the same page produces a
+-- different key and the stale row is simply never read again. `created_at` is what
+-- the sweeper uses to retire those.
+create table if not exists plot_outputs (
+    athlete_id   bigint not null references athletes(id) on delete cascade,
+    signature    text not null,
+    plot_type    text not null default '',
+    payload      jsonb not null,
+    created_at   timestamptz not null default now(),
+
+    primary key (athlete_id, signature)
+);
+
+create index if not exists plot_outputs_athlete_created_idx
+    on plot_outputs (athlete_id, created_at desc);
+
+-- --- Background precomputation --------------------------------------------
+
+-- Progress of a background compute pass, polled by the UI exactly like `sync_state`.
+-- One row per (athlete, kind); `kind` is the job name, currently only 'builtin'
+-- (fill the cache for the built-in example pages).
+create table if not exists precompute_jobs (
+    athlete_id   bigint not null references athletes(id) on delete cascade,
+    kind         text not null,
+    status       text not null default 'idle',   -- idle | running | done | error
+    done         integer not null default 0,
+    total        integer not null default 0,
+    message      text not null default '',
+    finished_at  timestamptz,
+    updated_at   timestamptz not null default now(),
+
+    primary key (athlete_id, kind)
+);
+
+-- --- Uploaded images -------------------------------------------------------
+
+-- Images an athlete puts in a panel. Bytes live in Postgres rather than in the
+-- stream bucket: they are small, there are few of them, and keeping them here means
+-- the feature works identically on a local Postgres and on Supabase with no bucket
+-- to configure and no signed-URL handling. `MAX_ASSET_BYTES` in api/routers/assets.py
+-- is what keeps that assumption true.
+create table if not exists assets (
+    id           text primary key,
+    athlete_id   bigint not null references athletes(id) on delete cascade,
+    filename     text not null default '',
+    content_type text not null,
+    byte_size    integer not null,
+    data         bytea not null,
+    created_at   timestamptz not null default now()
+);
+
+create index if not exists assets_athlete_created_idx
+    on assets (athlete_id, created_at desc);

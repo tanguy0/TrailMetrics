@@ -28,6 +28,9 @@ from src.domain.plots import gap_curve         # noqa: F401
 from src.domain.plots import metric_scatter    # noqa: F401
 from src.domain.plots import metric_distribution  # noqa: F401
 from src.domain.plots import data_table        # noqa: F401
+# Content blocks last: they carry no data, so they belong at the end of the picker.
+from src.domain.plots import text_block        # noqa: F401
+from src.domain.plots import image_block       # noqa: F401
 
 __all__ = [
     "CHEAP",

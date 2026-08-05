@@ -59,6 +59,18 @@ html, body {
   line-height: 1.5;
 }
 
+/* App-wide backdrop. The tint keeps the paper-cream palette dominant so text and
+   cards read exactly as they do without it; the image only shows as soft form at
+   the margins. `fixed` means it does not scroll with long pages. */
+body {
+  /* html carries the flat --bg, so body's backdrop is painted over body's own box
+     rather than the canvas — it must fill the viewport even on short pages. */
+  min-height: 100vh;
+  background:
+    linear-gradient(rgba(251, 248, 243, 0.72), rgba(251, 248, 243, 0.72)),
+    url("/background.webp") center / cover no-repeat fixed var(--bg);
+}
+
 a { color: var(--primary); }
 
 h1 {
@@ -302,6 +314,11 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   flex-wrap: wrap;
 }
 .plot-card__actions { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+/* A text or image block is page content, not a figure: no frame around it, so a
+   page reads as a document rather than as a stack of cards. The editor keeps its
+   own affordances (see `plot-card--content` handling in PanelEditor). */
+.plot-card--content { border-color: transparent; padding: 0.25rem 0.75rem; }
+.plot-card--content .plot-card__header:empty { display: none; }
 
 .plot-picker { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
 
@@ -681,7 +698,114 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
 
 .sync { margin: 1rem 0; }
 .sync__actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
-.progress { width: 100%; max-width: 26rem; height: 0.75rem; }
+.sync__progress { margin: 0.35rem 0 0.6rem; }
+
+/* --- Progress bar ---------------------------------------------------------
+ *
+ * Replaces `<progress>`, which renders as OS chrome and ignores almost every
+ * property you set on it. Two divs instead, in the same palette as the charts.
+ *
+ * The fill runs the app's own gradient (forest -> moss -> terracotta -> amber, the
+ * `theme.GRADIENT` the figures use) so a running import reads as part of the product.
+ * The moving sheen is what says "still working" when the numbers change slowly. */
+
+.progress-bar { width: 100%; max-width: 34rem; }
+.progress-bar__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.3rem;
+}
+.progress-bar__label { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.progress-bar__count {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.progress-bar__percent { font-weight: 700; color: var(--primary); }
+
+/* The model pass, announced on a page that has model fits on it. */
+.page-precompute { margin: 0.75rem 0 1rem; }
+.progress-bar__detail {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.progress-bar__track {
+  position: relative;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  /* Inset rather than a border: a 1px border on a 0.7rem pill eats the fill's
+     rounding at low percentages and the bar looks square until it is half full. */
+  box-shadow: inset 0 0 0 1px var(--grid);
+  overflow: hidden;
+}
+.progress-bar__fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--primary) 0%,
+    var(--moss) 45%,
+    var(--terracotta) 80%,
+    var(--sunrise) 100%
+  );
+  /* Sized in ems of the *track*, so the gradient reads as one sweep however wide
+     the bar is rather than being squashed into the filled part. */
+  background-size: 34rem 100%;
+  transition: width 0.35s ease-out;
+  position: relative;
+}
+.progress-bar--sunrise .progress-bar__fill {
+  background: linear-gradient(90deg, var(--sunrise) 0%, var(--terracotta) 100%);
+}
+.progress-bar--sunrise .progress-bar__percent { color: var(--terracotta); }
+
+/* A sheen travelling over the fill: progress you can see between two counts. */
+.progress-bar__fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 100%
+  );
+  background-size: 8rem 100%;
+  background-repeat: repeat-x;
+  animation: progress-sheen 1.4s linear infinite;
+}
+
+/* Unknown total: the bar sweeps instead of claiming a percentage. A bar frozen at
+   0% reads as broken, which is exactly the wrong thing to say while listing a
+   decade of activities. */
+.progress-bar__track--indeterminate .progress-bar__fill {
+  width: 38%;
+  transition: none;
+  animation: progress-sweep 1.5s ease-in-out infinite;
+}
+
+@keyframes progress-sheen { to { background-position: 8rem 0; } }
+@keyframes progress-sweep {
+  0% { margin-left: -40%; }
+  100% { margin-left: 100%; }
+}
+
+/* Respect a stated preference for less motion: the bar still shows progress, it
+   just stops animating. */
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar__fill::after,
+  .progress-bar__track--indeterminate .progress-bar__fill { animation: none; }
+  .progress-bar__track--indeterminate .progress-bar__fill { width: 100%; opacity: 0.5; }
+  .progress-bar__fill { transition: none; }
+}
 
 .card-grid {
   display: grid;
@@ -704,6 +828,15 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
 .card__icon { font-size: 1.4rem; }
 .card__title { font-weight: 700; color: var(--primary); }
 .card__meta { font-size: 0.75rem; color: var(--muted); }
+/* Marks an analysis that ships with the app. Deliberately quiet: the only thing it
+   says is "you cannot delete this one". */
+.card__badge {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  font-size: 0.65rem;
+  color: var(--primary);
+}
 .card__description {
   font-size: 0.8rem;
   color: var(--muted);
@@ -720,6 +853,149 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   margin: 2rem 0;
 }
 .feature-list p { font-size: 0.875rem; color: var(--muted); }
+
+/* --- Content blocks: prose and images in a panel -------------------------- */
+
+/* `pre-wrap` is what preserves the author's line breaks. The text is rendered as
+   text, never as HTML (see ContentBlocks.tsx), so this is the only formatting a
+   paragraph gets — and it is the formatting someone typing one expects. */
+.text-block {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 80ch;
+  margin: 0.5rem 0;
+  color: var(--text);
+}
+.text-block--center { margin-left: auto; margin-right: auto; text-align: center; }
+.text-block--body { font-size: 0.95rem; }
+.text-block--lede { font-size: 1.05rem; color: var(--muted); }
+.text-block--heading {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0.75rem 0 0.25rem;
+}
+.text-block--quote {
+  font-size: 1rem;
+  font-style: italic;
+  border-left: 3px solid var(--spine);
+  padding-left: 0.85rem;
+  color: var(--muted);
+}
+
+/* A tone turns the block into a highlighted note, in the same tints the tiles and
+   the "how pages work" steps use — so a called-out paragraph looks like the rest of
+   the product rather than like a new component. */
+.text-block--forest,
+.text-block--terracotta,
+.text-block--sunrise,
+.text-block--plum {
+  padding: 0.7rem 0.85rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--spine);
+  max-width: none;
+}
+.text-block--forest {
+  background: var(--tone-forest-tint);
+  border-left-color: var(--tone-forest);
+}
+.text-block--terracotta {
+  background: var(--tone-terracotta-tint);
+  border-left-color: var(--tone-terracotta);
+}
+.text-block--sunrise {
+  background: var(--tone-terracotta-tint);
+  border-left-color: var(--sunrise);
+}
+.text-block--plum {
+  background: var(--tone-plum-tint);
+  border-left-color: var(--tone-plum);
+}
+/* A quote already has a left rule; a tone would draw a second one beside it. */
+.text-block--quote.text-block--forest,
+.text-block--quote.text-block--terracotta,
+.text-block--quote.text-block--sunrise,
+.text-block--quote.text-block--plum { padding-left: 0.85rem; }
+
+.image-block { margin: 0.5rem 0; min-width: 0; }
+.image-block--center { text-align: center; }
+.image-block__img {
+  /* The author sets the width as a percentage; `max-width` keeps a small panel from
+     being overflowed by it, and `height: auto` keeps the aspect ratio. */
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--surface-alt);
+  background: var(--surface-alt);
+}
+.image-block__caption {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+
+/* The image parameter's editor: upload, or paste a URL. */
+.image-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 16rem;
+}
+.image-field__actions { display: flex; gap: 0.4rem; align-items: center; }
+/* The <input type="file"> is hidden inside its <label>, which is what lets it be
+   styled as one of the app's buttons. */
+.image-field__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.image-field__preview {
+  max-width: 12rem;
+  max-height: 8rem;
+  width: auto;
+  border-radius: 6px;
+  border: 1px solid var(--spine);
+  object-fit: contain;
+  background: var(--surface-alt);
+}
+
+.param__textarea {
+  min-width: 22rem;
+  max-width: 46rem;
+  resize: vertical;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* --- First run: the email question --------------------------------------- */
+
+.card-block--welcome {
+  border-top: 4px solid var(--tone-forest);
+  margin: 1.5rem 0;
+}
+.welcome__title {
+  font-size: 1.5rem;
+  border-bottom: 4px solid var(--sunrise);
+  display: inline-block;
+  margin: 0 0 0.75rem;
+}
+
+.email-form { margin-top: 0.75rem; }
+.email-form__label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.email-form__row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.email-form__input { flex: 1 1 18rem; min-width: 0; padding: 0.5rem 0.6rem; }
+
+.tile__footnote--error { color: var(--danger); font-weight: 600; }
 
 /* --- My Pages: the explainer ---------------------------------------------- */
 

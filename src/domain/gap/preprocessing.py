@@ -110,8 +110,21 @@ class DefaultStreamPreprocessor(StreamPreprocessor):
         all_hr = np.concatenate(heartrates)
         all_sport = np.concatenate(sport_types)
 
+        # Both GAP models are built on `heartrate / speed`, so a split without heart
+        # rate cannot contribute to either — and must not merely be *ignored*, it has
+        # to be removed. A single NaN reaching the efficiency model poisons every
+        # curve it produces: the normalisation divides by `median(flat efficiencies)`,
+        # and `np.median` over anything containing NaN is NaN, so one HR-less activity
+        # in the flat band turns the whole fit into NaN and the plot reports "no sample
+        # falls in this range" for a dataset that is mostly fine.
+        #
+        # Activities with no HR sensor arrive here as all-NaN (see `StravaClient`), and
+        # the range comparisons below silently drop NaN speed and elevation already —
+        # heart rate was the one column with no such guard.
+        finite = np.isfinite(all_speed) & np.isfinite(all_elev) & np.isfinite(all_hr)
         mask = (
-            (all_elev >= self.elevation_range[0])
+            finite
+            & (all_elev >= self.elevation_range[0])
             & (all_elev <= self.elevation_range[1])
             & (all_speed >= self.speed_range[0])
             & (all_speed <= self.speed_range[1])
