@@ -298,6 +298,12 @@ TRANSLATIONS = {
         "fr": "{count} activité(s) sans données par seconde ont été ignorées — "
         "ce graphique a besoin des traces complètes.",
     },
+    "panel.dropped_cross_sport": {
+        "en": "{count} activity(ies) from a different sport were excluded — a "
+        "panel can't mix cycling with running.",
+        "fr": "{count} activité(s) d'un autre sport ont été exclues — un panneau "
+        "ne peut pas mélanger vélo et course à pied.",
+    },
 
     # --- Plot catalogue ------------------------------------------------------
     "plotcat.general": {"en": "General", "fr": "Général"},
@@ -523,18 +529,6 @@ TRANSLATIONS = {
         "en": "Second aggregation", "fr": "Agrégation de la seconde",
     },
     "param.chart2": {"en": "Second chart type", "fr": "Type de la seconde"},
-    "param.signal2": {"en": "Second signal", "fr": "Second signal"},
-    "param.signal2.help": {
-        "en": "Overlays a second signal on its own axis on the right — heart rate "
-              "against pace, say. Each signal takes one colour and each activity one "
-              "dash pattern. The two axes are scaled independently, so compare the "
-              "shapes rather than where the lines cross.",
-        "fr": "Superpose un second signal sur son propre axe à droite — par exemple "
-              "la fréquence cardiaque et l'allure. Chaque signal a une couleur, "
-              "chaque activité un style de trait. Les deux axes étant mis à "
-              "l'échelle indépendamment, comparez les formes plutôt que les "
-              "croisements.",
-    },
     "param.granularity": {"en": "Granularity", "fr": "Granularité"},
     "param.x_mode": {"en": "X axis", "fr": "Axe X"},
     "param.x_mode.calendar": {"en": "Calendar", "fr": "Calendrier"},
@@ -628,7 +622,16 @@ TRANSLATIONS = {
         "en": "Compare each window's own best.",
         "fr": "Comparer le meilleur de chaque fenêtre.",
     },
-    "param.signal": {"en": "Signal", "fr": "Signal"},
+    "param.signals": {"en": "Signals", "fr": "Signaux"},
+    "param.signals.help": {
+        "en": "Any number at once. Signals sharing a unit (GAP and raw pace, say) "
+              "share an axis; a second unit gets the right-hand axis; everything "
+              "past that folds onto whichever axis is closest.",
+        "fr": "Autant que voulu à la fois. Les signaux qui partagent une unité "
+              "(GAP et allure brute, par exemple) partagent un axe ; une seconde "
+              "unité obtient l'axe de droite ; le reste se replie sur l'axe le "
+              "plus proche.",
+    },
     "param.x_axis": {"en": "X axis", "fr": "Axe X"},
     "param.as_speed": {"en": "Show as speed", "fr": "Afficher en vitesse"},
     "param.as_speed.help": {
@@ -742,9 +745,11 @@ TRANSLATIONS = {
     # lives — see the module docstring.
     "ui.nav.home": {"en": "Home", "fr": "Accueil"},
     "ui.nav.analysis": {"en": "Analysis", "fr": "Analysis"},
+    "ui.nav.training": {"en": "Training", "fr": "Entraînement"},
     "ui.nav.sign_out": {"en": "Sign out", "fr": "Se déconnecter"},
 
     "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},
+    "ui.common.close": {"en": "Close", "fr": "Fermer"},
     "ui.common.not_set": {"en": "Not set", "fr": "Non renseigné"},
     "ui.common.saving": {"en": "saving", "fr": "enregistrement"},
     "ui.common.not_saved": {
@@ -758,7 +763,7 @@ TRANSLATIONS = {
     "ui.common.years": {"en": "years", "fr": "ans"},
 
     # Home — profile card
-    "ui.home.profile.title": {"en": "Profile", "fr": "Profil"},
+    "ui.home.profile.title": {"en": "Athlete History", "fr": "Historique de l'athlète"},
     "ui.home.profile.activities": {"en": "Activities", "fr": "Activités"},
     "ui.home.profile.oldest": {"en": "First run", "fr": "Première sortie"},
     "ui.home.profile.newest": {"en": "Latest run", "fr": "Dernière sortie"},
@@ -776,25 +781,40 @@ TRANSLATIONS = {
     },
 
     # Home — health card
-    "ui.home.health.title": {"en": "Health", "fr": "Santé"},
+    "ui.home.health.title": {
+        "en": "Athlete Health Metrics", "fr": "Indicateurs de santé de l'athlète",
+    },
     "ui.home.health.age": {"en": "Age", "fr": "Âge"},
-    "ui.home.health.age_help": {
-        "en": "Set your date of birth — Strava does not share it.",
-        "fr": "Renseignez votre date de naissance — Strava ne la transmet pas.",
-    },
     "ui.home.health.experience": {"en": "Years running", "fr": "Années de course"},
-    "ui.home.health.experience_help": {
-        "en": "Measured from your first recorded activity.",
-        "fr": "Calculé depuis votre première activité enregistrée.",
-    },
     "ui.home.health.weight": {"en": "Weight", "fr": "Poids"},
     "ui.home.health.weight_help": {
-        "en": "Unlocks the power metrics. Stored power is per kilogram, so a new "
-              "weight rescales your whole history at once.",
-        "fr": "Débloque les métriques de puissance. La puissance est stockée par "
-              "kilogramme : un nouveau poids réajuste tout l'historique d'un coup.",
+        "en": "Unlocks the power metrics.",
+        "fr": "Débloque les métriques de puissance.",
     },
     "ui.home.health.height": {"en": "Height", "fr": "Taille"},
+
+    # Home — training zones and VMA pace (display-only, see ZonesCard)
+    "ui.home.zones.title": {
+        "en": "Athlete Performance Metrics", "fr": "Indicateurs de performance de l'athlète",
+    },
+    "ui.home.zones.subtitle": {
+        "en": "Just for reference — nothing here feeds a calculation.",
+        "fr": "Juste pour référence — rien ici n'alimente un calcul.",
+    },
+    "ui.home.zones.z1": {"en": "End of Z1", "fr": "Fin Z1"},
+    "ui.home.zones.z2": {"en": "End of Z2", "fr": "Fin Z2"},
+    "ui.home.zones.z3": {"en": "End of Z3", "fr": "Fin Z3"},
+    "ui.home.zones.z4": {"en": "End of Z4", "fr": "Fin Z4"},
+    "ui.home.zones.hr_max": {"en": "HRmax", "fr": "FCmax"},
+    "ui.home.zones.vma": {"en": "VMA pace", "fr": "Allure VMA"},
+    "ui.home.zones.pace_z2": {"en": "Z2", "fr": "Z2"},
+    "ui.home.zones.pace_endurance": {"en": "Endurance", "fr": "Endurance"},
+    "ui.home.zones.pace_threshold": {"en": "Threshold", "fr": "Seuil"},
+    "ui.home.zones.pace_intervals": {"en": "Intervals", "fr": "Intervalles"},
+    "ui.home.zones.pace_reps": {"en": "Reps", "fr": "Répétitions"},
+    "ui.home.zones.unlocked_by_vma": {
+        "en": "Unlocked by giving VMA", "fr": "Débloqué en renseignant la VMA",
+    },
 
     # Home — last activity and the weekly volume chart
     "ui.home.last.title": {"en": "Last activity", "fr": "Dernière activité"},
@@ -985,6 +1005,23 @@ TRANSLATIONS = {
         "en": "Could not finish fitting the models",
         "fr": "Impossible de terminer l'ajustement des modèles",
     },
+
+    # Training: the calendar of planned workouts/goals and completed sessions.
+    "ui.training.add_workout": {"en": "+ Workout", "fr": "+ Séance"},
+    "ui.training.add_goal": {"en": "+ Goal", "fr": "+ Objectif"},
+    "ui.training.kind.workout": {"en": "Workout", "fr": "Séance"},
+    "ui.training.kind.goal": {"en": "Goal", "fr": "Objectif"},
+    "ui.training.form.title_placeholder": {"en": "Title", "fr": "Titre"},
+    "ui.training.form.body_placeholder": {
+        "en": "Notes — shown when opened",
+        "fr": "Notes — visibles à l'ouverture",
+    },
+    "ui.training.form.save": {"en": "Save", "fr": "Enregistrer"},
+    "ui.training.form.delete": {"en": "Delete", "fr": "Supprimer"},
+    "ui.training.form.importance_primary": {"en": "Primary", "fr": "Principal"},
+    "ui.training.form.importance_secondary": {"en": "Secondary", "fr": "Secondaire"},
+    "ui.training.badge.planned": {"en": "Planned", "fr": "Prévu"},
+    "ui.training.badge.completed": {"en": "Completed", "fr": "Terminé"},
 
 }
 

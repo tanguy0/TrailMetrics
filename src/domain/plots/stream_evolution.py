@@ -1,10 +1,19 @@
 """Within-activity signal traces — the STREAM-level plot.
 
-One line per activity, over elapsed time or distance covered: GAP pace, raw pace,
-heart rate, power, power-to-HR, altitude or gradient. This is the whole race
-comparator's set of evolution figures as a single plot type where the signal is a
-parameter — and it generalizes, because any activity the panel selected can be
-overlaid, not just races.
+One line per activity per signal, over elapsed time or distance covered: GAP pace,
+raw pace, heart rate, power, power-to-HR, altitude or gradient. This is the whole
+race comparator's set of evolution figures as a single plot type where the signals
+are a parameter — and it generalizes, because any activity the panel selected can
+be overlaid, not just races.
+
+Any number of signals can be selected at once. There are only two y-axes in the
+chart IR, so signals are bucketed onto them by ``value_kind`` (their unit) rather
+than one-per-axis: every "pace" signal shares the axis GAP would use alone, every
+"number" signal shares the other. That is a real simplification — heart rate and
+altitude sharing an axis despite different units — but it is the one this plot
+type already made for its dual-axis case, just no longer capped at exactly two
+signals. A panel that wants heart rate read against its own untouched axis should
+give it a panel of its own.
 
 Per-signal smoothing is exposed because these traces are unusable raw: per-second
 GPS pace and altitude are dominated by noise. The two-stage filter (time-domain
@@ -43,6 +52,7 @@ from src.domain.spec.params import (
     choice,
     group,
     integer,
+    multichoice,
     number,
     when,
 )
@@ -59,21 +69,20 @@ SIGNALS: Dict[str, Tuple[str, str, str, int, bool]] = {
     "gradient": ("gradient_pct", "signal.gradient.y", "number", 1, False),
 }
 
+_DEFAULT_SIGNALS = ["gap_pace"]
+
 # x-axis key -> (attribute, label key, scale from SI, hover unit)
 _X_AXES = {
     "time": ("time_s", "plot.races.x.time", 1.0 / 60.0, "min"),
     "distance": ("distance_m", "plot.races.x.distance", 1.0 / 1000.0, "km"),
 }
 
-# Sentinel for "one signal only", matching NO_METRIC's role in metric_trend.
-NO_SIGNAL = "none"
-
 # Dashes distinguish the *activities* once colour is spent on the signal.
 _ACTIVITY_DASHES = ["-", "--", "-.", ":"]
 
-# One colour per signal on a dual-axis chart, matching each axis's tint.
-_PRIMARY_COLOR = series_color(0)
-_SECONDARY_COLOR = series_color(1)
+# One entry per signal sharing a y-axis: its legend label, unit, tick decimals, and
+# whether it is being shown as speed rather than pace.
+_AxisEntry = Tuple[str, str, int, bool]
 
 
 def _filter_group(key: str, label_key: str, default: FilterConfig) -> ParamSpec:
@@ -89,21 +98,18 @@ def _filter_group(key: str, label_key: str, default: FilterConfig) -> ParamSpec:
 _SMOOTH_DEFAULTS = default_smoothing_params()
 
 PARAMS: List[ParamSpec] = [
-    choice("signal", "param.signal", "gap_pace", choices=[
+    multichoice("signals", "param.signals", list(_DEFAULT_SIGNALS), choices=[
         Choice(key, f"signal.{key}") for key in SIGNALS
-    ]),
-    # A second signal on the same figure, against its own right-hand axis: heart
-    # rate against pace is the reason this exists, but any pair works.
-    choice("signal2", "param.signal2", NO_SIGNAL, choices=[
-        Choice(NO_SIGNAL, "param.metric2.none"),
-        *[Choice(key, f"signal.{key}") for key in SIGNALS],
-    ], help_key="param.signal2.help"),
+    ], help_key="param.signals.help"),
     choice("x_axis", "param.x_axis", "time", choices=[
         Choice("time", "races.xaxis.time"),
         Choice("distance", "races.xaxis.distance"),
     ], help_key="races.xaxis.help"),
     boolean("as_speed", "param.as_speed", False, help_key="param.as_speed.help",
-            visible_when=when.one_of("signal", ["gap_pace", "pace"])),
+            visible_when=when.any_of(
+                when.contains("signals", "gap_pace"),
+                when.contains("signals", "pace"),
+            )),
     integer("max_series", "param.max_series", 8, min=1, max=30,
             help_key="param.max_series.help"),
     group("smoothing", "param.smoothing", [
@@ -115,18 +121,22 @@ PARAMS: List[ParamSpec] = [
 ]
 
 
+def _selected_signals(params: Dict[str, Any]) -> List[str]:
+    """The chosen signals, valid and de-duplicated, in the order picked."""
+    raw = params.get("signals") or []
+    ordered: List[str] = []
+    for key in raw:
+        if key in SIGNALS and key not in ordered:
+            ordered.append(key)
+    return ordered or list(_DEFAULT_SIGNALS)
+
+
 def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     lang = resolved.lang
-    signal_key = params.get("signal") or "gap_pace"
-    attribute, y_label_key, value_kind, decimals, needs_weight = SIGNALS.get(
-        signal_key, SIGNALS["gap_pace"]
-    )
+    signal_keys = _selected_signals(params)
     x_key = params.get("x_axis") or "time"
     x_attribute, x_label_key, x_scale, x_unit = _X_AXES.get(x_key, _X_AXES["time"])
-    as_speed = bool(params.get("as_speed")) and value_kind == "pace"
-
-    if needs_weight and resolved.mass_kg is None:
-        return empty_output(weight_note(lang))
+    as_speed = bool(params.get("as_speed"))
 
     activity_ids = [
         aid for aid in resolved.activity_ids
@@ -144,56 +154,83 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
             shown=limit, total=len(activity_ids)))
         activity_ids = activity_ids[:limit]
 
+    # A single activity's own name is not useful information on every one of its
+    # traces — the legend only needs to say *which signal* a line is, not repeat the
+    # one session everything on the chart already belongs to.
+    single_activity = len(activity_ids) == 1
+
     smoothing = _smoothing_from(params.get("smoothing") or {})
     smoothing_key = _smoothing_key(smoothing)
 
-    # A second signal changes how the first is coloured, so resolve it up front.
-    signal2_key = params.get("signal2") or NO_SIGNAL
-    dual = signal2_key != NO_SIGNAL and signal2_key != signal_key
-    signal2 = SIGNALS.get(signal2_key) if dual else None
-    if signal2 is not None and signal2[4] and resolved.mass_kg is None:
-        # The second signal needs a weight we do not have: drop it with a note
-        # rather than failing the whole plot, which the first signal doesn't need.
+    # A signal that needs a weight we don't have is dropped, with one note covering
+    # all of them — not one per signal, which would repeat the same explanation.
+    resolved_signals = []
+    missing_weight = False
+    for key in signal_keys:
+        attribute, y_label_key, value_kind, decimals, needs_weight = SIGNALS[key]
+        if needs_weight and resolved.mass_kg is None:
+            missing_weight = True
+            continue
+        resolved_signals.append((key, attribute, y_label_key, value_kind, decimals))
+    if missing_weight:
         notes.append(weight_note(lang))
-        signal2 = None
-        dual = False
+    if not resolved_signals:
+        return empty_output(weight_note(lang))
 
-    traces = _signal_traces(
-        resolved, activity_ids, attribute, x_attribute, x_scale, x_unit,
-        value_kind, decimals, as_speed=as_speed,
-        smoothing=smoothing, smoothing_key=smoothing_key,
-        axis="y",
-        unify_color=_PRIMARY_COLOR if dual else None,
-        signal_label=translate(f"signal.{signal_key}", lang),
-    )
+    # Bucket onto (at most) two axes by unit, in the order the signals were picked —
+    # see the module docstring for why a third distinct unit would still land on
+    # the second axis rather than being dropped.
+    axis_kinds: List[str] = []
+    for _, _, _, value_kind, _ in resolved_signals:
+        if value_kind not in axis_kinds:
+            axis_kinds.append(value_kind)
+    primary_kind = axis_kinds[0]
 
-    y2_axis = None
-    if signal2 is not None:
-        attribute2, y_label_key2, value_kind2, decimals2, _ = signal2
-        # `as_speed` belongs to the primary signal's control; the second signal is
-        # always drawn in its own natural unit.
+    multi_signal = len(resolved_signals) > 1
+    traces: List[Trace] = []
+    primary_entries: List[_AxisEntry] = []
+    secondary_entries: List[_AxisEntry] = []
+    # A single-colour axis tint only still means something when exactly one signal
+    # is on that axis; two differently-coloured signals sharing it can't be tinted
+    # to either one, so it stays untinted.
+    primary_color: Optional[str] = None
+    secondary_color: Optional[str] = None
+
+    for index, (key, attribute, y_label_key, value_kind, decimals) in enumerate(resolved_signals):
+        on_primary = value_kind == primary_kind
+        signal_as_speed = as_speed and value_kind == "pace"
+        color = series_color(index) if multi_signal else None
+        label = translate(f"signal.{key}", lang)
+
         traces += _signal_traces(
-            resolved, activity_ids, attribute2, x_attribute, x_scale, x_unit,
-            value_kind2, decimals2, as_speed=False,
+            resolved, activity_ids, attribute, x_attribute, x_scale, x_unit,
+            value_kind, decimals, as_speed=signal_as_speed,
             smoothing=smoothing, smoothing_key=smoothing_key,
-            axis="y2",
-            unify_color=_SECONDARY_COLOR,
-            signal_label=translate(f"signal.{signal2_key}", lang),
+            axis="y" if on_primary else "y2",
+            unify_color=color,
+            signal_label=label,
+            single_activity=single_activity,
         )
-        y2_axis = _y_axis(translate(y_label_key2, lang), value_kind2, False, decimals2)
-        y2_axis.color = _SECONDARY_COLOR
+
+        entry: _AxisEntry = (label, value_kind, decimals, signal_as_speed)
+        if on_primary:
+            primary_entries.append(entry)
+            primary_color = color if len(primary_entries) == 1 else None
+        else:
+            secondary_entries.append(entry)
+            secondary_color = color if len(secondary_entries) == 1 else None
 
     if not traces:
         return empty_output(translate("plot.metric_unavailable", lang).format(
-            metric=translate(f"signal.{signal_key}", lang)))
+            metric=translate(f"signal.{signal_keys[0]}", lang)))
 
-    y_title = translate("plot.races.gap_speed.y", lang) if as_speed \
-        else translate(y_label_key, lang)
-    left_axis = _y_axis(y_title, value_kind, as_speed, decimals)
-    title = translate(f"signal.{signal_key}", lang)
+    left_axis = _combined_axis(primary_entries, lang)
+    y2_axis = _combined_axis(secondary_entries, lang) if secondary_entries else None
     if y2_axis is not None:
-        left_axis.color = _PRIMARY_COLOR
-        title = f"{title} · {translate(f'signal.{signal2_key}', lang)}"
+        left_axis.color = primary_color
+        y2_axis.color = secondary_color
+
+    title = " · ".join(label for label, *_ in primary_entries + secondary_entries)
 
     chart = ChartData(
         title=title,
@@ -205,6 +242,20 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
         height=420,
     )
     return PlotOutput(charts=[chart], notes=notes)
+
+
+def _combined_axis(entries: List[_AxisEntry], lang: str) -> Axis:
+    """One y-axis for every signal sharing it, formatted like the first of them.
+
+    Several signals of the same ``value_kind`` can still differ in decimals or
+    natural unit (altitude in metres, gradient in percent); the first signal
+    assigned to the axis decides the tick formatting, and the title lists all of
+    them so the reader knows what else is drawn against it.
+    """
+    _, value_kind, decimals, as_speed = entries[0]
+    title = (translate("plot.races.gap_speed.y", lang) if as_speed
+             else " · ".join(label for label, *_ in entries))
+    return _y_axis(title, value_kind, as_speed, decimals)
 
 
 def _signal_traces(
@@ -223,12 +274,18 @@ def _signal_traces(
     axis: str,
     unify_color: Optional[str],
     signal_label: str,
+    single_activity: bool,
 ) -> List[Trace]:
     """One line per activity for a single signal, bound to one y-axis.
 
-    With two signals, colour has to say *which signal* a line is — that is the
-    question a dual-axis chart raises — so activities are told apart by dash and the
-    trace name carries both. With one signal, per-activity colours are kept.
+    With more than one signal selected, colour has to say *which signal* a line
+    is, so activities are told apart by dash instead and the trace name carries
+    both. With one signal, per-activity colours are kept.
+
+    ``single_activity`` overrides all of that: with only one activity on the whole
+    panel, every trace already belongs to the one session on the chart, so the name
+    is just the signal — repeating the session's own label on every line would be
+    the only thing in the legend, telling the reader nothing.
     """
     traces: List[Trace] = []
     for index, activity_id in enumerate(activity_ids):
@@ -244,9 +301,13 @@ def _signal_traces(
         x = np.asarray(getattr(series, x_attribute), dtype=float) * x_scale
         y = 3600.0 / values if as_speed else values
 
-        name = resolved.activity_label(activity_id)
+        if single_activity:
+            name = signal_label
+        else:
+            activity_name = resolved.activity_label(activity_id)
+            name = f"{activity_name} · {signal_label}" if unify_color else activity_name
         traces.append(Trace(
-            name=f"{name} · {signal_label}" if unify_color else name,
+            name=name,
             x=x.tolist(),
             y=[None if not np.isfinite(v) else float(v) for v in y],
             kind=TraceKind.LINE,

@@ -27,6 +27,7 @@ from api.routers import (
     precompute,
     registry,
     render,
+    training,
 )
 
 logging.basicConfig(
@@ -95,6 +96,7 @@ app.include_router(activities.router)
 app.include_router(pages.router)
 app.include_router(render.router)
 app.include_router(home.router)
+app.include_router(training.router)
 app.include_router(precompute.router)
 app.include_router(assets.router)
 

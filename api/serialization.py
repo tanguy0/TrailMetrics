@@ -178,6 +178,12 @@ def athlete_payload(
         "birthdate": athlete.birthdate.isoformat() if athlete.birthdate else None,
         "height_cm": athlete.height_cm,
         "email": athlete.email,
+        "hr_zone1_end": athlete.hr_zone1_end,
+        "hr_zone2_end": athlete.hr_zone2_end,
+        "hr_zone3_end": athlete.hr_zone3_end,
+        "hr_zone4_end": athlete.hr_zone4_end,
+        "hr_max": athlete.hr_max,
+        "vma_pace_s_per_km": athlete.vma_pace_s_per_km,
         # Derived rather than left to the client to infer from a null email, so
         # "have they answered?" has one definition.
         "needs_email": athlete.needs_email,

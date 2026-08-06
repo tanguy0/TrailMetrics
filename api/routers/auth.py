@@ -104,6 +104,15 @@ class ProfileUpdate(BaseModel):
     height_cm: Optional[float] = Field(default=None, ge=100, le=250)
     email: Optional[str] = Field(default=None, max_length=254, pattern=_EMAIL_PATTERN)
 
+    # Self-reported zones and VMA pace — display-only, see the module docstring
+    # on `Athlete` for why there's no cross-field validation between them.
+    hr_zone1_end: Optional[int] = Field(default=None, ge=30, le=250)
+    hr_zone2_end: Optional[int] = Field(default=None, ge=30, le=250)
+    hr_zone3_end: Optional[int] = Field(default=None, ge=30, le=250)
+    hr_zone4_end: Optional[int] = Field(default=None, ge=30, le=250)
+    hr_max: Optional[int] = Field(default=None, ge=30, le=250)
+    vma_pace_s_per_km: Optional[float] = Field(default=None, ge=90, le=900)
+
     model_config = {"extra": "forbid"}
 
 
@@ -194,6 +203,20 @@ def update_me(
     if "email" in touched:
         athletes.set_email(athlete.id, payload.email)
         athlete.email = payload.email
+
+    zone_fields = (
+        "hr_zone1_end", "hr_zone2_end", "hr_zone3_end", "hr_zone4_end",
+        "hr_max", "vma_pace_s_per_km",
+    )
+    if touched.keys() & set(zone_fields):
+        # A partial update must not blank a zone the client didn't mention.
+        values = {
+            field: getattr(payload, field) if field in touched else getattr(athlete, field)
+            for field in zone_fields
+        }
+        athletes.set_zones(athlete.id, **values)
+        for field, value in values.items():
+            setattr(athlete, field, value)
 
     return _me_payload(athlete)
 

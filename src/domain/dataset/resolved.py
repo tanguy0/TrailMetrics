@@ -74,6 +74,7 @@ class ResolvedPanelData:
         mass_kg: Optional[float] = None,
         memo: Optional[Dict[Any, Any]] = None,
         dropped_streamless: int = 0,
+        dropped_cross_sport: int = 0,
         summaries: Optional[Sequence[ActivitySummary]] = None,
     ):
         self.groups = list(groups)
@@ -83,6 +84,9 @@ class ResolvedPanelData:
         self._memo: Dict[Any, Any] = memo if memo is not None else {}
         # How many activities were skipped for lacking per-second data.
         self.dropped_streamless = dropped_streamless
+        # How many activities were skipped for belonging to the other sport
+        # family (running vs cycling) than the rest of this panel's selection.
+        self.dropped_cross_sport = dropped_cross_sport
         self._features: Optional[pd.DataFrame] = None
         self._summaries: Optional[Dict[int, ActivitySummary]] = (
             {s.activity_id: s for s in summaries} if summaries is not None else None

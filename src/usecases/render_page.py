@@ -200,6 +200,11 @@ class RenderPage(UseCase):
                 translate("panel.dropped_streamless", context.lang).format(
                     count=resolved.dropped_streamless)
             )
+        if resolved.dropped_cross_sport:
+            output.notes.append(
+                translate("panel.dropped_cross_sport", context.lang).format(
+                    count=resolved.dropped_cross_sport)
+            )
         context.output_cache.set(signature, plot.plot_type, output)
         result.output = output
         return result

@@ -331,6 +331,14 @@ export interface Athlete {
   birthdate: string | null; // ISO date
   height_cm: number | null;
   email: string | null;
+  /** Self-reported training zones and VMA pace — display-only, fed into no
+   * calculation anywhere in the app. */
+  hr_zone1_end: number | null;
+  hr_zone2_end: number | null;
+  hr_zone3_end: number | null;
+  hr_zone4_end: number | null;
+  hr_max: number | null;
+  vma_pace_s_per_km: number | null;
   /** Server's verdict on whether the email question has been answered. */
   needs_email: boolean;
   age: number | null;
@@ -411,6 +419,29 @@ export interface RouteResult {
   activity_id: number | null;
   points: [number, number][];
   source: "stored" | "strava" | "none" | "unavailable";
+}
+
+// --- Training --------------------------------------------------------------
+
+export type PlannedItemKind = "workout" | "goal";
+/** Only meaningful for a goal: a secondary goal keeps the goal colour but shaded. */
+export type PlannedItemImportance = "primary" | "secondary";
+
+/** A planned workout or goal on the training calendar. Title is what shows on
+ * the calendar cell; body is the text revealed when the item is opened. */
+export interface PlannedItem {
+  id: string;
+  kind: PlannedItemKind;
+  date: string; // ISO date
+  title: string;
+  body: string;
+  importance: PlannedItemImportance;
+}
+
+/** Everything the calendar draws for one requested date range. */
+export interface TrainingCalendar {
+  planned_items: PlannedItem[];
+  activities: ActivityCard[];
 }
 
 // --- UI strings ------------------------------------------------------------

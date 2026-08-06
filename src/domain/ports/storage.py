@@ -39,6 +39,15 @@ class Athlete:
     # Asked for once, right after the first sign-in. ``None`` for an account that has
     # not answered yet, which is what the app's first-run prompt keys on.
     email: Optional[str] = None
+    # Self-reported training zones and VMA pace (seconds per km). Purely a
+    # reference the athlete writes down for themselves — nothing here feeds any
+    # computation, so there is no cross-field validation between them.
+    hr_zone1_end: Optional[int] = None
+    hr_zone2_end: Optional[int] = None
+    hr_zone3_end: Optional[int] = None
+    hr_zone4_end: Optional[int] = None
+    hr_max: Optional[int] = None
+    vma_pace_s_per_km: Optional[float] = None
 
     @property
     def display_name(self) -> str:
@@ -109,6 +118,19 @@ class AthleteRepository(ABC):
     @abstractmethod
     def set_email(self, athlete_id: int, email: Optional[str]) -> None:
         """Set the athlete's email address, which Strava never provides."""
+
+    @abstractmethod
+    def set_zones(
+        self,
+        athlete_id: int,
+        hr_zone1_end: Optional[int],
+        hr_zone2_end: Optional[int],
+        hr_zone3_end: Optional[int],
+        hr_zone4_end: Optional[int],
+        hr_max: Optional[int],
+        vma_pace_s_per_km: Optional[float],
+    ) -> None:
+        """Set the athlete's self-reported training zones and VMA pace."""
 
     @abstractmethod
     def save_credentials(self, athlete_id: int, credentials: StravaCredentials) -> None:

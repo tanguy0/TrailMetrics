@@ -25,19 +25,21 @@ import { useRouter } from "next/navigation";
 import { ChartView } from "@/components/ChartView";
 import { EmailForm } from "@/components/EmailForm";
 import { ProgressBar } from "@/components/ProgressBar";
-import { RouteMap } from "@/components/RouteMap";
+import { SessionDetail } from "@/components/SessionDetail";
 import {
   ApiError,
   getAthlete,
   getHomeSummary,
-  getLastActivityRoute,
   getSyncStatus,
   renderPanel,
   startPrecompute,
   startSync,
   updateProfile,
 } from "@/lib/api";
-import { formatDate, formatHms, formatNumber, formatPace } from "@/lib/format";
+import {
+  formatDate, formatHms, formatNumber, formatPaceInput, parsePaceInput,
+} from "@/lib/format";
+import { RUNNING_SPORT_TYPES } from "@/lib/sport";
 import { translator, type Strings, type Translate } from "@/lib/strings";
 import type {
   ActivityCard,
@@ -46,7 +48,6 @@ import type {
   HomeRecord,
   HomeSummary,
   PanelSpec,
-  RouteResult,
 } from "@/lib/types";
 
 const POLL_MS = 2000;
@@ -73,7 +74,6 @@ export function HomeScreen({ strings }: { strings: Strings }) {
   const [summary, setSummary] = useState<HomeSummary | null>(null);
   const [volumeCharts, setVolumeCharts] = useState<ChartData[] | null>(null);
   const [formCharts, setFormCharts] = useState<ChartData[] | null>(null);
-  const [route, setRoute] = useState<RouteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Whether this mount has already fired the automatic passes. A ref, not state:
@@ -130,23 +130,6 @@ export function HomeScreen({ strings }: { strings: Strings }) {
     // Keyed on the activity count alone: `t` is rebuilt every render but its
     // strings never change, so including it would re-render the charts endlessly.
   }, [activityCount]);
-
-  // The route is its own request: it can involve a call out to Strava, and the
-  // rest of the screen should never wait on that.
-  const lastActivityId = summary?.last_activity?.activity_id ?? null;
-  useEffect(() => {
-    if (lastActivityId == null) {
-      setRoute(null);
-      return;
-    }
-    let live = true;
-    getLastActivityRoute()
-      .then((result) => live && setRoute(result))
-      .catch(() => live && setRoute(null));
-    return () => {
-      live = false;
-    };
-  }, [lastActivityId]);
 
   const syncing = athlete?.sync.status === "running";
   useEffect(() => {
@@ -231,6 +214,18 @@ export function HomeScreen({ strings }: { strings: Strings }) {
       <header className="hero">
         <div>
           <h1 className="hero__name">{athlete.display_name}</h1>
+          <div className="hero__email">
+            <EditableTile
+              tone="slate"
+              label={t("home.health.email")}
+              value={athlete.email}
+              input={{ type: "email", value: athlete.email ?? "" }}
+              onCommit={async (raw) =>
+                setAthlete(await updateProfile({ email: raw.trim() === "" ? null : raw.trim() }))
+              }
+              t={t}
+            />
+          </div>
           <p className="hero__meta">
             {formatNumber(summary.profile.total_distance_m / 1000, 0)}{" "}
             {t("common.km")} · {summary.profile.activity_count}{" "}
@@ -274,6 +269,8 @@ export function HomeScreen({ strings }: { strings: Strings }) {
         />
       </div>
 
+      <ZonesCard athlete={athlete} onSaved={setAthlete} t={t} />
+
       <RecordsCard records={summary.records} t={t} />
 
       {/* Your data: the import controls, then what the data most recently says. */}
@@ -292,7 +289,6 @@ export function HomeScreen({ strings }: { strings: Strings }) {
         <div className="data-stack">
           <LastActivityBlock
             activity={summary.last_activity}
-            route={route}
             t={t}
           />
           <RecentHistoryBlock
@@ -405,7 +401,11 @@ function recentWindow(name: string): PanelSpec["source"] {
     activity_ids: [],
     selection_label: "",
     windows: [{ name, start: isoDate(start), end: isoDate(end) }],
-    filters: { sport_types: [], min_distance_km: null, max_distance_km: null },
+    // Explicit, not "every sport": Home is running-only even though cycling is
+    // now imported too — see api/routers/home.py's `summary()` docstring.
+    filters: {
+      sport_types: RUNNING_SPORT_TYPES, min_distance_km: null, max_distance_km: null,
+    },
   };
 }
 
@@ -425,7 +425,7 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
         <span aria-hidden="true">🏃</span> {t("home.profile.title")}
       </h2>
 
-      <div className="tile-grid">
+      <div className="tile-grid tile-grid--four">
         <Tile
           tone="forest"
           label={t("home.profile.activities")}
@@ -532,13 +532,12 @@ function HealthCard({
         <span aria-hidden="true">❤️</span> {t("home.health.title")}
       </h2>
 
-      <div className="tile-grid tile-grid--two">
+      <div className="tile-grid tile-grid--two tile-grid--square">
         <EditableTile
           tone="rose"
           label={t("home.health.age")}
           value={athlete.age != null ? String(athlete.age) : null}
           unit={athlete.age != null ? t("common.years") : undefined}
-          help={t("home.health.age_help")}
           input={{
             type: "date",
             value: athlete.birthdate ?? "",
@@ -557,7 +556,6 @@ function HealthCard({
           label={t("home.health.experience")}
           value={experience != null ? formatNumber(experience, 1) : "—"}
           unit={experience != null ? t("common.years") : undefined}
-          footnote={t("home.health.experience_help")}
         />
 
         <EditableTile
@@ -584,18 +582,110 @@ function HealthCard({
           }
           t={t}
         />
+      </div>
+    </section>
+  );
+}
 
-        {/* Editable like the rest: the athlete gave it, so they can correct it. */}
+/**
+ * Training zones and VMA pace — self-reported, shown back to the athlete, and
+ * read by nothing else in the app. A reference to have written down in one
+ * place, not an input to any computation.
+ */
+/** Reference paces at a %VMA range, in the order (and table) most training
+ * plans quote them. The pace shown for the low end of the range comes first —
+ * lower %VMA is the slower pace. */
+const VMA_PACE_ZONES: { key: string; lowPct: number; highPct: number }[] = [
+  { key: "z2", lowPct: 60, highPct: 70 },
+  { key: "endurance", lowPct: 70, highPct: 80 },
+  { key: "threshold", lowPct: 85, highPct: 90 },
+  { key: "intervals", lowPct: 95, highPct: 105 },
+  { key: "reps", lowPct: 105, highPct: 115 },
+];
+
+function vmaPaceRange(vmaSecondsPerKm: number, lowPct: number, highPct: number): string {
+  const slow = vmaSecondsPerKm / (lowPct / 100);
+  const fast = vmaSecondsPerKm / (highPct / 100);
+  return `${formatPaceInput(slow)}–${formatPaceInput(fast)}`;
+}
+
+function ZonesCard({
+  athlete,
+  onSaved,
+  t,
+}: {
+  athlete: Athlete;
+  onSaved: (athlete: Athlete) => void;
+  t: T;
+}) {
+  const bpmTile = (
+    tone: Tone,
+    label: string,
+    value: number | null,
+    onCommit: (raw: string) => Promise<Athlete>,
+  ) => (
+    <EditableTile
+      tone={tone}
+      label={label}
+      value={value != null ? String(value) : null}
+      unit={value != null ? "bpm" : undefined}
+      input={{ type: "number", value: value?.toString() ?? "", min: 30, max: 250, step: 1 }}
+      onCommit={async (raw) => onSaved(await onCommit(raw))}
+      t={t}
+    />
+  );
+
+  const vma = athlete.vma_pace_s_per_km;
+
+  return (
+    <section className="card-block card-block--zones">
+      <h2 className="card-block__title">
+        <span aria-hidden="true">🎯</span> {t("home.zones.title")}
+      </h2>
+      <p className="data-block__lede">{t("home.zones.subtitle")}</p>
+
+      <div className="tile-grid">
         <EditableTile
-          tone="slate"
-          label={t("home.health.email")}
-          value={athlete.email}
-          input={{ type: "email", value: athlete.email ?? "" }}
-          onCommit={async (raw) =>
-            onSaved(await updateProfile({ email: raw.trim() === "" ? null : raw.trim() }))
-          }
+          tone="plum"
+          label={t("home.zones.vma")}
+          value={vma != null ? formatPaceInput(vma) : null}
+          unit={vma != null ? "/km" : undefined}
+          input={{ type: "text", value: formatPaceInput(vma), placeholder: "4:00" }}
+          onCommit={async (raw) => {
+            if (raw.trim() === "") {
+              onSaved(await updateProfile({ vma_pace_s_per_km: null }));
+              return;
+            }
+            const parsed = parsePaceInput(raw);
+            if (parsed == null) throw new Error("invalid pace");
+            onSaved(await updateProfile({ vma_pace_s_per_km: parsed }));
+          }}
           t={t}
         />
+
+        {VMA_PACE_ZONES.map((zone) => (
+          <Tile
+            key={zone.key}
+            tone="grey"
+            label={t(`home.zones.pace_${zone.key}`)}
+            value={vma != null ? vmaPaceRange(vma, zone.lowPct, zone.highPct) : "—"}
+            unit={vma != null ? "/km" : undefined}
+            footnote={t("home.zones.unlocked_by_vma")}
+          />
+        ))}
+      </div>
+
+      <div className="tile-grid tile-grid--two">
+        {bpmTile("teal", t("home.zones.z1"), athlete.hr_zone1_end, (raw) =>
+          updateProfile({ hr_zone1_end: raw === "" ? null : Number(raw) }))}
+        {bpmTile("forest", t("home.zones.z2"), athlete.hr_zone2_end, (raw) =>
+          updateProfile({ hr_zone2_end: raw === "" ? null : Number(raw) }))}
+        {bpmTile("sunrise", t("home.zones.z3"), athlete.hr_zone3_end, (raw) =>
+          updateProfile({ hr_zone3_end: raw === "" ? null : Number(raw) }))}
+        {bpmTile("terracotta", t("home.zones.z4"), athlete.hr_zone4_end, (raw) =>
+          updateProfile({ hr_zone4_end: raw === "" ? null : Number(raw) }))}
+        {bpmTile("rose", t("home.zones.hr_max"), athlete.hr_max, (raw) =>
+          updateProfile({ hr_max: raw === "" ? null : Number(raw) }))}
       </div>
     </section>
   );
@@ -603,80 +693,23 @@ function HealthCard({
 
 // --- Latest activity and weekly volume -------------------------------------
 
-/** The latest activity: its numbers, and its route on a map when there is one. */
+/** The latest activity: its numbers, its route, and its pace/GAP/HR traces. */
 function LastActivityBlock({
   activity,
-  route,
   t,
 }: {
   activity: ActivityCard | null;
-  route: RouteResult | null;
   t: T;
 }) {
-  if (!activity) {
-    return (
-      <div className="data-block">
-        <h3 className="data-block__title">
-          <span aria-hidden="true">📍</span> {t("home.last.title")}
-        </h3>
-        <p className="muted">{t("home.last.empty")}</p>
-      </div>
-    );
-  }
-
-  const km = activity.distance_m != null ? activity.distance_m / 1000 : null;
-  const pace =
-    km && km > 0 && activity.moving_s != null ? activity.moving_s / km : null;
-
   return (
     <div className="data-block">
       <h3 className="data-block__title">
         <span aria-hidden="true">📍</span> {t("home.last.title")}
       </h3>
-
-      <p className="last-activity__head">
-        <span className="last-activity__sport">{activity.sport_type}</span>
-        <span className="last-activity__date">{formatDate(activity.date)}</span>
-      </p>
-
-      <dl className="metric-row">
-        <Metric
-          label={t("home.last.distance")}
-          value={km != null ? `${formatNumber(km, 2)} ${t("common.km")}` : "—"}
-        />
-        <Metric label={t("home.last.time")} value={formatHms(activity.moving_s)} />
-        <Metric label={t("home.last.pace")} value={formatPace(pace)} />
-        <Metric
-          label={t("home.last.climb")}
-          value={
-            activity.elevation_gain_m != null
-              ? `${formatNumber(activity.elevation_gain_m, 0)} ${t("common.metres")}`
-              : "—"
-          }
-        />
-        {activity.avg_hr != null && (
-          <Metric
-            label={t("home.last.heart_rate")}
-            value={`${formatNumber(activity.avg_hr, 0)} bpm`}
-          />
-        )}
-      </dl>
-
-      {route === null ? (
-        <div className="pending">
-          <span className="spinner" />
-          <p className="muted">{t("home.last.map_loading")}</p>
-        </div>
-      ) : route.points.length ? (
-        <RouteMap points={route.points} />
+      {activity ? (
+        <SessionDetail activity={activity} t={t} />
       ) : (
-        // Says which kind of nothing this is: a treadmill run has no route to draw,
-        // an unreachable Strava is a different problem with the same blank space.
-        <p className="muted">
-          {route.source === "unavailable"
-            ? t("home.last.map_unavailable")
-            : t("home.last.map_none")}
-        </p>
+        <p className="muted">{t("home.last.empty")}</p>
       )}
     </div>
   );
@@ -840,7 +873,7 @@ function SyncControls({
 
 type Tone =
   | "forest" | "terracotta" | "sunrise" | "moss" | "slate"
-  | "plum" | "teal" | "rose" | "amber";
+  | "plum" | "teal" | "rose" | "amber" | "grey";
 
 function Tile({
   tone,
@@ -891,11 +924,12 @@ function EditableTile({
   unit?: string;
   help?: string;
   input: {
-    type: "number" | "date" | "email";
+    type: "number" | "date" | "email" | "text";
     value: string;
     min?: number | string;
     max?: number | string;
     step?: number;
+    placeholder?: string;
   };
   onCommit: (raw: string) => Promise<void>;
   t: T;
@@ -941,6 +975,7 @@ function EditableTile({
           min={input.min}
           max={input.max}
           step={input.step}
+          placeholder={input.placeholder}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={commit}
           onKeyDown={(event) => {
@@ -966,15 +1001,6 @@ function EditableTile({
         {t("common.not_saved")}
       </span>}
       {help && <span className="tile__footnote">{help}</span>}
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="metric">
-      <dt className="metric__label">{label}</dt>
-      <dd className="metric__value">{value}</dd>
     </div>
   );
 }

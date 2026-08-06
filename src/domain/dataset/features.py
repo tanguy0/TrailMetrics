@@ -32,6 +32,7 @@ import numpy as np
 import pandas as pd
 
 from src.domain.dataset.binning import naive
+from src.domain.dataset.sport import RUNNING, sport_family
 from src.domain.models.activity import ActivityStream
 from src.domain.progress.models import GRADIENT_BANDS, PR_DISTANCES
 from src.domain.progress.records import best_effort_time
@@ -190,10 +191,13 @@ def build_activity_features(
     if n < 2 or distance.size != n or altitude.size != n:
         return _summary_only_row(stream)
 
+    sport = sport_name(stream.sport_type)
+    is_running = sport_family(sport) == RUNNING
+
     row: Dict[str, Any] = {
         "activity_id": int(stream.activity_id),
         "date": naive(stream.start_date),
-        "sport_type": sport_name(stream.sport_type),
+        "sport_type": sport,
         "has_streams": True,
         "elapsed_s": float(time[-1] - time[0]),
         "relative_effort": _optional_float(stream.summary_relative_effort),
@@ -222,8 +226,12 @@ def build_activity_features(
 
     # GAP-adjusted distance: Σ (step distance × the reference speed adjuster).
     # Stored as a distance so avg GAP pace re-aggregates as Σtime ÷ Σgap-distance.
-    factor = gradient_adjustment_factor(gradient_m_per_km)
-    row["gap_distance_m"] = float(np.nansum((delta_dist * factor)[moving]))
+    # The adjuster comes from a running metabolic-cost curve (see
+    # src/domain/gap/reference_curves.py), so it has nothing to say about a ride.
+    row["gap_distance_m"] = np.nan
+    if is_running:
+        factor = gradient_adjustment_factor(gradient_m_per_km)
+        row["gap_distance_m"] = float(np.nansum((delta_dist * factor)[moving]))
 
     # Time per gradient band — the raw material of the gradient map, and of
     # "how much of my season was steep climbing" style questions.
@@ -236,25 +244,29 @@ def build_activity_features(
     row["avg_hr"] = float(np.mean(step_hr[hr_valid])) if hr_valid.any() else np.nan
     row["max_hr"] = float(np.max(step_hr[hr_valid])) if hr_valid.any() else np.nan
 
-    speed = np.divide(
-        delta_dist, delta_time, out=np.zeros_like(delta_dist), where=delta_time > 0
-    )
-    # Computed at 1 kg: the power model is linear in mass, so the row stays valid
-    # for any body weight and :func:`apply_mass` scales it on read.
-    power = compute_power_series(
-        speed_m_per_s=speed, gradient_m_per_km=gradient_m_per_km, mass_kg=1.0,
-    )
     row["avg_power_w_per_kg"] = np.nan
     row["power_to_hr_per_kg"] = np.nan
-    if power is not None:
-        power_valid = moving & np.isfinite(power)
-        if power_valid.any():
-            row["avg_power_w_per_kg"] = float(np.mean(power[power_valid]))
-        both = power_valid & hr_valid
-        if both.any():
-            mean_hr = float(np.mean(step_hr[both]))
-            if mean_hr > 0:
-                row["power_to_hr_per_kg"] = float(np.mean(power[both])) / mean_hr
+    # `compute_power_series` models running's cost of transport (P = m·v·(Cr +
+    # g·s)) — a bike's power comes from a real power meter or not at all, never
+    # from this formula, so a ride gets no modelled figure rather than a wrong one.
+    if is_running:
+        speed = np.divide(
+            delta_dist, delta_time, out=np.zeros_like(delta_dist), where=delta_time > 0
+        )
+        # Computed at 1 kg: the power model is linear in mass, so the row stays
+        # valid for any body weight and :func:`apply_mass` scales it on read.
+        power = compute_power_series(
+            speed_m_per_s=speed, gradient_m_per_km=gradient_m_per_km, mass_kg=1.0,
+        )
+        if power is not None:
+            power_valid = moving & np.isfinite(power)
+            if power_valid.any():
+                row["avg_power_w_per_kg"] = float(np.mean(power[power_valid]))
+            both = power_valid & hr_valid
+            if both.any():
+                mean_hr = float(np.mean(step_hr[both]))
+                if mean_hr > 0:
+                    row["power_to_hr_per_kg"] = float(np.mean(power[both])) / mean_hr
 
     # Best efforts run on the *raw* cumulative streams: elapsed time spans real
     # wall-clock, so a paused stretch inflates a segment and self-excludes.

@@ -21,6 +21,9 @@
 
   --radius: 10px;
   --gap: 1rem;
+  /* Shared by Athlete History's and Athlete Health Metrics' tiles so both
+     cards' two rows come out to the same height regardless of column count. */
+  --tile-height: 6.6rem;
 
   /*
    * Widget accents. Four hues drawn from the chart palette above, so a tile and a
@@ -46,9 +49,12 @@
   --tone-plum-tint: #f3eaee;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   background: var(--bg);
@@ -71,7 +77,9 @@ body {
     url("/background.webp") center / cover no-repeat fixed var(--bg);
 }
 
-a { color: var(--primary); }
+a {
+  color: var(--primary);
+}
 
 h1 {
   font-size: 1.75rem;
@@ -80,17 +88,46 @@ h1 {
   padding-bottom: 0.2rem;
   display: inline-block;
 }
-h2 { font-size: 1.25rem; color: var(--primary); margin: 2rem 0 0.5rem; }
-h3 { font-size: 1rem; color: var(--primary); margin: 0; }
-h4 { font-size: 0.95rem; margin: 0 0 0.35rem; }
 
-.muted { color: var(--muted); font-size: 0.875rem; margin: 0.25rem 0; }
-.lede { font-size: 1.05rem; max-width: 60ch; }
+h2 {
+  font-size: 1.25rem;
+  color: var(--primary);
+  margin: 2rem 0 0.5rem;
+}
+
+h3 {
+  font-size: 1rem;
+  color: var(--primary);
+  margin: 0;
+}
+
+h4 {
+  font-size: 0.95rem;
+  margin: 0 0 0.35rem;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin: 0.25rem 0;
+}
+
+.lede {
+  font-size: 1.05rem;
+  max-width: 60ch;
+}
 
 /* --- Shell & sidebar ------------------------------------------------------ */
 
-.shell { display: flex; min-height: 100vh; }
-.shell__content { flex: 1; min-width: 0; }
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.shell__content {
+  flex: 1;
+  min-width: 0;
+}
 
 .sidebar {
   display: flex;
@@ -117,13 +154,24 @@ h4 { font-size: 0.95rem; margin: 0 0 0.35rem; }
   font-size: 1.05rem;
   padding: 0 0.35rem;
 }
-.sidebar__brand-mark { font-size: 1.35rem; }
+
+.sidebar__brand-mark {
+  font-size: 1.35rem;
+}
+
 .sidebar__brand-name {
   border-bottom: 3px solid var(--sunrise);
   padding-bottom: 0.1rem;
 }
 
-.sidebar__nav { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.3rem; }
+.sidebar__nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
 .sidebar__link {
   display: flex;
   align-items: center;
@@ -136,13 +184,20 @@ h4 { font-size: 0.95rem; margin: 0 0 0.35rem; }
   font-size: 0.95rem;
   border-left: 3px solid transparent;
 }
-.sidebar__link:hover { background: var(--surface-alt); }
+
+.sidebar__link:hover {
+  background: var(--surface-alt);
+}
+
 .sidebar__link--active {
   background: var(--tone-forest-tint);
   border-left-color: var(--primary);
   color: var(--primary);
 }
-.sidebar__icon { font-size: 1.05rem; }
+
+.sidebar__icon {
+  font-size: 1.05rem;
+}
 
 .sidebar__signout {
   margin-top: auto;
@@ -151,10 +206,16 @@ h4 { font-size: 0.95rem; margin: 0 0 0.35rem; }
   text-decoration: none;
   padding: 0 0.6rem;
 }
-.sidebar__signout:hover { color: var(--danger); }
+
+.sidebar__signout:hover {
+  color: var(--danger);
+}
 
 @media (max-width: 720px) {
-  .shell { flex-direction: column; }
+  .shell {
+    flex-direction: column;
+  }
+
   .sidebar {
     width: auto;
     height: auto;
@@ -165,14 +226,28 @@ h4 { font-size: 0.95rem; margin: 0 0 0.35rem; }
     border-right: none;
     border-bottom: 1px solid var(--spine);
   }
-  .sidebar__nav { display: flex; }
-  .sidebar__signout { margin-top: 0; margin-left: auto; }
+
+  .sidebar__nav {
+    display: flex;
+  }
+
+  .sidebar__signout {
+    margin-top: 0;
+    margin-left: auto;
+  }
 }
 
 /* --- Layout --------------------------------------------------------------- */
 
-.container { max-width: 1280px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
-.container--narrow { max-width: 720px; }
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 4rem;
+}
+
+.container--narrow {
+  max-width: 720px;
+}
 
 .page-header {
   display: flex;
@@ -182,8 +257,17 @@ h4 { font-size: 0.95rem; margin: 0 0 0.35rem; }
   flex-wrap: wrap;
   margin-bottom: 0.75rem;
 }
-.page-header__title { display: flex; align-items: center; gap: 0.5rem; }
-.page-header__icon { font-size: 1.5rem; }
+
+.page-header__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-header__icon {
+  font-size: 1.5rem;
+}
+
 .page-header__name {
   font-size: 1.6rem;
   font-weight: 700;
@@ -194,8 +278,18 @@ h4 { font-size: 0.95rem; margin: 0 0 0.35rem; }
   padding: 0 0 0.2rem;
   min-width: 16rem;
 }
-.page-header__actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-.page-description { color: var(--muted); max-width: 80ch; }
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.page-description {
+  color: var(--muted);
+  max-width: 80ch;
+}
 
 /* --- Buttons -------------------------------------------------------------- */
 
@@ -211,18 +305,50 @@ h4 { font-size: 0.95rem; margin: 0 0 0.35rem; }
   cursor: pointer;
   text-decoration: none;
 }
-.button:hover { filter: brightness(1.08); }
-.button:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
 
-.button--ghost { background: transparent; color: var(--primary); }
-.button--danger { background: transparent; color: var(--danger); border-color: var(--danger); }
-.button--small { padding: 0.25rem 0.55rem; font-size: 0.8rem; font-weight: 500; }
-.button--wide { width: 100%; margin-top: 1rem; }
-.button--strava { background: #fc4c02; border-color: #fc4c02; font-size: 1.05rem; }
+.button:hover {
+  filter: brightness(1.08);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.button--ghost {
+  background: transparent;
+  color: var(--primary);
+}
+
+.button--danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.button--small {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.button--wide {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.button--strava {
+  background: #fc4c02;
+  border-color: #fc4c02;
+  font-size: 1.05rem;
+}
 
 /* --- Forms ---------------------------------------------------------------- */
 
-input, select, textarea {
+input,
+select,
+textarea {
   font: inherit;
   color: var(--text);
   background: var(--surface);
@@ -230,8 +356,17 @@ input, select, textarea {
   border-radius: 6px;
   padding: 0.35rem 0.5rem;
 }
-input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--primary); }
-.select--small { padding: 0.25rem 0.4rem; font-size: 0.8rem; }
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  accent-color: var(--primary);
+}
+
+.select--small {
+  padding: 0.25rem 0.4rem;
+  font-size: 0.8rem;
+}
 
 .param-form {
   display: flex;
@@ -240,15 +375,51 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   align-items: flex-start;
   padding: 0.75rem 0;
 }
-.param { display: flex; flex-direction: column; gap: 0.2rem; min-width: 9rem; }
-.param__label { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
-.param__help { font-size: 0.75rem; color: var(--muted); margin: 0; max-width: 26rem; }
 
-.param--group, .param--rows { flex-basis: 100%; }
-.param--group summary { cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--primary); }
+.param {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 9rem;
+}
 
-.multichoice { display: flex; flex-wrap: wrap; gap: 0.15rem 0.75rem; }
-.multichoice__item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
+.param__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.param__help {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0;
+  max-width: 26rem;
+}
+
+.param--group,
+.param--rows {
+  flex-basis: 100%;
+}
+
+.param--group summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.multichoice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.75rem;
+}
+
+.multichoice__item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
 
 .row-item {
   display: flex;
@@ -257,7 +428,12 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   border-left: 3px solid var(--surface-alt);
   padding-left: 0.6rem;
 }
-.row-actions { display: flex; gap: 0.5rem; margin-top: 0.35rem; }
+
+.row-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
 
 /* --- Panels --------------------------------------------------------------- */
 
@@ -268,6 +444,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   padding: 1rem;
   margin: 1.25rem 0;
 }
+
 .panel__header {
   display: flex;
   align-items: center;
@@ -276,7 +453,13 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   border-bottom: 1px solid var(--surface-alt);
   padding-bottom: 0.6rem;
 }
-.panel__title { font-size: 1.1rem; color: var(--primary); margin: 0; }
+
+.panel__title {
+  font-size: 1.1rem;
+  color: var(--primary);
+  margin: 0;
+}
+
 .panel__title-input {
   font-size: 1.1rem;
   font-weight: 600;
@@ -286,26 +469,58 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   padding: 0;
   min-width: 14rem;
 }
-.panel__meta { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
-.panel__actions { display: flex; gap: 0.35rem; flex-wrap: wrap; }
-.panel__description { color: var(--muted); font-size: 0.9rem; }
 
-.plot-grid { display: grid; gap: var(--gap); margin-top: 0.75rem; }
-.plot-grid--one { grid-template-columns: 1fr; }
-.plot-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.panel__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.panel__actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.panel__description {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.plot-grid {
+  display: grid;
+  gap: var(--gap);
+  margin-top: 0.75rem;
+}
+
+.plot-grid--one {
+  grid-template-columns: 1fr;
+}
+
+.plot-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 /* Tables are unreadable in a half-width column, so they span. */
-.plot-card--wide { grid-column: 1 / -1; }
+.plot-card--wide {
+  grid-column: 1 / -1;
+}
 
 @media (max-width: 900px) {
-  .plot-grid--two { grid-template-columns: 1fr; }
+  .plot-grid--two {
+    grid-template-columns: 1fr;
+  }
 }
 
 .plot-card {
   border: 1px solid var(--surface-alt);
   border-radius: var(--radius);
   padding: 0.75rem;
-  min-width: 0; /* let charts shrink inside the grid instead of overflowing */
+  min-width: 0;
+  /* let charts shrink inside the grid instead of overflowing */
 }
+
 .plot-card__header {
   display: flex;
   justify-content: space-between;
@@ -313,33 +528,86 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   gap: 0.5rem;
   flex-wrap: wrap;
 }
-.plot-card__actions { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+
+.plot-card__actions {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
 /* A text or image block is page content, not a figure: no frame around it, so a
    page reads as a document rather than as a stack of cards. The editor keeps its
    own affordances (see `plot-card--content` handling in PanelEditor). */
-.plot-card--content { border-color: transparent; padding: 0.25rem 0.75rem; }
-.plot-card--content .plot-card__header:empty { display: none; }
+.plot-card--content {
+  border-color: transparent;
+  padding: 0.25rem 0.75rem;
+}
 
-.plot-picker { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+.plot-card--content .plot-card__header:empty {
+  display: none;
+}
+
+.plot-picker {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
 
 /* --- Charts & tables ------------------------------------------------------ */
 
-.chart { margin: 0.5rem 0 0; }
-.chart__canvas { width: 100%; min-height: 320px; }
-.chart__caption { font-size: 0.8rem; color: var(--muted); margin: 0.2rem 0 0.4rem; }
+.chart {
+  margin: 0.5rem 0 0;
+}
 
-.table-block { margin-top: 0.75rem; }
-.table-scroll { overflow-x: auto; }
-.table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
-.table th, .table td {
+.chart__canvas {
+  width: 100%;
+  min-height: 320px;
+}
+
+.chart__caption {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0.2rem 0 0.4rem;
+}
+
+.table-block {
+  margin-top: 0.75rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.table th,
+.table td {
   border-bottom: 1px solid var(--surface-alt);
   padding: 0.35rem 0.6rem;
   text-align: right;
   white-space: nowrap;
 }
-.table th { color: var(--muted); font-weight: 600; text-align: right; }
-.table th:first-child, .table td:first-child { text-align: left; }
-.cell--best { background: var(--moss); color: #fff; font-weight: 700; }
+
+.table th {
+  color: var(--muted);
+  font-weight: 600;
+  text-align: right;
+}
+
+.table th:first-child,
+.table td:first-child {
+  text-align: left;
+}
+
+.cell--best {
+  background: var(--moss);
+  color: #fff;
+  font-weight: 700;
+}
 
 /* --- Notes & status ------------------------------------------------------- */
 
@@ -351,9 +619,19 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   font-size: 0.85rem;
   margin: 0.5rem 0;
 }
-.note--error { border-left-color: var(--danger); color: var(--danger); }
 
-.pending { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding: 0.5rem 0; }
+.note--error {
+  border-left-color: var(--danger);
+  color: var(--danger);
+}
+
+.pending {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0;
+}
 
 .spinner {
   width: 0.9rem;
@@ -364,7 +642,12 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   animation: spin 0.7s linear infinite;
   display: inline-block;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 .tag {
   font-size: 0.7rem;
@@ -384,7 +667,13 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   padding: 0.85rem;
   margin: 0.75rem 0;
 }
-.source-editor__modes { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.source-editor__modes {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .mode {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -398,14 +687,39 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   cursor: pointer;
   flex: 1 1 14rem;
 }
-.mode--active { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
-.mode__label { font-weight: 600; font-size: 0.9rem; }
-.mode__hint { grid-column: 2; font-size: 0.75rem; color: var(--muted); }
 
-.window-row { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem; }
-.window-list { margin-top: 0.5rem; }
+.mode--active {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
 
-.activity-picker { margin-top: 0.75rem; }
+.mode__label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.mode__hint {
+  grid-column: 2;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.window-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.window-list {
+  margin-top: 0.5rem;
+}
+
+.activity-picker {
+  margin-top: 0.75rem;
+}
+
 .activity-list {
   max-height: 18rem;
   overflow-y: auto;
@@ -414,6 +728,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   border-radius: 6px;
   padding: 0.35rem 0.5rem;
 }
+
 .activity-item {
   display: flex;
   align-items: center;
@@ -422,9 +737,23 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   padding: 0.12rem 0;
 }
 
-.filters { margin-top: 0.75rem; }
-.filters summary { cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--primary); }
-.filters__body { display: flex; gap: 1.25rem; flex-wrap: wrap; padding-top: 0.5rem; }
+.filters {
+  margin-top: 0.75rem;
+}
+
+.filters summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.filters__body {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+}
 
 /* --- Home screen ---------------------------------------------------------- */
 
@@ -434,11 +763,37 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   gap: var(--gap);
   margin-bottom: 1.25rem;
 }
+
 .hero__name {
   font-size: 1.9rem;
   border-bottom-width: 5px;
 }
-.hero__meta { color: var(--muted); font-size: 0.9rem; margin: 0.4rem 0 0; }
+
+/* Plain text under the name, not a tile: strip the tile's chrome and caption,
+   keep only the (still click-to-edit) value. */
+.hero__email .tile {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 0.15rem;
+}
+
+.hero__email .tile__label {
+  display: none;
+}
+
+.hero__email .tile__value {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.hero__meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0.4rem 0 0;
+}
+
 .hero__avatar {
   width: 3.75rem;
   height: 3.75rem;
@@ -448,17 +803,25 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   object-fit: cover;
 }
 
-/* Profile beside Health. Everything below them runs the full width. */
+/* Athlete History beside Athlete Health Metrics. Stretched to equal height —
+   not `start` — so the shorter of the two still reaches the row's full height
+   and there is no gap between it and the section underneath. */
 .home-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Wider than a plain 50/50 split: Athlete Health Metrics is four square
+     tiles and needs less room than Athlete History's fuller tile-grid, so
+     Athlete History takes the extra space rather than the row stretching
+     Health's tiles wide and shallow. */
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: var(--gap);
   margin-bottom: var(--gap);
-  align-items: start;
+  align-items: stretch;
 }
 
 @media (max-width: 1000px) {
-  .home-grid { grid-template-columns: 1fr; }
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .card-block {
@@ -467,11 +830,30 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   border-radius: var(--radius);
   padding: 1rem 1.1rem 1.15rem;
 }
+
 /* A coloured spine per card, so the two columns read as different things. */
-.card-block--profile { border-top: 4px solid var(--tone-forest); }
-.card-block--health { border-top: 4px solid var(--tone-plum); }
-.card-block--records { border-top: 4px solid var(--sunrise); margin-bottom: var(--gap); }
-.card-block--sync { border-top: 4px solid var(--tone-blue); margin-bottom: var(--gap); }
+.card-block--profile {
+  border-top: 4px solid var(--tone-forest);
+}
+
+.card-block--health {
+  border-top: 4px solid var(--tone-plum);
+}
+
+.card-block--records {
+  border-top: 4px solid var(--sunrise);
+  margin-bottom: var(--gap);
+}
+
+.card-block--zones {
+  border-top: 4px solid var(--tone-terracotta);
+  margin-bottom: var(--gap);
+}
+
+.card-block--sync {
+  border-top: 4px solid var(--tone-blue);
+  margin-bottom: var(--gap);
+}
 
 .card-block__title {
   display: flex;
@@ -482,6 +864,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   color: var(--text);
   margin: 0 0 0.75rem;
 }
+
 .card-block__subtitle {
   display: flex;
   align-items: center;
@@ -490,7 +873,12 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   color: var(--text);
   margin: 1.1rem 0 0.5rem;
 }
-.card-block__lede { color: var(--muted); font-size: 0.85rem; margin: -0.5rem 0 0.75rem; }
+
+.card-block__lede {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: -0.5rem 0 0.75rem;
+}
 
 /* --- Stat tiles ----------------------------------------------------------- */
 
@@ -499,7 +887,45 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
   gap: 0.6rem;
 }
-.tile-grid--two { grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+
+.tile-grid--two {
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+
+/* Fixed 4 columns rather than auto-fit — Athlete History's 8 tiles land as
+   two even rows regardless of the card's width, matching Athlete Health
+   Metrics' two rows at the same per-tile height (`--tile-height`) so the two
+   cards come out the same overall length. */
+.tile-grid--four {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.tile-grid--four .tile {
+  height: var(--tile-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Four equal cells, same height as Athlete History's — not square (that tied
+   each tile's height to its own column width, which differs between the two
+   cards), just fixed. */
+.tile-grid--square {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.tile-grid--square .tile {
+  height: var(--tile-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Space between a card's stacked tile-grids, matching the gap used elsewhere
+   between a card's own sections. */
+.tile-grid+.tile-grid {
+  margin-top: var(--gap);
+}
 
 .tile {
   display: flex;
@@ -512,6 +938,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   background: var(--surface-alt);
   min-width: 0;
 }
+
 .tile__label {
   font-size: 0.72rem;
   font-weight: 700;
@@ -519,6 +946,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   letter-spacing: 0.03em;
   color: var(--muted);
 }
+
 /* Values stay in ink: hue is the tile's accent, never the number itself. */
 .tile__value {
   font-size: 1.35rem;
@@ -528,25 +956,86 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-.tile__unit { font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-left: 0.2rem; }
-.tile__footnote { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; }
-.tile__saving { font-weight: 500; text-transform: none; letter-spacing: 0; }
-.tile__unset { font-size: 0.95rem; font-weight: 600; color: var(--muted); }
 
-.tile--forest { border-left-color: var(--tone-forest); background: var(--tone-forest-tint); }
-.tile--moss { border-left-color: var(--moss); background: var(--tone-forest-tint); }
+.tile__unit {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-left: 0.2rem;
+}
+
+.tile__footnote {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+.tile__saving {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.tile__unset {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.tile--forest {
+  border-left-color: var(--tone-forest);
+  background: var(--tone-forest-tint);
+}
+
+.tile--moss {
+  border-left-color: var(--moss);
+  background: var(--tone-forest-tint);
+}
+
 .tile--terracotta {
   border-left-color: var(--tone-terracotta);
   background: var(--tone-terracotta-tint);
 }
-.tile--sunrise { border-left-color: var(--sunrise); background: var(--tone-terracotta-tint); }
-.tile--amber { border-left-color: var(--sunrise); background: var(--tone-terracotta-tint); }
-.tile--slate { border-left-color: var(--tone-blue); background: var(--tone-blue-tint); }
-.tile--teal { border-left-color: var(--tone-blue); background: var(--tone-blue-tint); }
-.tile--plum { border-left-color: var(--tone-plum); background: var(--tone-plum-tint); }
-.tile--rose { border-left-color: var(--tone-plum); background: var(--tone-plum-tint); }
 
-.tile--editable { cursor: text; }
+.tile--sunrise {
+  border-left-color: var(--sunrise);
+  background: var(--tone-terracotta-tint);
+}
+
+.tile--amber {
+  border-left-color: var(--sunrise);
+  background: var(--tone-terracotta-tint);
+}
+
+.tile--slate {
+  border-left-color: var(--tone-blue);
+  background: var(--tone-blue-tint);
+}
+
+.tile--teal {
+  border-left-color: var(--tone-blue);
+  background: var(--tone-blue-tint);
+}
+
+.tile--plum {
+  border-left-color: var(--tone-plum);
+  background: var(--tone-plum-tint);
+}
+
+.tile--rose {
+  border-left-color: var(--tone-plum);
+  background: var(--tone-plum-tint);
+}
+
+.tile--grey {
+  border-left-color: var(--spine);
+  background: var(--surface-alt);
+}
+
+.tile--editable {
+  cursor: text;
+}
+
 .tile__value--button {
   border: none;
   background: none;
@@ -561,8 +1050,16 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   border-bottom: 1px dashed var(--spine);
   align-self: flex-start;
 }
-.tile__value--button:hover { border-bottom-color: var(--primary); }
-.tile__input { width: 100%; margin-top: 0.15rem; font-weight: 700; }
+
+.tile__value--button:hover {
+  border-bottom-color: var(--primary);
+}
+
+.tile__input {
+  width: 100%;
+  margin-top: 0.15rem;
+  font-weight: 700;
+}
 
 /* --- Records -------------------------------------------------------------- */
 
@@ -572,6 +1069,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: 0.6rem;
 }
+
 .record {
   display: flex;
   flex-direction: column;
@@ -581,6 +1079,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   background: var(--tone-terracotta-tint);
   border-left: 4px solid var(--sunrise);
 }
+
 .record__distance {
   font-size: 0.72rem;
   font-weight: 700;
@@ -588,6 +1087,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   letter-spacing: 0.03em;
   color: var(--muted);
 }
+
 .record__time {
   font-size: 1.5rem;
   font-weight: 800;
@@ -595,7 +1095,11 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
-.record__date { font-size: 0.7rem; color: var(--muted); }
+
+.record__date {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
 
 /* --- "Your data": import, latest activity, recent history (stacked) -------- */
 
@@ -604,11 +1108,13 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   gap: 1.1rem;
   margin-top: 1rem;
 }
+
 .data-block {
   border-top: 1px solid var(--surface-alt);
   padding-top: 0.9rem;
   min-width: 0;
 }
+
 .data-block__title {
   display: flex;
   align-items: center;
@@ -618,6 +1124,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   color: var(--text);
   margin: 0 0 0.6rem;
 }
+
 .data-block__lede {
   color: var(--muted);
   font-size: 0.85rem;
@@ -637,14 +1144,22 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   /* Above the page background but below any dropdown. */
   z-index: 0;
 }
+
 /* Leaflet's own chrome, brought into the app's palette. */
-.route-map .leaflet-container { background: var(--surface-alt); font: inherit; }
+.route-map .leaflet-container {
+  background: var(--surface-alt);
+  font: inherit;
+}
+
 .route-map .leaflet-control-attribution {
   background: rgba(255, 253, 249, 0.82);
   color: var(--muted);
   font-size: 0.68rem;
 }
-.route-map .leaflet-control-attribution a { color: var(--primary); }
+
+.route-map .leaflet-control-attribution a {
+  color: var(--primary);
+}
 
 /* --- Last activity -------------------------------------------------------- */
 
@@ -655,14 +1170,39 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   flex-wrap: wrap;
   margin: 0 0 0.6rem;
 }
+
 .last-activity__sport {
   font-weight: 700;
-  background: var(--tone-terracotta-tint);
   border-radius: 999px;
   padding: 0.1rem 0.6rem;
   font-size: 0.85rem;
 }
-.last-activity__date { font-size: 0.8rem; color: var(--muted); }
+
+/* One colour per sport type, shared with the calendar's session chips. */
+.last-activity__sport--trail {
+  background: var(--tone-forest-tint);
+  color: var(--tone-forest);
+}
+
+.last-activity__sport--run {
+  background: var(--tone-blue-tint);
+  color: var(--tone-blue);
+}
+
+.last-activity__sport--cycling {
+  background: var(--tone-plum-tint);
+  color: var(--tone-plum);
+}
+
+.last-activity__sport--neutral {
+  background: var(--tone-terracotta-tint);
+  color: var(--text);
+}
+
+.last-activity__date {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
 
 .metric-row {
   display: grid;
@@ -670,7 +1210,14 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   gap: 0.6rem;
   margin: 0;
 }
-.metric { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
 .metric__label {
   font-size: 0.7rem;
   font-weight: 700;
@@ -678,6 +1225,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   letter-spacing: 0.03em;
   color: var(--muted);
 }
+
 .metric__value {
   margin: 0;
   font-size: 1.05rem;
@@ -694,11 +1242,25 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   background: var(--bg);
   min-width: 0;
 }
-.chart-frame .chart__canvas { min-height: 320px; }
 
-.sync { margin: 1rem 0; }
-.sync__actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
-.sync__progress { margin: 0.35rem 0 0.6rem; }
+.chart-frame .chart__canvas {
+  min-height: 320px;
+}
+
+.sync {
+  margin: 1rem 0;
+}
+
+.sync__actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sync__progress {
+  margin: 0.35rem 0 0.6rem;
+}
 
 /* --- Progress bar ---------------------------------------------------------
  *
@@ -709,7 +1271,11 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
  * `theme.GRADIENT` the figures use) so a running import reads as part of the product.
  * The moving sheen is what says "still working" when the numbers change slowly. */
 
-.progress-bar { width: 100%; max-width: 34rem; }
+.progress-bar {
+  width: 100%;
+  max-width: 34rem;
+}
+
 .progress-bar__head {
   display: flex;
   align-items: baseline;
@@ -717,17 +1283,30 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   gap: 0.75rem;
   margin-bottom: 0.3rem;
 }
-.progress-bar__label { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+
+.progress-bar__label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
 .progress-bar__count {
   font-size: 0.78rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.progress-bar__percent { font-weight: 700; color: var(--primary); }
+
+.progress-bar__percent {
+  font-weight: 700;
+  color: var(--primary);
+}
 
 /* The model pass, announced on a page that has model fits on it. */
-.page-precompute { margin: 0.75rem 0 1rem; }
+.page-precompute {
+  margin: 0.75rem 0 1rem;
+}
+
 .progress-bar__detail {
   display: block;
   margin-top: 0.3rem;
@@ -745,39 +1324,40 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   box-shadow: inset 0 0 0 1px var(--grid);
   overflow: hidden;
 }
+
 .progress-bar__fill {
   height: 100%;
   width: 0;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    var(--primary) 0%,
-    var(--moss) 45%,
-    var(--terracotta) 80%,
-    var(--sunrise) 100%
-  );
+  background: linear-gradient(90deg,
+      var(--primary) 0%,
+      var(--moss) 45%,
+      var(--terracotta) 80%,
+      var(--sunrise) 100%);
   /* Sized in ems of the *track*, so the gradient reads as one sweep however wide
      the bar is rather than being squashed into the filled part. */
   background-size: 34rem 100%;
   transition: width 0.35s ease-out;
   position: relative;
 }
+
 .progress-bar--sunrise .progress-bar__fill {
   background: linear-gradient(90deg, var(--sunrise) 0%, var(--terracotta) 100%);
 }
-.progress-bar--sunrise .progress-bar__percent { color: var(--terracotta); }
+
+.progress-bar--sunrise .progress-bar__percent {
+  color: var(--terracotta);
+}
 
 /* A sheen travelling over the fill: progress you can see between two counts. */
 .progress-bar__fill::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    100deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.45) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(100deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.45) 50%,
+      transparent 100%);
   background-size: 8rem 100%;
   background-repeat: repeat-x;
   animation: progress-sheen 1.4s linear infinite;
@@ -792,19 +1372,39 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   animation: progress-sweep 1.5s ease-in-out infinite;
 }
 
-@keyframes progress-sheen { to { background-position: 8rem 0; } }
+@keyframes progress-sheen {
+  to {
+    background-position: 8rem 0;
+  }
+}
+
 @keyframes progress-sweep {
-  0% { margin-left: -40%; }
-  100% { margin-left: 100%; }
+  0% {
+    margin-left: -40%;
+  }
+
+  100% {
+    margin-left: 100%;
+  }
 }
 
 /* Respect a stated preference for less motion: the bar still shows progress, it
    just stops animating. */
 @media (prefers-reduced-motion: reduce) {
+
   .progress-bar__fill::after,
-  .progress-bar__track--indeterminate .progress-bar__fill { animation: none; }
-  .progress-bar__track--indeterminate .progress-bar__fill { width: 100%; opacity: 0.5; }
-  .progress-bar__fill { transition: none; }
+  .progress-bar__track--indeterminate .progress-bar__fill {
+    animation: none;
+  }
+
+  .progress-bar__track--indeterminate .progress-bar__fill {
+    width: 100%;
+    opacity: 0.5;
+  }
+
+  .progress-bar__fill {
+    transition: none;
+  }
 }
 
 .card-grid {
@@ -813,6 +1413,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   gap: var(--gap);
   margin: 0.5rem 0 1.5rem;
 }
+
 .card {
   display: flex;
   flex-direction: column;
@@ -824,10 +1425,25 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   text-decoration: none;
   color: var(--text);
 }
-.card:hover { border-color: var(--primary); }
-.card__icon { font-size: 1.4rem; }
-.card__title { font-weight: 700; color: var(--primary); }
-.card__meta { font-size: 0.75rem; color: var(--muted); }
+
+.card:hover {
+  border-color: var(--primary);
+}
+
+.card__icon {
+  font-size: 1.4rem;
+}
+
+.card__title {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.card__meta {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
 /* Marks an analysis that ships with the app. Deliberately quiet: the only thing it
    says is "you cannot delete this one". */
 .card__badge {
@@ -837,6 +1453,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   font-size: 0.65rem;
   color: var(--primary);
 }
+
 .card__description {
   font-size: 0.8rem;
   color: var(--muted);
@@ -852,7 +1469,11 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   gap: var(--gap);
   margin: 2rem 0;
 }
-.feature-list p { font-size: 0.875rem; color: var(--muted); }
+
+.feature-list p {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
 
 /* --- Content blocks: prose and images in a panel -------------------------- */
 
@@ -866,15 +1487,29 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   margin: 0.5rem 0;
   color: var(--text);
 }
-.text-block--center { margin-left: auto; margin-right: auto; text-align: center; }
-.text-block--body { font-size: 0.95rem; }
-.text-block--lede { font-size: 1.05rem; color: var(--muted); }
+
+.text-block--center {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.text-block--body {
+  font-size: 0.95rem;
+}
+
+.text-block--lede {
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+
 .text-block--heading {
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--primary);
   margin: 0.75rem 0 0.25rem;
 }
+
 .text-block--quote {
   font-size: 1rem;
   font-style: italic;
@@ -895,30 +1530,44 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   border-left: 4px solid var(--spine);
   max-width: none;
 }
+
 .text-block--forest {
   background: var(--tone-forest-tint);
   border-left-color: var(--tone-forest);
 }
+
 .text-block--terracotta {
   background: var(--tone-terracotta-tint);
   border-left-color: var(--tone-terracotta);
 }
+
 .text-block--sunrise {
   background: var(--tone-terracotta-tint);
   border-left-color: var(--sunrise);
 }
+
 .text-block--plum {
   background: var(--tone-plum-tint);
   border-left-color: var(--tone-plum);
 }
+
 /* A quote already has a left rule; a tone would draw a second one beside it. */
 .text-block--quote.text-block--forest,
 .text-block--quote.text-block--terracotta,
 .text-block--quote.text-block--sunrise,
-.text-block--quote.text-block--plum { padding-left: 0.85rem; }
+.text-block--quote.text-block--plum {
+  padding-left: 0.85rem;
+}
 
-.image-block { margin: 0.5rem 0; min-width: 0; }
-.image-block--center { text-align: center; }
+.image-block {
+  margin: 0.5rem 0;
+  min-width: 0;
+}
+
+.image-block--center {
+  text-align: center;
+}
+
 .image-block__img {
   /* The author sets the width as a percentage; `max-width` keeps a small panel from
      being overflowed by it, and `height: auto` keeps the aspect ratio. */
@@ -928,6 +1577,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   border: 1px solid var(--surface-alt);
   background: var(--surface-alt);
 }
+
 .image-block__caption {
   font-size: 0.8rem;
   color: var(--muted);
@@ -941,7 +1591,13 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   gap: 0.35rem;
   min-width: 16rem;
 }
-.image-field__actions { display: flex; gap: 0.4rem; align-items: center; }
+
+.image-field__actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
 /* The <input type="file"> is hidden inside its <label>, which is what lets it be
    styled as one of the app's buttons. */
 .image-field__file {
@@ -951,6 +1607,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   opacity: 0;
   pointer-events: none;
 }
+
 .image-field__preview {
   max-width: 12rem;
   max-height: 8rem;
@@ -975,6 +1632,7 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   border-top: 4px solid var(--tone-forest);
   margin: 1.5rem 0;
 }
+
 .welcome__title {
   font-size: 1.5rem;
   border-bottom: 4px solid var(--sunrise);
@@ -982,7 +1640,10 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   margin: 0 0 0.75rem;
 }
 
-.email-form { margin-top: 0.75rem; }
+.email-form {
+  margin-top: 0.75rem;
+}
+
 .email-form__label {
   display: block;
   font-size: 0.8rem;
@@ -992,10 +1653,24 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   color: var(--muted);
   margin-bottom: 0.25rem;
 }
-.email-form__row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
-.email-form__input { flex: 1 1 18rem; min-width: 0; padding: 0.5rem 0.6rem; }
 
-.tile__footnote--error { color: var(--danger); font-weight: 600; }
+.email-form__row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.email-form__input {
+  flex: 1 1 18rem;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+}
+
+.tile__footnote--error {
+  color: var(--danger);
+  font-weight: 600;
+}
 
 /* --- My Pages: the explainer ---------------------------------------------- */
 
@@ -1007,29 +1682,63 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   padding: 1rem 1.1rem 1.2rem;
   margin: 1.25rem 0 2rem;
 }
-.explainer__title { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.35rem; }
-.explainer__lede { margin: 0 0 0.9rem; max-width: 70ch; color: var(--muted); }
+
+.explainer__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+}
+
+.explainer__lede {
+  margin: 0 0 0.9rem;
+  max-width: 70ch;
+  color: var(--muted);
+}
 
 .step-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: 0.7rem;
 }
+
 .step {
   padding: 0.75rem 0.85rem;
   border-radius: 8px;
   border-left: 4px solid var(--spine);
   background: var(--surface-alt);
 }
-.step--forest { border-left-color: var(--tone-forest); background: var(--tone-forest-tint); }
+
+.step--forest {
+  border-left-color: var(--tone-forest);
+  background: var(--tone-forest-tint);
+}
+
 .step--terracotta {
   border-left-color: var(--tone-terracotta);
   background: var(--tone-terracotta-tint);
 }
-.step--sunrise { border-left-color: var(--sunrise); background: var(--tone-terracotta-tint); }
-.step__icon { font-size: 1.3rem; }
-.step__title { font-size: 0.92rem; font-weight: 700; color: var(--text); margin: 0.2rem 0 0.25rem; }
-.step__body { font-size: 0.82rem; color: var(--muted); margin: 0; }
+
+.step--sunrise {
+  border-left-color: var(--sunrise);
+  background: var(--tone-terracotta-tint);
+}
+
+.step__icon {
+  font-size: 1.3rem;
+}
+
+.step__title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0.2rem 0 0.25rem;
+}
+
+.step__body {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
+}
 
 /* --- My Pages: the New page button ---------------------------------------- */
 
@@ -1044,20 +1753,24 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   text-align: left;
   cursor: pointer;
   color: var(--text);
-  background: linear-gradient(
-    100deg,
-    var(--tone-forest-tint) 0%,
-    var(--surface) 55%,
-    var(--tone-terracotta-tint) 100%
-  );
+  background: linear-gradient(100deg,
+      var(--tone-forest-tint) 0%,
+      var(--surface) 55%,
+      var(--tone-terracotta-tint) 100%);
   border: 2px dashed var(--primary);
   border-radius: var(--radius);
 }
+
 .new-page:hover {
   border-style: solid;
   box-shadow: 0 2px 10px rgba(46, 111, 64, 0.16);
 }
-.new-page:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+
+.new-page:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
 .new-page__plus {
   display: grid;
@@ -1072,6 +1785,384 @@ input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--p
   font-weight: 700;
   line-height: 1;
 }
-.new-page__text { display: flex; flex-direction: column; gap: 0.1rem; }
-.new-page__label { font-size: 1.1rem; font-weight: 800; color: var(--primary); }
-.new-page__hint { font-size: 0.82rem; color: var(--muted); }
+
+.new-page__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.new-page__label {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+/* --- Modal ------------------------------------------------------------------ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(36, 31, 25, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  z-index: 100;
+}
+
+.modal-panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(36, 31, 25, 0.28);
+  width: min(32rem, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-panel--wide {
+  width: 100%;
+  max-width: none;
+}
+
+.modal-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid var(--surface-alt);
+}
+
+.modal-panel__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.modal-panel__close {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.modal-panel__close:hover {
+  color: var(--text);
+}
+
+.modal-panel__body {
+  padding: 1rem 1.1rem 1.2rem;
+}
+
+/* --- Training calendar ------------------------------------------------------ */
+
+.training-calendar {
+  margin-top: 1rem;
+  height: calc(100vh - 12rem);
+  overflow-y: auto;
+  border: 1px solid var(--surface-alt);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.training-sentinel {
+  height: 1px;
+}
+
+.training-week {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--surface-alt);
+}
+
+.training-week__label {
+  flex-shrink: 0;
+  width: 3.5rem;
+  padding: 0.6rem 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+  border-right: 1px solid var(--surface-alt);
+}
+
+.training-week__days {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+/* Week totals, to the right of the days: cycling (when there was any that
+   week) on the left, running — always shown — on the right. */
+.training-week__summary {
+  flex-shrink: 0;
+  display: flex;
+  border-left: 1px solid var(--surface-alt);
+}
+
+.week-summary {
+  min-width: 4.75rem;
+  padding: 0.4rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.week-summary--cycling {
+  background: var(--tone-plum-tint);
+  color: var(--tone-plum);
+}
+
+.week-summary--running {
+  background: var(--tone-forest-tint);
+  color: var(--tone-forest);
+}
+
+.week-summary__row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.week-summary__icon {
+  font-size: 0.75rem;
+}
+
+.training-day {
+  min-width: 0;
+  min-height: 7rem;
+  padding: 0.5rem;
+  border-right: 1px solid var(--surface-alt);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.training-day:last-child {
+  border-right: none;
+}
+
+.training-day--today {
+  background: var(--tone-forest-tint);
+}
+
+.training-day--drag-over {
+  background: var(--tone-terracotta-tint);
+}
+
+.training-day__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.3rem;
+}
+
+.training-day__weekday {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+.training-day__number {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.training-day__items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+}
+
+.training-pill {
+  position: relative;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: grab;
+  border: 1px solid transparent;
+}
+
+.training-pill--workout {
+  background: var(--surface-alt);
+  border-color: var(--spine);
+  color: var(--text);
+}
+
+.training-pill--goal {
+  background: var(--sunrise);
+  border-color: var(--sunrise);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Secondary keeps the goal's hue but shaded — a lighter fill of the same colour
+   rather than the solid, brighter fill a primary goal gets. */
+.training-pill--goal.training-pill--secondary {
+  background: rgba(232, 163, 61, 0.18);
+  border-color: var(--sunrise);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.training-session {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font: inherit;
+  text-align: left;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+/* One colour per sport type, shared with the session-detail sport tag. */
+.training-session--trail {
+  background: var(--tone-forest-tint);
+  border-color: var(--tone-forest);
+}
+
+.training-session--run {
+  background: var(--tone-blue-tint);
+  border-color: var(--tone-blue);
+}
+
+.training-session--cycling {
+  background: var(--tone-plum-tint);
+  border-color: var(--tone-plum);
+}
+
+.training-session--neutral {
+  background: var(--surface-alt);
+  border-color: var(--spine);
+}
+
+.training-session__sport {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.training-session--trail .training-session__sport {
+  color: var(--tone-forest);
+}
+
+.training-session--run .training-session__sport {
+  color: var(--tone-blue);
+}
+
+.training-session--cycling .training-session__sport {
+  color: var(--tone-plum);
+}
+
+.training-session--neutral .training-session__sport {
+  color: var(--muted);
+}
+
+.training-session__stats {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* A tiny "PLANNED" / "COMPLETED" sticker, overlapping the card's top-right corner. */
+.card-badge {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.35rem;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--spine);
+  line-height: 1.4;
+}
+
+.training-day__add {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.training-add-btn {
+  background: none;
+  border: 1px dashed var(--spine);
+  border-radius: 6px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.68rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.training-add-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.training-add-btn--goal:hover {
+  border-color: var(--sunrise);
+  color: var(--sunrise);
+}
+
+.training-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.training-form__title {
+  font-weight: 700;
+}
+
+.training-form__body {
+  resize: vertical;
+}
+
+.training-form__importance {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.85rem;
+}
+
+.training-form__importance label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.training-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.session-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.new-page__hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
