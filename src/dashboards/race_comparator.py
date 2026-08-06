@@ -36,7 +36,7 @@ def build_race_comparator(oldest: date, newest: date, lang: str = "en") -> PageS
     ]
     plots += [
         PlotSpec(plot_type="stream_evolution", params={
-            "signal": signal,
+            "signals": [signal],
             "x_axis": "time",
             "max_series": 4,
         })

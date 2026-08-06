@@ -28,6 +28,9 @@ from src.domain.charts.ir import PlotOutput
 from src.infrastructure.postgres.activity_repository import PostgresActivityRepository
 from src.infrastructure.postgres.athlete_repository import PostgresAthleteRepository
 from src.infrastructure.postgres.page_repository import PostgresPageRepository
+from src.infrastructure.postgres.planned_item_repository import (
+    PostgresPlannedItemRepository,
+)
 from src.infrastructure.postgres.plot_output_repository import (
     PostgresPlotOutputRepository,
 )
@@ -114,6 +117,10 @@ def get_token_service() -> StravaTokenService:
 
 def get_page_repository(athlete_id: int) -> PageRepository:
     return PostgresPageRepository(get_database(), athlete_id)
+
+
+def get_planned_item_repository(athlete_id: int) -> PostgresPlannedItemRepository:
+    return PostgresPlannedItemRepository(get_database(), athlete_id)
 
 
 def get_plot_output_repository(athlete_id: int) -> PostgresPlotOutputRepository:

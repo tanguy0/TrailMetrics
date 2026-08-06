@@ -25,6 +25,20 @@ export function formatPace(secondsPerKm: number | null | undefined): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}/km`;
 }
 
+/** A pace as `M:SS`, for an editable field — no `/km` suffix to re-parse out. */
+export function formatPaceInput(secondsPerKm: number | null | undefined): string {
+  if (secondsPerKm == null || !Number.isFinite(secondsPerKm)) return "";
+  const total = Math.round(secondsPerKm);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** Parses `M:SS` or `MM:SS` back into seconds; `null` for anything else. */
+export function parsePaceInput(text: string): number | null {
+  const match = text.trim().match(/^(\d+):([0-5]\d)$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
 export function formatNumber(value: number, decimals: number): string {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: decimals,

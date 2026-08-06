@@ -33,8 +33,9 @@ from src.usecases.base import UseCase
 
 logger = logging.getLogger(__name__)
 
-# Sport types imported. Everything else on Strava is not running.
-DEFAULT_SPORT_TYPES = ["TrailRun", "Run", "VirtualRun"]
+# Sport types imported: every running variant, plus cycling. Everything else on
+# Strava is neither and stays out.
+DEFAULT_SPORT_TYPES = ["TrailRun", "Run", "VirtualRun", "Ride"]
 
 # Rows are flushed this often, so a crash costs at most this much work.
 BATCH_SIZE = 25

@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends
 
 from api.deps import current_athlete, get_activity_repository, get_token_service
 from src.domain.dataset.features import best_column
+from src.domain.dataset.sport import RUNNING_SPORT_TYPES
 from src.domain.geo.polyline import decode as decode_polyline
 from src.domain.ports.storage import Athlete
 from src.domain.progress.models import PR_DISTANCES
@@ -57,20 +58,30 @@ _METRES_BY_LABEL = {label: metres for label, metres in PR_DISTANCES}
 def last_activity_route(athlete: Athlete = Depends(current_athlete)) -> dict:
     """The latest activity's route as coordinates, for the map.
 
-    Separate from :func:`summary` on purpose. The summary is pure database work and
-    must stay fast; this may have to call Strava, because routes were not stored
-    before this feature existed. When it does, the result is written back, so the
-    call happens at most once per activity rather than on every page load.
+    Running only — see :func:`summary`'s docstring on why Home stays scoped to
+    the sport it was built for even now that cycling is imported too.
+    """
+    rows = _running_only(get_activity_repository().summaries(athlete.id))
+    if not rows:
+        return {"activity_id": None, "points": [], "source": "none"}
+    return resolve_activity_route(athlete, int(rows[-1]["activity_id"]))
+
+
+def resolve_activity_route(athlete: Athlete, activity_id: int) -> dict:
+    """One activity's route as coordinates, for the map.
+
+    Shared by the Home screen's latest-activity widget and the Training calendar's
+    click-to-open session view — any activity, not just the latest.
+
+    A network round-trip on purpose: routes were not stored before this feature
+    existed, so an older activity may have none yet. When Strava has to be asked,
+    the result is written back, so the call happens at most once per activity
+    rather than on every view.
 
     A missing route is a normal outcome — treadmill runs and manual entries have
     none — so this returns an empty ``points`` list rather than a 404.
     """
     activities = get_activity_repository()
-    rows = activities.summaries(athlete.id)
-    if not rows:
-        return {"activity_id": None, "points": [], "source": "none"}
-
-    activity_id = int(rows[-1]["activity_id"])
     encoded = activities.route_polyline(athlete.id, activity_id)
     source = "stored"
 
@@ -102,8 +113,17 @@ def last_activity_route(athlete: Athlete = Depends(current_athlete)) -> dict:
 
 @router.get("/summary")
 def summary(athlete: Athlete = Depends(current_athlete)) -> dict:
-    """Profile totals, body fields, current records and the latest activity."""
-    rows = get_activity_repository().rows(athlete.id)
+    """Profile totals, body fields, current records and the latest activity.
+
+    Running only. Cycling is now imported too (see
+    ``sync_athlete_activities.DEFAULT_SPORT_TYPES``), but this screen — its
+    volume totals, its PR ladder, its "latest activity" — was built for running
+    and a ride's numbers aren't comparable to a run's; mixing them in here would
+    silently corrupt "furthest run" into "furthest anything" the moment the
+    athlete's next ride is longer than their longest run. Cycling gets its own
+    read of the same history through the Analysis section instead.
+    """
+    rows = _running_only(get_activity_repository().rows(athlete.id))
     today = date.today()
 
     return {
@@ -112,6 +132,10 @@ def summary(athlete: Athlete = Depends(current_athlete)) -> dict:
         "records": _records(rows),
         "last_activity": _last_activity(rows),
     }
+
+
+def _running_only(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return [row for row in rows if row.get("sport_type") in RUNNING_SPORT_TYPES]
 
 
 def _profile(rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:

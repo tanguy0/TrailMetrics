@@ -17,10 +17,14 @@ import type {
   PageSummary,
   PanelResult,
   PanelSpec,
+  PlannedItem,
+  PlannedItemImportance,
+  PlannedItemKind,
   PrecomputeStatus,
   Registry,
   RouteResult,
   SyncStatus,
+  TrainingCalendar,
   UiStrings,
 } from "./types";
 
@@ -108,7 +112,12 @@ export const getAthlete = () => request<Athlete>("/auth/me");
  * `null` still clears a field.
  */
 export const updateProfile = (
-  changes: Partial<Pick<Athlete, "weight_kg" | "birthdate" | "height_cm" | "email">>,
+  changes: Partial<Pick<
+    Athlete,
+    | "weight_kg" | "birthdate" | "height_cm" | "email"
+    | "hr_zone1_end" | "hr_zone2_end" | "hr_zone3_end" | "hr_zone4_end"
+    | "hr_max" | "vma_pace_s_per_km"
+  >>,
 ) =>
   request<Athlete>("/auth/me", {
     method: "PATCH",
@@ -141,6 +150,10 @@ export const startSync = (options: { force?: boolean; max_activities?: number } 
   });
 
 export const getSyncStatus = () => request<SyncStatus>("/activities/sync");
+
+/** Any activity's route — the generalized form of `getLastActivityRoute`. */
+export const getActivityRoute = (activityId: number) =>
+  request<RouteResult>(`/activities/${activityId}/route`);
 
 // --- Background computation ------------------------------------------------
 
@@ -232,3 +245,34 @@ export const renderPanel = (
     }),
     signal,
   });
+
+// --- Training ----------------------------------------------------------------
+
+/** Planned items and completed activities for one date range, inclusive. */
+export const getTrainingCalendar = (start: string, end: string) =>
+  request<TrainingCalendar>("/training/calendar", { query: { start, end } });
+
+export const createPlannedItem = (item: {
+  kind: PlannedItemKind;
+  date: string;
+  title: string;
+  body: string;
+  importance?: PlannedItemImportance;
+}) =>
+  request<PlannedItem>("/training/planned-items", {
+    method: "POST",
+    body: JSON.stringify(item),
+  });
+
+/** Also what a drag-and-drop move calls, with just `{ date }`. */
+export const updatePlannedItem = (
+  id: string,
+  changes: Partial<Pick<PlannedItem, "date" | "title" | "body" | "importance">>,
+) =>
+  request<PlannedItem>(`/training/planned-items/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
+
+export const deletePlannedItem = (id: string) =>
+  request<void>(`/training/planned-items/${id}`, { method: "DELETE" });

@@ -45,6 +45,17 @@ alter table athletes add column if not exists height_cm double precision;
 -- than on the column being NOT NULL, which would lock those accounts out.
 alter table athletes add column if not exists email text;
 
+-- Self-reported training zones and VMA pace. Purely a reference the athlete
+-- writes down alongside their profile — nothing in the app reads these back
+-- into a calculation, so there is no validation beyond "it's a number" and no
+-- consequence to leaving them blank.
+alter table athletes add column if not exists hr_zone1_end integer;
+alter table athletes add column if not exists hr_zone2_end integer;
+alter table athletes add column if not exists hr_zone3_end integer;
+alter table athletes add column if not exists hr_zone4_end integer;
+alter table athletes add column if not exists hr_max integer;
+alter table athletes add column if not exists vma_pace_s_per_km double precision;
+
 -- Strava tokens, encrypted application-side (Fernet) before they get here.
 create table if not exists strava_credentials (
     athlete_id        bigint primary key references athletes(id) on delete cascade,
@@ -199,6 +210,31 @@ create table if not exists precompute_jobs (
 
     primary key (athlete_id, kind)
 );
+
+-- --- Training diary ----------------------------------------------------
+
+-- A planned workout or planned goal: a text cell an athlete (or, later, their
+-- coach) puts on a day of the training calendar. `kind` is the only thing that
+-- distinguishes a goal from a workout — both are title + body — so they share one
+-- table rather than two identical schemas.
+create table if not exists planned_items (
+    id          text primary key,
+    athlete_id  bigint not null references athletes(id) on delete cascade,
+    kind        text not null,              -- 'workout' | 'goal'
+    date        date not null,
+    title       text not null default '',
+    body        text not null default '',
+    created_at  timestamptz not null default now(),
+    updated_at  timestamptz not null default now()
+);
+
+-- Only meaningful for a goal: a secondary goal keeps the goal's colour but shaded,
+-- so a diary with several goals can still say which one is the main target.
+alter table planned_items add column if not exists importance text not null default 'primary';
+
+-- The calendar always queries "this athlete, this date range".
+create index if not exists planned_items_athlete_date_idx
+    on planned_items (athlete_id, date);
 
 -- --- Uploaded images -------------------------------------------------------
 

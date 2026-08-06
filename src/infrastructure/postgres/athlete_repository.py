@@ -41,7 +41,8 @@ class PostgresAthleteRepository(AthleteRepository):
                 profile_url = excluded.profile_url,
                 updated_at = now()
             returning id, firstname, lastname, profile_url, weight_kg,
-                      birthdate, height_cm, email
+                      birthdate, height_cm, email, hr_zone1_end, hr_zone2_end,
+                      hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km
             """,
             (athlete.id, athlete.firstname, athlete.lastname,
              athlete.profile_url, athlete.weight_kg),
@@ -51,7 +52,9 @@ class PostgresAthleteRepository(AthleteRepository):
     def get(self, athlete_id: int) -> Optional[Athlete]:
         row = self.db.fetch_one(
             "select id, firstname, lastname, profile_url, weight_kg, "
-            "birthdate, height_cm, email from athletes where id = %s",
+            "birthdate, height_cm, email, hr_zone1_end, hr_zone2_end, "
+            "hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km "
+            "from athletes where id = %s",
             (athlete_id,),
         )
         return _athlete(row) if row else None
@@ -81,6 +84,24 @@ class PostgresAthleteRepository(AthleteRepository):
         self.db.execute(
             "update athletes set email = %s, updated_at = now() where id = %s",
             (cleaned, athlete_id),
+        )
+
+    def set_zones(
+        self,
+        athlete_id: int,
+        hr_zone1_end: Optional[int],
+        hr_zone2_end: Optional[int],
+        hr_zone3_end: Optional[int],
+        hr_zone4_end: Optional[int],
+        hr_max: Optional[int],
+        vma_pace_s_per_km: Optional[float],
+    ) -> None:
+        self.db.execute(
+            "update athletes set hr_zone1_end = %s, hr_zone2_end = %s, "
+            "hr_zone3_end = %s, hr_zone4_end = %s, hr_max = %s, "
+            "vma_pace_s_per_km = %s, updated_at = now() where id = %s",
+            (hr_zone1_end, hr_zone2_end, hr_zone3_end, hr_zone4_end, hr_max,
+             vma_pace_s_per_km, athlete_id),
         )
 
     # --- Credentials -------------------------------------------------------
@@ -177,6 +198,12 @@ def _athlete(row) -> Athlete:
         birthdate=row["birthdate"],
         height_cm=row["height_cm"],
         email=row.get("email"),
+        hr_zone1_end=row.get("hr_zone1_end"),
+        hr_zone2_end=row.get("hr_zone2_end"),
+        hr_zone3_end=row.get("hr_zone3_end"),
+        hr_zone4_end=row.get("hr_zone4_end"),
+        hr_max=row.get("hr_max"),
+        vma_pace_s_per_km=row.get("vma_pace_s_per_km"),
     )
 
 

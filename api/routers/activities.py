@@ -72,6 +72,22 @@ def list_activities(
     }
 
 
+@router.get("/{activity_id}/route")
+def activity_route(
+    activity_id: int,
+    athlete: Athlete = Depends(current_athlete),
+) -> dict:
+    """One activity's route as coordinates, for the map.
+
+    The generalized form of ``GET /home/last-activity/route`` — that endpoint keeps
+    its own name and shape (it also carries the "no activities at all" case), but
+    both call the same :func:`resolve_activity_route`.
+    """
+    from api.routers.home import resolve_activity_route
+
+    return resolve_activity_route(athlete, activity_id)
+
+
 @router.get("/sync")
 def sync_status(athlete: Athlete = Depends(current_athlete)) -> dict:
     state = get_athlete_repository().get_sync_state(athlete.id)

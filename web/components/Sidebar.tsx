@@ -18,6 +18,7 @@ export function Sidebar({ strings }: { strings: Strings }) {
   const items = [
     { href: "/home", label: t("nav.home"), icon: "🏠" },
     { href: "/pages", label: t("nav.analysis"), icon: "📊" },
+    { href: "/training", label: t("nav.training"), icon: "📅" },
   ];
 
   return (

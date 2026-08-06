@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.domain.dataset.binning import to_date
 from src.domain.dataset.resolved import ResolvedGroup, ResolvedPanelData
+from src.domain.dataset.sport import CYCLING_SPORT_TYPES, RUNNING, sport_family
 from src.domain.ports.activity_data import ActivityDataSource, ActivitySummary
 from src.domain.spec.datasource import (
     DEFAULT_SELECTION_LABEL,
@@ -44,7 +45,8 @@ class ResolvePanelData(UseCase):
 
     def execute(self, params: ResolvePanelDataInput) -> ResolvedPanelData:
         summaries = params.data.summaries()
-        candidates, dropped = self._filter(summaries, params)
+        candidates, dropped_streamless = self._filter(summaries, params)
+        candidates, dropped_cross_sport = self._filter_family(candidates, params)
         groups = self._groups(params.source, candidates, params)
 
         return ResolvedPanelData(
@@ -53,7 +55,8 @@ class ResolvePanelData(UseCase):
             lang=params.lang,
             mass_kg=params.mass_kg,
             memo=params.memo,
-            dropped_streamless=dropped,
+            dropped_streamless=dropped_streamless,
+            dropped_cross_sport=dropped_cross_sport,
             summaries=summaries,
         )
 
@@ -92,6 +95,43 @@ class ResolvePanelData(UseCase):
         if filters.max_distance_km is not None and kilometres > filters.max_distance_km:
             return False
         return True
+
+    # --- Sport family --------------------------------------------------------
+
+    def _filter_family(
+        self, candidates: List[ActivitySummary], params: ResolvePanelDataInput
+    ) -> Tuple[List[ActivitySummary], int]:
+        """Keep one sport family only.
+
+        GAP, the modelled power-per-kg, and PR/gradient-band numbers are not
+        comparable between running and cycling (see
+        :mod:`src.domain.dataset.sport`), so a panel must never plot both at
+        once. Which family wins:
+
+        * an explicit sport filter that is entirely cycling → cycling;
+        * otherwise, in ACTIVITIES mode with no such filter, whichever family
+          the athlete's *first* hand-picked activity belongs to;
+        * otherwise (a window, or no filter and no picks yet) → running, which
+          is what every existing page already assumes with no filter set.
+        """
+        if not candidates:
+            return candidates, 0
+
+        wanted_sports = set(params.source.filters.sport_types or [])
+        if wanted_sports and wanted_sports <= CYCLING_SPORT_TYPES:
+            family = "cycling"
+        elif params.source.mode is SourceMode.ACTIVITIES:
+            by_id = {s.activity_id: s for s in candidates}
+            first_picked = next(
+                (by_id[int(i)] for i in params.source.activity_ids if int(i) in by_id),
+                None,
+            )
+            family = sport_family(first_picked.sport_type) if first_picked else RUNNING
+        else:
+            family = RUNNING
+
+        kept = [s for s in candidates if sport_family(s.sport_type) == family]
+        return kept, len(candidates) - len(kept)
 
     # --- Grouping ----------------------------------------------------------
 
