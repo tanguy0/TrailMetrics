@@ -16,7 +16,11 @@ import { NextRequest, NextResponse } from "next/server";
  * so nothing else has to change.
  */
 export function middleware(request: NextRequest) {
-  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  // `btoa`, not `Buffer.from(...).toString("base64")`: middleware runs on the
+  // Edge Runtime, which has no Node.js globals — `Buffer` is undefined there.
+  // This crashed in real Vercel deployment despite working in `next dev`, which
+  // runs middleware in a more Node-compatible sandbox.
+  const nonce = btoa(crypto.randomUUID());
   const isDev = process.env.NODE_ENV !== "production";
 
   const csp = [
