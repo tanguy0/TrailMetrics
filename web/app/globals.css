@@ -155,13 +155,9 @@ h4 {
   padding: 0 0.35rem;
 }
 
-.sidebar__brand-mark {
-  font-size: 1.35rem;
-}
-
-.sidebar__brand-name {
-  border-bottom: 3px solid var(--sunrise);
-  padding-bottom: 0.1rem;
+.sidebar__brand-logo {
+  height: 2rem;
+  width: auto;
 }
 
 .coach-switcher {

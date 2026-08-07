@@ -25,8 +25,7 @@ export function Sidebar({ strings }: { strings: Strings }) {
   return (
     <nav className="sidebar" aria-label={t("nav.analysis")}>
       <a className="sidebar__brand" href="/home">
-        <span className="sidebar__brand-mark">🏔️</span>
-        <span className="sidebar__brand-name">TrailMetrics</span>
+        <img className="sidebar__brand-logo" src="/logo.webp" alt="TrailMetrics" />
       </a>
 
       <CoachSwitcher />
