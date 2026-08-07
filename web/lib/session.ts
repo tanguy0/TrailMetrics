@@ -12,6 +12,11 @@
 import { cookies } from "next/headers";
 
 export const SESSION_COOKIE = "tm_session";
+// Which athlete a coach account is currently browsing as. Not itself a security
+// boundary — the API re-checks on every request whether the real, signed-in
+// athlete (from `tm_session`) is actually a coach — so it doesn't need to be
+// signed, just carried along. See api/deps.py's `current_athlete_id`.
+export const VIEW_AS_COOKIE = "tm_view_as";
 
 export function apiBaseUrl(): string {
   const url = process.env.TRAILMETRICS_API_URL;
@@ -47,5 +52,16 @@ export function sessionCookieOptions(maxAgeDays: number) {
     sameSite: "lax" as const,
     path: "/",
     maxAge: maxAgeDays * 24 * 60 * 60,
+  };
+}
+
+/** No `maxAge`: a browser-session cookie, so a forgotten "viewing as" doesn't
+ *  outlive the tab. */
+export function viewAsCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
   };
 }

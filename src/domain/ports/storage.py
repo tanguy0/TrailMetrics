@@ -103,6 +103,10 @@ class AthleteRepository(ABC):
         ...
 
     @abstractmethod
+    def list_all(self) -> List[Athlete]:
+        """Every athlete — the coach roster's source, nothing else reads this wide."""
+
+    @abstractmethod
     def set_weight(self, athlete_id: int, weight_kg: Optional[float]) -> None:
         ...
 

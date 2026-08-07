@@ -164,6 +164,72 @@ h4 {
   padding-bottom: 0.1rem;
 }
 
+.coach-switcher {
+  position: relative;
+}
+
+.coach-switcher__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--spine);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.coach-switcher__toggle:hover {
+  background: var(--surface-alt);
+}
+
+.coach-switcher__toggle--active {
+  background: var(--tone-terracotta-tint);
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+
+.coach-switcher__list {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0.3rem;
+  display: grid;
+  gap: 0.15rem;
+  background: var(--surface);
+  border: 1px solid var(--spine);
+  border-radius: 8px;
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.coach-switcher__list button {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.coach-switcher__list button:hover {
+  background: var(--surface-alt);
+}
+
+.coach-switcher__hint {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .sidebar__nav {
   list-style: none;
   margin: 0;
@@ -1897,8 +1963,10 @@ input[type="radio"] {
   grid-template-columns: repeat(7, 1fr);
 }
 
-/* Week totals, to the right of the days: cycling (when there was any that
-   week) on the left, running — always shown — on the right. */
+/* Week totals, to the right of the days: cycling on the left, running on the
+   right, both always shown (even at zero) so the columns don't shift week to
+   week. Grey rather than tone-colored — the tag above each says which sport it
+   is, so color isn't carrying that meaning too. */
 .training-week__summary {
   flex-shrink: 0;
   display: flex;
@@ -1915,16 +1983,17 @@ input[type="radio"] {
   font-size: 0.72rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  background: var(--surface-alt);
+  color: var(--text);
 }
 
-.week-summary--cycling {
-  background: var(--tone-plum-tint);
-  color: var(--tone-plum);
-}
-
-.week-summary--running {
-  background: var(--tone-forest-tint);
-  color: var(--tone-forest);
+.week-summary__tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 0.1rem;
 }
 
 .week-summary__row {
@@ -2007,6 +2076,15 @@ input[type="radio"] {
   border-color: var(--sunrise);
   color: #fff;
   font-weight: 700;
+}
+
+/* Lighter than a workout on purpose — a note is background information, not
+   something to train for. */
+.training-pill--note {
+  background: rgba(207, 195, 174, 0.18);
+  border-color: var(--surface-alt);
+  color: var(--muted);
+  font-weight: 600;
 }
 
 /* Secondary keeps the goal's hue but shaded — a lighter fill of the same colour
@@ -2096,13 +2174,12 @@ input[type="radio"] {
 }
 
 .training-day__add {
-  display: flex;
-  gap: 0.3rem;
-  flex-wrap: wrap;
   margin-top: auto;
 }
 
 .training-add-btn {
+  display: block;
+  width: 100%;
   background: none;
   border: 1px dashed var(--spine);
   border-radius: 6px;
@@ -2117,15 +2194,33 @@ input[type="radio"] {
   color: var(--primary);
 }
 
-.training-add-btn--goal:hover {
-  border-color: var(--sunrise);
-  color: var(--sunrise);
-}
-
 .training-form {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+}
+
+.training-form__kind {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.training-form__kind-btn {
+  flex: 1;
+  background: var(--surface-alt);
+  border: 1px solid var(--surface-alt);
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.training-form__kind-btn--active {
+  background: var(--tone-forest-tint);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .training-form__title {
@@ -2147,6 +2242,14 @@ input[type="radio"] {
   align-items: center;
   gap: 0.35rem;
   cursor: pointer;
+}
+
+.training-form__end-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .training-form__actions {

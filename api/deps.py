@@ -214,11 +214,19 @@ class PersistentOutputCache(OutputCache):
 # --- Request-scoped -------------------------------------------------------
 
 def current_athlete_id(request: Request) -> int:
-    """The authenticated athlete, from the bearer session token.
+    """The athlete this request acts as — almost always the signed-in one.
 
-    ``DEV_ATHLETE_ID`` bypasses this, but only when ``DEV_MODE`` is explicitly on,
-    so a misconfigured production deploy can't accidentally authenticate everyone
-    as one athlete.
+    ``DEV_ATHLETE_ID`` bypasses the token check, but only when ``DEV_MODE`` is
+    explicitly on, so a misconfigured production deploy can't accidentally
+    authenticate everyone as one athlete.
+
+    A coach account (``COACH_ATHLETE_IDS``) can override this via the
+    ``X-View-As-Athlete-Id`` header the web app attaches while browsing another
+    athlete's account (see web/app/api/proxy). Every endpoint keyed on this
+    dependency — which is nearly all of them — picks that up for free; the one
+    exception is guarded explicitly with :func:`block_when_viewing_as`. The real,
+    signed-in identity is still recorded on ``request.state`` for that check and
+    for :func:`is_coach_session`.
     """
     settings = get_settings()
     header = request.headers.get("authorization") or ""
@@ -226,12 +234,61 @@ def current_athlete_id(request: Request) -> int:
     if not token:
         token = request.cookies.get("tm_session", "")
 
-    athlete_id = read_session_token(token, settings.session_secret)
-    if athlete_id is not None:
-        return athlete_id
-    if settings.allow_dev_athlete:
-        return int(settings.dev_athlete_id)
-    raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Not signed in.")
+    real_id = read_session_token(token, settings.session_secret)
+    if real_id is None:
+        if not settings.allow_dev_athlete:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Not signed in.")
+        real_id = int(settings.dev_athlete_id)
+    request.state.real_athlete_id = real_id
+
+    view_as = request.headers.get("x-view-as-athlete-id", "").strip()
+    if view_as and settings.is_coach(real_id):
+        try:
+            target_id = int(view_as)
+        except ValueError:
+            return real_id
+        if target_id != real_id:
+            return target_id
+    return real_id
+
+
+def real_athlete_id(request: Request, _: int = Depends(current_athlete_id)) -> int:
+    """The signed-in athlete, ignoring any view-as override."""
+    return request.state.real_athlete_id
+
+
+def session_context(
+    effective_id: int = Depends(current_athlete_id),
+    real_id: int = Depends(real_athlete_id),
+) -> Dict[str, bool]:
+    """Coach status and view-as state, for the client to render the switcher."""
+    return {
+        "is_coach": get_settings().is_coach(real_id),
+        "viewing_as": effective_id != real_id,
+    }
+
+
+def block_when_viewing_as(
+    effective_id: int = Depends(current_athlete_id),
+    real_id: int = Depends(real_athlete_id),
+) -> None:
+    """Guard for the handful of actions only the athlete themself may take.
+
+    Strava's tokens are theirs; a coach browsing their account should not be able
+    to trigger a fetch of their private data from Strava on their behalf, even
+    though the stored (encrypted) tokens would technically allow it.
+    """
+    if effective_id != real_id:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Not available while viewing another athlete's account.",
+        )
+
+
+def require_coach(real_id: int = Depends(real_athlete_id)) -> int:
+    if not get_settings().is_coach(real_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not a coach.")
+    return real_id
 
 
 def require_service_token(request: Request) -> None:

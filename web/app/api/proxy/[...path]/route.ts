@@ -11,7 +11,7 @@
 
 import { NextRequest } from "next/server";
 
-import { SESSION_COOKIE, apiBaseUrl } from "@/lib/session";
+import { SESSION_COOKIE, VIEW_AS_COOKIE, apiBaseUrl } from "@/lib/session";
 
 // Renders can take a while (a GAP fit is a real model fit), so allow well past the
 // default. Vercel caps this by plan; the API's own timeouts are the real bound.
@@ -34,6 +34,11 @@ async function forward(request: NextRequest, path: string[]): Promise<Response> 
 
   const session = request.cookies.get(SESSION_COOKIE)?.value;
   if (session) headers.set("authorization", `Bearer ${session}`);
+
+  // Only takes effect server-side if the *signed-in* athlete is a coach — see
+  // api/deps.py's `current_athlete_id`. Forwarding it unconditionally is safe.
+  const viewAs = request.cookies.get(VIEW_AS_COOKIE)?.value;
+  if (viewAs) headers.set("x-view-as-athlete-id", viewAs);
 
   const hasBody = !["GET", "HEAD"].includes(request.method);
   let response: Response;

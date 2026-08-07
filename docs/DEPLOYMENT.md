@@ -84,6 +84,13 @@ Environment variables:
 | `ENCRYPTION_KEY` | generated — Fernet key encrypting Strava tokens at rest |
 | `SERVICE_TOKEN` | generated — **must match the web app's** |
 | `WEB_APP_URL` | `https://your-app.vercel.app` |
+| `COACH_ATHLETE_IDS` | comma-separated Strava athlete ids, optional |
+
+`COACH_ATHLETE_IDS` lets those athletes browse any other athlete's account —
+their data, pages, and training diary, but not their Strava connection — via the
+switcher in the web app's sidebar. Find an id from that athlete's Strava profile
+URL (`strava.com/athletes/<id>`) or from `/auth/me`'s `id` field once they're
+signed in. Leave it unset until at least one person needs it.
 
 Leave `DEV_MODE` unset. It bypasses authentication and only takes effect when
 explicitly set together with `DEV_ATHLETE_ID`, but there is no reason for it in a

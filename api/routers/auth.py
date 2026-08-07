@@ -30,6 +30,7 @@ from api.deps import (
     invalidate_caches,
     language,
     require_service_token,
+    session_context,
 )
 from api.security import create_session_token
 from api.serialization import athlete_payload
@@ -166,15 +167,20 @@ def exchange(payload: ExchangeRequest) -> dict:
 
 
 @router.get("/me")
-def me(athlete: Athlete = Depends(current_athlete), lang: str = Depends(language)) -> dict:
-    """The signed-in athlete, their data range and any sync in progress."""
-    return _me_payload(athlete)
+def me(
+    athlete: Athlete = Depends(current_athlete),
+    lang: str = Depends(language),
+    session: dict = Depends(session_context),
+) -> dict:
+    """The signed-in athlete — or, for a coach viewing another one, that athlete."""
+    return _me_payload(athlete, session)
 
 
 @router.patch("/me")
 def update_me(
     payload: ProfileUpdate = Body(...),
     athlete: Athlete = Depends(current_athlete),
+    session: dict = Depends(session_context),
 ) -> dict:
     """Update the athlete's self-reported body fields.
 
@@ -218,7 +224,7 @@ def update_me(
         for field, value in values.items():
             setattr(athlete, field, value)
 
-    return _me_payload(athlete)
+    return _me_payload(athlete, session)
 
 
 @router.post("/logout")
@@ -231,13 +237,15 @@ def logout() -> dict:
     return {"ok": True}
 
 
-def _me_payload(athlete: Athlete) -> dict:
+def _me_payload(athlete: Athlete, session: dict) -> dict:
     activities = get_activity_repository()
     summaries = activities.summaries(athlete.id)
-    return athlete_payload(
+    payload = athlete_payload(
         athlete,
         sync=get_athlete_repository().get_sync_state(athlete.id),
         date_range=activities.date_range(athlete.id),
         activity_count=len(summaries),
         sport_types=sorted({row["sport_type"] for row in summaries}),
     )
+    payload.update(session)
+    return payload

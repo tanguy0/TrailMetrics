@@ -29,6 +29,11 @@ export function WelcomeScreen({
         <h1 className="welcome__title">{t("email.title")}</h1>
         <p className="lede">{t("email.body")}</p>
         <EmailForm strings={strings} onSaved={() => router.replace(next)} />
+        <p className="muted">
+          If you're being coached through this app, your coach's account can see your
+          training data and training diary to help plan your training — see the{" "}
+          <a href="/privacy">Privacy Policy</a> for what that does and doesn't include.
+        </p>
       </section>
     </main>
   );

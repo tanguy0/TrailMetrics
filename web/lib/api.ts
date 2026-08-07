@@ -12,6 +12,7 @@ import type {
   ActivitySummary,
   AssetUpload,
   Athlete,
+  CoachAthlete,
   HomeSummary,
   PageSpec,
   PageSummary,
@@ -255,6 +256,7 @@ export const getTrainingCalendar = (start: string, end: string) =>
 export const createPlannedItem = (item: {
   kind: PlannedItemKind;
   date: string;
+  end_date?: string;
   title: string;
   body: string;
   importance?: PlannedItemImportance;
@@ -267,7 +269,7 @@ export const createPlannedItem = (item: {
 /** Also what a drag-and-drop move calls, with just `{ date }`. */
 export const updatePlannedItem = (
   id: string,
-  changes: Partial<Pick<PlannedItem, "date" | "title" | "body" | "importance">>,
+  changes: Partial<Pick<PlannedItem, "date" | "end_date" | "title" | "body" | "importance">>,
 ) =>
   request<PlannedItem>(`/training/planned-items/${id}`, {
     method: "PATCH",
@@ -276,3 +278,9 @@ export const updatePlannedItem = (
 
 export const deletePlannedItem = (id: string) =>
   request<void>(`/training/planned-items/${id}`, { method: "DELETE" });
+
+// --- Coach -------------------------------------------------------------------
+
+/** Every athlete a coach account can switch into viewing. 403s for anyone else. */
+export const listCoachAthletes = () =>
+  request<{ athletes: CoachAthlete[] }>("/coach/athletes");

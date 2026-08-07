@@ -204,6 +204,15 @@ def athlete_payload(
     }
 
 
+def athlete_summary_payload(athlete: Athlete) -> Dict[str, Any]:
+    """One roster entry for the coach switcher — not the full profile."""
+    return {
+        "id": athlete.id,
+        "display_name": athlete.display_name,
+        "profile_url": athlete.profile_url,
+    }
+
+
 def page_payload(page: PageSpec) -> Dict[str, Any]:
     return page.to_dict()
 

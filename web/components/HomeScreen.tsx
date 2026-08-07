@@ -177,7 +177,10 @@ export function HomeScreen({ strings }: { strings: Strings }) {
       lastSynced === null || Date.now() - lastSynced > AUTO_SYNC_STALE_MS;
 
     (async () => {
-      if (athlete.sync.status !== "running" && stale) {
+      // A coach viewing another athlete's account can't trigger their Strava
+      // import (the API refuses it, see api/routers/activities.py) — skip firing
+      // a request that can only fail.
+      if (!athlete.viewing_as && athlete.sync.status !== "running" && stale) {
         // A failed automatic import must not shout: the manual buttons are right
         // there, and this attempt was not something the athlete asked for.
         await startSync({}).catch(() => undefined);
@@ -283,6 +286,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
           athlete={athlete}
           busy={busy}
           onImport={importActivities}
+          viewingAs={athlete.viewing_as}
           t={t}
         />
 
@@ -800,11 +804,15 @@ function SyncControls({
   athlete,
   busy,
   onImport,
+  viewingAs,
   t,
 }: {
   athlete: Athlete;
   busy: boolean;
   onImport: (force: boolean) => void;
+  /** A coach browsing this athlete's account: only they can import their own
+   *  Strava data, so the buttons that would trigger it are hidden, not disabled. */
+  viewingAs: boolean;
   t: T;
 }) {
   const syncing = athlete.sync.status === "running";
@@ -821,6 +829,17 @@ function SyncControls({
             label={t("home.import.running")}
             detail={athlete.sync.message || t("home.import.auto_help")}
           />
+        </div>
+      ) : viewingAs ? (
+        <div className="sync__actions">
+          <span className="muted">
+            Only {athlete.display_name} can import their own Strava data.
+          </span>
+          {athlete.sync.last_synced_at && (
+            <span className="muted">
+              {t("home.import.last")} {formatDate(athlete.sync.last_synced_at)}
+            </span>
+          )}
         </div>
       ) : (
         <div className="sync__actions">
@@ -858,11 +877,11 @@ function SyncControls({
         </div>
       )}
 
-      {!syncing && athlete.activity_count > 0 && (
+      {!syncing && !viewingAs && athlete.activity_count > 0 && (
         <p className="muted">{t("home.import.auto_help")}</p>
       )}
 
-      {athlete.activity_count === 0 && !syncing && (
+      {athlete.activity_count === 0 && !syncing && !viewingAs && (
         <p className="note">{t("home.import.empty")}</p>
       )}
     </>
