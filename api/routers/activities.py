@@ -15,6 +15,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, s
 from pydantic import BaseModel, Field
 
 from api.deps import (
+    block_when_viewing_as,
     current_athlete,
     get_activity_repository,
     get_athlete_repository,
@@ -101,13 +102,22 @@ def sync_status(athlete: Athlete = Depends(current_athlete)) -> dict:
     }
 
 
-@router.post("/sync", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/sync",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(block_when_viewing_as)],
+)
 def start_sync(
     background: BackgroundTasks,
     payload: SyncRequest = SyncRequest(),
     athlete: Athlete = Depends(current_athlete),
 ) -> dict:
-    """Kick off an import. Returns immediately; poll ``GET /activities/sync``."""
+    """Kick off an import. Returns immediately; poll ``GET /activities/sync``.
+
+    Refuses while a coach is viewing this athlete's account as someone else — the
+    stored Strava tokens are the athlete's own, and fetching on their behalf without
+    them present is not something a coach should be able to trigger.
+    """
     athletes = get_athlete_repository()
     state = athletes.get_sync_state(athlete.id)
     if state.status == "running":

@@ -88,6 +88,12 @@ export function durationToEpoch(seconds: number | null): number | null {
   return seconds * 1000;
 }
 
+/** A distance in km: one decimal below 100 km, none at or above — a three- or
+ *  four-digit distance doesn't need a decimal to be readable. */
+export function formatDistanceAdaptive(km: number): string {
+  return formatNumber(km, km >= 100 ? 0 : 1);
+}
+
 export function formatDistanceKm(metres: number): string {
   return `${(metres / 1000).toFixed(2)} km`;
 }

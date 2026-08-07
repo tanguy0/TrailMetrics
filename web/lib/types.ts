@@ -347,6 +347,17 @@ export interface Athlete {
   oldest_activity: string | null;
   newest_activity: string | null;
   sync: SyncStatus;
+  /** Whether the *signed-in* account (not this one) is a coach account. */
+  is_coach: boolean;
+  /** True when a coach is browsing this account rather than their own. */
+  viewing_as: boolean;
+}
+
+/** One entry in a coach's athlete switcher — not the full profile. */
+export interface CoachAthlete {
+  id: number;
+  display_name: string;
+  profile_url: string | null;
 }
 
 export interface ActivitySummary {
@@ -423,16 +434,20 @@ export interface RouteResult {
 
 // --- Training --------------------------------------------------------------
 
-export type PlannedItemKind = "workout" | "goal";
+export type PlannedItemKind = "workout" | "goal" | "note";
 /** Only meaningful for a goal: a secondary goal keeps the goal colour but shaded. */
 export type PlannedItemImportance = "primary" | "secondary";
 
-/** A planned workout or goal on the training calendar. Title is what shows on
- * the calendar cell; body is the text revealed when the item is opened. */
+/** A planned workout, goal, or note on the training calendar. Title is what
+ * shows on the calendar cell; body is the text revealed when the item is
+ * opened. `end_date` is always present (the server defaults it to `date`) —
+ * only a note is ever created with one past that, spanning every day up to and
+ * including it. */
 export interface PlannedItem {
   id: string;
   kind: PlannedItemKind;
   date: string; // ISO date
+  end_date: string; // ISO date, >= date
   title: string;
   body: string;
   importance: PlannedItemImportance;

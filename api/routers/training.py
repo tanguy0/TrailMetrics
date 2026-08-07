@@ -1,10 +1,12 @@
 """The training diary: planned workouts/goals and completed sessions, by date.
 
-Coach and athlete will eventually see the same calendar with different write
-permissions; that layer is not built yet, so today every row is scoped to the
-signed-in athlete like the rest of the app. The calendar itself lives on the web
-app as a fixed screen, not a page-builder page — see ``api/routers/home.py`` for
-the same "fixed screen, borrowed rendering pipeline" pattern.
+Every row is scoped to ``current_athlete`` like the rest of the app — which is
+also how a coach ends up editing an athlete's calendar with full read/write access
+when viewing their account (see ``api/deps.py``'s view-as override): there is no
+separate, more limited permission level here, unlike the Strava import. The
+calendar itself lives on the web app as a fixed screen, not a page-builder page —
+see ``api/routers/home.py`` for the same "fixed screen, borrowed rendering
+pipeline" pattern.
 """
 
 from datetime import date as date_type
@@ -23,13 +25,17 @@ from src.domain.ports.storage import Athlete
 
 router = APIRouter(prefix="/training", tags=["training"])
 
-_KINDS = {"workout", "goal"}
+_KINDS = {"workout", "goal", "note"}
 _IMPORTANCES = {"primary", "secondary"}
 
 
 class CreatePlannedItemRequest(BaseModel):
     kind: str
     date: date_type
+    # Only a note ever sets this to something other than `date` — the web app
+    # never sends it for a workout or goal, and the API doesn't need to enforce
+    # that itself; see the repository's `create`.
+    end_date: Optional[date_type] = None
     title: str = Field(default="", max_length=200)
     body: str = Field(default="", max_length=10000)
     importance: str = "primary"
@@ -43,6 +49,7 @@ class UpdatePlannedItemRequest(BaseModel):
     # so `Optional[date]` silently resolves to `Optional[None]` and every update
     # is rejected. Naming the type differently from the field sidesteps it.
     date: Optional[date_type] = None
+    end_date: Optional[date_type] = None
     title: Optional[str] = Field(default=None, max_length=200)
     body: Optional[str] = Field(default=None, max_length=10000)
     importance: Optional[str] = None
@@ -61,6 +68,13 @@ def _validate_importance(importance: Optional[str]) -> None:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             detail=f"importance must be one of {sorted(_IMPORTANCES)}",
+        )
+
+
+def _validate_range(date: date_type, end_date: Optional[date_type]) -> None:
+    if end_date is not None and end_date < date:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail="end_date must not be before date",
         )
 
 
@@ -89,8 +103,10 @@ def create_planned_item(
 ) -> dict:
     _validate_kind(payload.kind)
     _validate_importance(payload.importance)
+    _validate_range(payload.date, payload.end_date)
     return get_planned_item_repository(athlete.id).create(
         payload.kind, payload.date, payload.title, payload.body, payload.importance,
+        end_date=payload.end_date,
     )
 
 
@@ -101,9 +117,11 @@ def update_planned_item(
     athlete: Athlete = Depends(current_athlete),
 ) -> dict:
     _validate_importance(payload.importance)
+    if payload.date is not None and payload.end_date is not None:
+        _validate_range(payload.date, payload.end_date)
     updated = get_planned_item_repository(athlete.id).update(
-        item_id, date=payload.date, title=payload.title, body=payload.body,
-        importance=payload.importance,
+        item_id, date=payload.date, end_date=payload.end_date, title=payload.title,
+        body=payload.body, importance=payload.importance,
     )
     if updated is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="planned item not found")

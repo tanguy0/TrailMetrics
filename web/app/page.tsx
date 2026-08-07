@@ -67,6 +67,10 @@ export default async function Home({
         TrailMetrics reads your activities from Strava so it can analyse them. Your Strava
         tokens are encrypted and never leave the server.
       </p>
+
+      <p className="muted">
+        <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a>
+      </p>
     </main>
   );
 }

@@ -1006,11 +1006,12 @@ TRANSLATIONS = {
         "fr": "Impossible de terminer l'ajustement des modèles",
     },
 
-    # Training: the calendar of planned workouts/goals and completed sessions.
-    "ui.training.add_workout": {"en": "+ Workout", "fr": "+ Séance"},
-    "ui.training.add_goal": {"en": "+ Goal", "fr": "+ Objectif"},
+    # Training: the calendar of planned workouts/goals/notes and completed sessions.
+    "ui.training.add_plan": {"en": "+ Plan", "fr": "+ Planifier"},
+    "ui.training.new_plan_title": {"en": "New plan", "fr": "Nouveau plan"},
     "ui.training.kind.workout": {"en": "Workout", "fr": "Séance"},
     "ui.training.kind.goal": {"en": "Goal", "fr": "Objectif"},
+    "ui.training.kind.note": {"en": "Note", "fr": "Note"},
     "ui.training.form.title_placeholder": {"en": "Title", "fr": "Titre"},
     "ui.training.form.body_placeholder": {
         "en": "Notes — shown when opened",
@@ -1020,8 +1021,12 @@ TRANSLATIONS = {
     "ui.training.form.delete": {"en": "Delete", "fr": "Supprimer"},
     "ui.training.form.importance_primary": {"en": "Primary", "fr": "Principal"},
     "ui.training.form.importance_secondary": {"en": "Secondary", "fr": "Secondaire"},
+    "ui.training.form.end_date_label": {"en": "Until", "fr": "Jusqu'au"},
     "ui.training.badge.planned": {"en": "Planned", "fr": "Prévu"},
+    "ui.training.badge.note": {"en": "Note", "fr": "Note"},
     "ui.training.badge.completed": {"en": "Completed", "fr": "Terminé"},
+    "ui.training.week.running": {"en": "Running", "fr": "Course"},
+    "ui.training.week.cycling": {"en": "Cycling", "fr": "Vélo"},
 
 }
 

@@ -9,6 +9,7 @@
 
 import { usePathname } from "next/navigation";
 
+import { CoachSwitcher } from "@/components/CoachSwitcher";
 import { translator, type Strings } from "@/lib/strings";
 
 export function Sidebar({ strings }: { strings: Strings }) {
@@ -27,6 +28,8 @@ export function Sidebar({ strings }: { strings: Strings }) {
         <span className="sidebar__brand-mark">🏔️</span>
         <span className="sidebar__brand-name">TrailMetrics</span>
       </a>
+
+      <CoachSwitcher />
 
       <ul className="sidebar__nav">
         {items.map((item) => {

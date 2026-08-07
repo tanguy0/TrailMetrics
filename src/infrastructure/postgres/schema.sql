@@ -16,9 +16,12 @@
 --   linear in body mass, so a row stays valid when the athlete's weight changes —
 --   the API multiplies through on read instead of recomputing history.
 --
--- * Access goes through the API with the service role, so there are no RLS
---   policies: every query is already scoped by athlete_id server-side. If you
---   ever expose PostgREST directly to browsers, add RLS before doing so.
+-- * Access goes through the API with the service role, and every query is
+--   already scoped by athlete_id server-side. RLS is enabled below with no
+--   permissive policies anyway, purely as a backstop: the service role (and a
+--   local superuser) bypass it regardless, but it means an anon/authenticated
+--   Supabase key — or a future PostgREST exposure — gets nothing instead of
+--   everything.
 
 create extension if not exists pgcrypto;
 
@@ -232,6 +235,12 @@ create table if not exists planned_items (
 -- so a diary with several goals can still say which one is the main target.
 alter table planned_items add column if not exists importance text not null default 'primary';
 
+-- Optional multi-day span for a note. NULL means "just `date`" — true for every
+-- workout and goal (both are inherently one day) and for any note that predates
+-- this column. The API reads it as `coalesce(end_date, date)` everywhere rather
+-- than backfilling it.
+alter table planned_items add column if not exists end_date date;
+
 -- The calendar always queries "this athlete, this date range".
 create index if not exists planned_items_athlete_date_idx
     on planned_items (athlete_id, date);
@@ -255,3 +264,18 @@ create table if not exists assets (
 
 create index if not exists assets_athlete_created_idx
     on assets (athlete_id, created_at desc);
+
+-- --- Row-level security -----------------------------------------------------
+
+-- No policies defined: this is a default-deny backstop for any role other than
+-- the service role / a local superuser, both of which bypass RLS outright. See
+-- the note at the top of this file.
+alter table athletes enable row level security;
+alter table strava_credentials enable row level security;
+alter table sync_state enable row level security;
+alter table activities enable row level security;
+alter table pages enable row level security;
+alter table plot_outputs enable row level security;
+alter table precompute_jobs enable row level security;
+alter table planned_items enable row level security;
+alter table assets enable row level security;

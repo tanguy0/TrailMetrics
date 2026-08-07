@@ -32,6 +32,19 @@ def _env_int(name: str) -> Optional[int]:
         return None
 
 
+def _env_int_list(name: str) -> List[int]:
+    ids = []
+    for part in _env(name).split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            ids.append(int(part))
+        except ValueError:
+            pass
+    return ids
+
+
 @dataclass
 class Settings:
     # --- Data ---------------------------------------------------------------
@@ -65,6 +78,12 @@ class Settings:
     dev_athlete_id: Optional[int] = None
     dev_mode: bool = False
 
+    # Strava athlete ids allowed to browse another athlete's account read-mostly
+    # (see api/deps.py's view-as override). Not a role stored in the database —
+    # there is no admin UI for it, just this list, set once by whoever operates
+    # the deployment.
+    coach_athlete_ids: List[int] = field(default_factory=list)
+
     @classmethod
     def from_env(cls) -> "Settings":
         local_root = _env("LOCAL_STREAM_ROOT")
@@ -85,6 +104,7 @@ class Settings:
             extra_cors_origins=[o.strip() for o in origins],
             dev_athlete_id=_env_int("DEV_ATHLETE_ID"),
             dev_mode=_env("DEV_MODE").lower() in ("1", "true", "yes"),
+            coach_athlete_ids=_env_int_list("COACH_ATHLETE_IDS"),
         )
 
     # --- Derived ------------------------------------------------------------
@@ -105,6 +125,9 @@ class Settings:
     def allow_dev_athlete(self) -> bool:
         """Impersonation is only ever allowed with DEV_MODE explicitly on."""
         return self.dev_mode and self.dev_athlete_id is not None
+
+    def is_coach(self, athlete_id: int) -> bool:
+        return athlete_id in self.coach_athlete_ids
 
     @property
     def cors_origins(self) -> List[str]:

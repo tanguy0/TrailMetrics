@@ -59,6 +59,15 @@ class PostgresAthleteRepository(AthleteRepository):
         )
         return _athlete(row) if row else None
 
+    def list_all(self) -> list:
+        rows = self.db.fetch_all(
+            "select id, firstname, lastname, profile_url, weight_kg, "
+            "birthdate, height_cm, email, hr_zone1_end, hr_zone2_end, "
+            "hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km "
+            "from athletes order by firstname, lastname"
+        )
+        return [_athlete(row) for row in rows]
+
     def set_weight(self, athlete_id: int, weight_kg: Optional[float]) -> None:
         self.db.execute(
             "update athletes set weight_kg = %s, updated_at = now() where id = %s",

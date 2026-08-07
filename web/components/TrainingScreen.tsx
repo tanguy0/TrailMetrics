@@ -39,7 +39,7 @@ import {
   getTrainingCalendar,
   updatePlannedItem,
 } from "@/lib/api";
-import { formatHms, formatNumber, formatPace } from "@/lib/format";
+import { formatDistanceAdaptive, formatHms, formatNumber, formatPace } from "@/lib/format";
 import { CYCLING_SPORT_TYPES, RUNNING_SPORT_TYPES, sportTone } from "@/lib/sport";
 import { translator, type Strings, type Translate } from "@/lib/strings";
 import type {
@@ -95,10 +95,19 @@ function rangeWeeks(fromWeekStart: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => addDays(fromWeekStart, i * 7));
 }
 
+/** Every date from `start` to `end`, inclusive. Plain string comparison sorts
+ * the same as chronological order for `YYYY-MM-DD`, so this needs no Date math
+ * beyond stepping one day at a time. */
+function datesBetween(start: string, end: string): string[] {
+  const dates: string[] = [];
+  for (let date = start; date <= end; date = addDays(date, 1)) dates.push(date);
+  return dates;
+}
+
 type ModalState =
   | { type: "session"; activity: ActivityCard }
   | { type: "edit"; item: PlannedItem }
-  | { type: "new"; date: string; kind: PlannedItemKind };
+  | { type: "new"; date: string };
 
 export function TrainingScreen({ strings }: { strings: Strings }) {
   const t = translator(strings);
@@ -227,7 +236,11 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
 
   const itemsByDate: Record<string, PlannedItem[]> = {};
   for (const item of Object.values(plannedItems)) {
-    (itemsByDate[item.date] ??= []).push(item);
+    // A workout or goal's `end_date` is always its own `date`, so this only
+    // ever iterates more than once for a multi-day note.
+    for (const date of datesBetween(item.date, item.end_date)) {
+      (itemsByDate[date] ??= []).push(item);
+    }
   }
   const activitiesByDate: Record<string, ActivityCard[]> = {};
   for (const activity of Object.values(activities)) {
@@ -237,10 +250,12 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
 
   const saveNewItem = async (
     date: string, kind: PlannedItemKind, title: string, body: string,
-    importance: PlannedItemImportance,
+    importance: PlannedItemImportance, endDate: string,
   ) => {
     try {
-      const created = await createPlannedItem({ kind, date, title, body, importance });
+      const created = await createPlannedItem({
+        kind, date, end_date: endDate, title, body, importance,
+      });
       setPlannedItems((current) => ({ ...current, [created.id]: created }));
       setModal(null);
     } catch (caught) {
@@ -251,9 +266,12 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
 
   const saveEditedItem = async (
     id: string, title: string, body: string, importance: PlannedItemImportance,
+    endDate: string,
   ) => {
     try {
-      const updated = await updatePlannedItem(id, { title, body, importance });
+      const updated = await updatePlannedItem(id, {
+        title, body, importance, end_date: endDate,
+      });
       setPlannedItems((current) => ({ ...current, [id]: updated }));
       setModal(null);
     } catch (caught) {
@@ -280,11 +298,22 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
   const moveItem = async (id: string, date: string) => {
     const previous = plannedItems[id];
     if (!previous || previous.date === date) return;
+    // Preserve the span length (zero for a workout or goal, which are always
+    // one day) rather than just moving `date` — otherwise `end_date` stays
+    // behind at its old value, which for a single-day item means it now
+    // precedes `date`.
+    const spanDays = Math.round(
+      (parseIsoDate(previous.end_date).getTime() - parseIsoDate(previous.date).getTime())
+        / 86_400_000,
+    );
+    const endDate = addDays(date, spanDays);
     // Optimistic: dropped onto a day, it should land there immediately. A failed
     // move is rare enough that reverting on error is simpler than blocking the drop.
-    setPlannedItems((current) => ({ ...current, [id]: { ...previous, date } }));
+    setPlannedItems((current) => (
+      { ...current, [id]: { ...previous, date, end_date: endDate } }
+    ));
     try {
-      const updated = await updatePlannedItem(id, { date });
+      const updated = await updatePlannedItem(id, { date, end_date: endDate });
       setPlannedItems((current) => ({ ...current, [id]: updated }));
     } catch (caught) {
       setError((caught as Error).message);
@@ -317,7 +346,7 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
             }}
             onOpenItem={(item) => setModal({ type: "edit", item })}
             onOpenSession={(activity) => setModal({ type: "session", activity })}
-            onAddItem={(date, kind) => setModal({ type: "new", date, kind })}
+            onAddItem={(date) => setModal({ type: "new", date })}
             onDropItem={moveItem}
             t={t}
           />
@@ -327,11 +356,11 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
 
       {modal?.type === "new" && (
         <ItemForm
-          title={modal.kind === "goal" ? t("training.add_goal") : t("training.add_workout")}
-          kind={modal.kind}
+          title={t("training.new_plan_title")}
+          startDate={modal.date}
           onCancel={() => setModal(null)}
-          onSave={(title, body, importance) =>
-            saveNewItem(modal.date, modal.kind, title, body, importance)
+          onSave={(kind, title, body, importance, endDate) =>
+            saveNewItem(modal.date, kind, title, body, importance, endDate)
           }
           t={t}
         />
@@ -341,12 +370,14 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
         <ItemForm
           title={t(`training.kind.${modal.item.kind}`)}
           kind={modal.item.kind}
+          startDate={modal.item.date}
           initialTitle={modal.item.title}
           initialBody={modal.item.body}
           initialImportance={modal.item.importance}
+          initialEndDate={modal.item.end_date}
           onCancel={() => setModal(null)}
-          onSave={(title, body, importance) =>
-            saveEditedItem(modal.item.id, title, body, importance)
+          onSave={(kind, title, body, importance, endDate) =>
+            saveEditedItem(modal.item.id, title, body, importance, endDate)
           }
           onDelete={() => removeItem(modal.item.id)}
           t={t}
@@ -387,7 +418,7 @@ function WeekRow({
   onRef: (element: HTMLDivElement | null) => void;
   onOpenItem: (item: PlannedItem) => void;
   onOpenSession: (activity: ActivityCard) => void;
-  onAddItem: (date: string, kind: PlannedItemKind) => void;
+  onAddItem: (date: string) => void;
   onDropItem: (id: string, date: string) => void;
   t: T;
 }) {
@@ -409,25 +440,27 @@ function WeekRow({
             sessions={activitiesByDate[date] ?? []}
             onOpenItem={onOpenItem}
             onOpenSession={onOpenSession}
-            onAddItem={(kind) => onAddItem(date, kind)}
+            onAddItem={() => onAddItem(date)}
             onDrop={(id) => onDropItem(id, date)}
             t={t}
           />
         ))}
       </div>
-      <WeekSummary days={days} activitiesByDate={activitiesByDate} />
+      <WeekSummary days={days} activitiesByDate={activitiesByDate} t={t} />
     </div>
   );
 }
 
-/** Totals for the week: cycling on the left, running on the right — cycling
- * appears only on a week that actually had a ride, running always does. */
+/** Totals for the week: cycling on the left, running on the right — both shown
+ * every week, zero or not, so the two columns stay in the same place. */
 function WeekSummary({
   days,
   activitiesByDate,
+  t,
 }: {
   days: string[];
   activitiesByDate: Record<string, ActivityCard[]>;
+  t: T;
 }) {
   const totals = { run: _emptyTotals(), ride: _emptyTotals() };
   for (const date of days) {
@@ -447,10 +480,8 @@ function WeekSummary({
 
   return (
     <div className="training-week__summary">
-      {totals.ride.count > 0 && (
-        <SportTotals tone="cycling" totals={totals.ride} />
-      )}
-      <SportTotals tone="running" totals={totals.run} />
+      <SportTotals tone="cycling" totals={totals.ride} label={t("training.week.cycling")} />
+      <SportTotals tone="running" totals={totals.run} label={t("training.week.running")} />
     </div>
   );
 }
@@ -462,15 +493,18 @@ function _emptyTotals() {
 function SportTotals({
   tone,
   totals,
+  label,
 }: {
   tone: "running" | "cycling";
   totals: { distance_m: number; elevation_gain_m: number; moving_s: number };
+  label: string;
 }) {
   return (
     <div className={`week-summary week-summary--${tone}`}>
+      <span className="week-summary__tag">{label}</span>
       <div className="week-summary__row">
         <span className="week-summary__icon" aria-hidden="true">📏</span>
-        {formatNumber(totals.distance_m / 1000, 1)} km
+        {formatDistanceAdaptive(totals.distance_m / 1000)} km
       </div>
       <div className="week-summary__row">
         <span className="week-summary__icon" aria-hidden="true">⛰️</span>
@@ -501,7 +535,7 @@ function DayCell({
   sessions: ActivityCard[];
   onOpenItem: (item: PlannedItem) => void;
   onOpenSession: (activity: ActivityCard) => void;
-  onAddItem: (kind: PlannedItemKind) => void;
+  onAddItem: () => void;
   onDrop: (id: string) => void;
   t: T;
 }) {
@@ -534,24 +568,34 @@ function DayCell({
       </div>
 
       <div className="training-day__items">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className={
-              `training-pill training-pill--${item.kind}` +
-              (item.kind === "goal" ? ` training-pill--${item.importance}` : "")
-            }
-            draggable
-            onDragStart={(event) => {
-              event.dataTransfer.setData("text/plain", item.id);
-              event.dataTransfer.effectAllowed = "move";
-            }}
-            onClick={() => onOpenItem(item)}
-          >
-            <span className="card-badge">{t("training.badge.planned")}</span>
-            {item.title || t(`training.kind.${item.kind}`)}
-          </div>
-        ))}
+        {items.map((item) => {
+          const spansDays = item.end_date !== item.date;
+          return (
+            <div
+              key={item.id}
+              className={
+                `training-pill training-pill--${item.kind}` +
+                (item.kind === "goal" ? ` training-pill--${item.importance}` : "")
+              }
+              title={spansDays ? `${item.date} → ${item.end_date}` : undefined}
+              // A multi-day note moves as a block or not at all — dragging one day
+              // of it would either shift the whole span or desync `date` from
+              // `end_date`, and neither has an obvious drop target. Simpler to
+              // just not offer it.
+              draggable={!spansDays}
+              onDragStart={(event) => {
+                event.dataTransfer.setData("text/plain", item.id);
+                event.dataTransfer.effectAllowed = "move";
+              }}
+              onClick={() => onOpenItem(item)}
+            >
+              <span className="card-badge">
+                {t(item.kind === "note" ? "training.badge.note" : "training.badge.planned")}
+              </span>
+              {item.title || t(`training.kind.${item.kind}`)}
+            </div>
+          );
+        })}
 
         {sessions.map((activity) => {
           const km = activity.distance_m != null ? activity.distance_m / 1000 : null;
@@ -576,15 +620,8 @@ function DayCell({
       </div>
 
       <div className="training-day__add">
-        <button type="button" className="training-add-btn" onClick={() => onAddItem("workout")}>
-          {t("training.add_workout")}
-        </button>
-        <button
-          type="button"
-          className="training-add-btn training-add-btn--goal"
-          onClick={() => onAddItem("goal")}
-        >
-          {t("training.add_goal")}
+        <button type="button" className="training-add-btn" onClick={onAddItem}>
+          {t("training.add_plan")}
         </button>
       </div>
     </div>
@@ -593,36 +630,70 @@ function DayCell({
 
 // --- Item editor --------------------------------------------------------------
 
+const PLANNED_ITEM_KINDS: PlannedItemKind[] = ["workout", "goal", "note"];
+
 function ItemForm({
   title,
-  kind,
+  kind: fixedKind,
+  startDate,
   initialTitle = "",
   initialBody = "",
   initialImportance = "primary",
+  initialEndDate,
   onCancel,
   onSave,
   onDelete,
   t,
 }: {
   title: string;
-  kind: PlannedItemKind;
+  /** Fixed once an item exists — only a brand-new one lets you pick a kind. */
+  kind?: PlannedItemKind;
+  startDate: string;
   initialTitle?: string;
   initialBody?: string;
   initialImportance?: PlannedItemImportance;
+  initialEndDate?: string;
   onCancel: () => void;
-  onSave: (title: string, body: string, importance: PlannedItemImportance) => Promise<void>;
+  onSave: (
+    kind: PlannedItemKind,
+    title: string,
+    body: string,
+    importance: PlannedItemImportance,
+    endDate: string,
+  ) => Promise<void>;
   onDelete?: () => Promise<void>;
   t: T;
 }) {
+  const [draftKind, setDraftKind] = useState<PlannedItemKind>(fixedKind ?? "workout");
   const [draftTitle, setDraftTitle] = useState(initialTitle);
   const [draftBody, setDraftBody] = useState(initialBody);
   const [draftImportance, setDraftImportance] =
     useState<PlannedItemImportance>(initialImportance);
+  const [draftEndDate, setDraftEndDate] = useState(initialEndDate ?? startDate);
   const [busy, setBusy] = useState(false);
+
+  const isNote = draftKind === "note";
 
   return (
     <Modal title={title} onClose={onCancel}>
       <div className="training-form">
+        {!fixedKind && (
+          <div className="training-form__kind">
+            {PLANNED_ITEM_KINDS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={
+                  "training-form__kind-btn" +
+                  (draftKind === option ? " training-form__kind-btn--active" : "")
+                }
+                onClick={() => setDraftKind(option)}
+              >
+                {t(`training.kind.${option}`)}
+              </button>
+            ))}
+          </div>
+        )}
         <input
           className="training-form__title"
           value={draftTitle}
@@ -637,7 +708,7 @@ function ItemForm({
           placeholder={t("training.form.body_placeholder")}
           rows={5}
         />
-        {kind === "goal" && (
+        {draftKind === "goal" && (
           <div className="training-form__importance">
             <label>
               <input
@@ -658,6 +729,17 @@ function ItemForm({
               {t("training.form.importance_secondary")}
             </label>
           </div>
+        )}
+        {isNote && (
+          <label className="training-form__end-date">
+            {t("training.form.end_date_label")}
+            <input
+              type="date"
+              value={draftEndDate}
+              min={startDate}
+              onChange={(event) => setDraftEndDate(event.target.value)}
+            />
+          </label>
         )}
         <div className="training-form__actions">
           {onDelete && (
@@ -684,7 +766,17 @@ function ItemForm({
             onClick={async () => {
               setBusy(true);
               try {
-                await onSave(draftTitle.trim(), draftBody, draftImportance);
+                await onSave(
+                  draftKind,
+                  draftTitle.trim(),
+                  draftBody,
+                  draftImportance,
+                  // Locking end date to start date whenever the kind isn't (or
+                  // no longer is, after switching away from) a note is what
+                  // keeps a workout or goal single-day even if a stale draft
+                  // end date is still sitting in state.
+                  isNote ? draftEndDate : startDate,
+                );
               } catch {
                 setBusy(false);
               }
