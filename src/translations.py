@@ -857,10 +857,10 @@ TRANSLATIONS = {
     },
     "ui.home.recent.title": {"en": "Recent History", "fr": "Historique récent"},
     "ui.home.recent.subtitle": {
-        "en": "Distance and climb per week over the last 20 weeks. Each has its own "
+        "en": "Distance and climb per week over the last 30 weeks. Each has its own "
               "axis — distance on the left, climb on the right — so compare the "
               "shapes rather than where the two meet.",
-        "fr": "Distance et dénivelé par semaine sur les 20 dernières semaines. "
+        "fr": "Distance et dénivelé par semaine sur les 30 dernières semaines. "
               "Chacun a son axe — distance à gauche, dénivelé à droite — comparez "
               "donc les formes plutôt que les points de rencontre.",
     },

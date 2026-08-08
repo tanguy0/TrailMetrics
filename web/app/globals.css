@@ -41,12 +41,17 @@
    */
   --tone-forest: #2e6f40;
   --tone-forest-tint: #eaefe7;
+  --tone-forest-rgb: 46, 111, 64;
   --tone-terracotta: #c65d3b;
   --tone-terracotta-tint: #f9ede6;
+  --tone-terracotta-rgb: 198, 93, 59;
   --tone-blue: #3a6ea5;
   --tone-blue-tint: #ebeff1;
   --tone-plum: #8b3e8f;
   --tone-plum-tint: #f3eaee;
+  --tone-plum-rgb: 139, 62, 143;
+  --sunrise-tint: #fdf4e3;
+  --sunrise-rgb: 232, 163, 61;
 }
 
 * {
@@ -405,6 +410,19 @@ h4 {
   font-size: 1.05rem;
 }
 
+/* The import controls, in the same blue as the "Your data" section's header
+   bar — a filled button by default, or ghost's transparent-with-colored-text
+   when combined with `.button--ghost`. */
+.button--blue {
+  background: var(--tone-blue);
+  border-color: var(--tone-blue);
+}
+
+.button--blue.button--ghost {
+  background: transparent;
+  color: var(--tone-blue);
+}
+
 /* --- Forms ---------------------------------------------------------------- */
 
 input,
@@ -499,7 +517,18 @@ input[type="radio"] {
 /* --- Panels --------------------------------------------------------------- */
 
 .panel {
-  background: var(--surface);
+  /* A faint paper grain behind the document, matching the tactile texture on
+     Home's stat tiles — neutral ink, not an accent, since a panel isn't tied
+     to any one section colour. */
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(36, 31, 25, 0.025) 0,
+      rgba(36, 31, 25, 0.025) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    var(--surface);
   border: 1px solid var(--spine);
   border-radius: var(--radius);
   padding: 1rem;
@@ -576,10 +605,14 @@ input[type="radio"] {
 
 .plot-card {
   border: 1px solid var(--surface-alt);
+  border-left: 3px solid var(--primary);
   border-radius: var(--radius);
   padding: 0.75rem;
   min-width: 0;
   /* let charts shrink inside the grid instead of overflowing */
+  /* Same soft bottom-right inset as a stat tile, in plain ink rather than a
+     section accent — a plot card isn't one of Home's four named sections. */
+  box-shadow: inset -8px -8px 11px -6px rgba(36, 31, 25, 0.1);
 }
 
 .plot-card__header {
@@ -601,6 +634,7 @@ input[type="radio"] {
    own affordances (see `plot-card--content` handling in PanelEditor). */
 .plot-card--content {
   border-color: transparent;
+  box-shadow: none;
   padding: 0.25rem 0.75rem;
 }
 
@@ -892,28 +926,20 @@ input[type="radio"] {
   padding: 1rem 1.1rem 1.15rem;
 }
 
-/* A coloured spine per card, so the two columns read as different things. */
-.card-block--profile {
-  border-top: 4px solid var(--tone-forest);
-}
-
-.card-block--health {
-  border-top: 4px solid var(--tone-plum);
-}
-
 .card-block--records {
-  border-top: 4px solid var(--sunrise);
   margin-bottom: var(--gap);
 }
 
 .card-block--zones {
-  border-top: 4px solid var(--tone-terracotta);
   margin-bottom: var(--gap);
 }
 
 .card-block--sync {
-  border-top: 4px solid var(--tone-blue);
   margin-bottom: var(--gap);
+}
+
+.card-block--welcome {
+  margin: 1.5rem 0;
 }
 
 .card-block__title {
@@ -924,6 +950,66 @@ input[type="radio"] {
   font-weight: 700;
   color: var(--text);
   margin: 0 0 0.75rem;
+}
+
+/*
+ * Race-Print section header: every named `card-block` on the site — not just
+ * Home's four dashboard sections — gets one solid, full-width accent bar bled
+ * to the card's own edges via negative margins matching its padding —
+ * `overflow: hidden` on the card clips the bar's square corners to the card's
+ * own radius, so no radius is needed on the bar itself. The title text grows
+ * to fill the middle, pushing the small print-registration mark to the right.
+ */
+.card-block--profile,
+.card-block--health,
+.card-block--zones,
+.card-block--records,
+.card-block--sync,
+.card-block--welcome {
+  overflow: hidden;
+}
+
+.card-block--profile > .card-block__title,
+.card-block--health > .card-block__title,
+.card-block--zones > .card-block__title,
+.card-block--records > .card-block__title,
+.card-block--sync > .card-block__title,
+.card-block--welcome > .card-block__title {
+  margin: -1rem -1.1rem 1rem;
+  padding: 0.6rem 1rem;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.95rem;
+}
+
+.card-block--profile > .card-block__title { background: var(--tone-forest); }
+.card-block--health > .card-block__title { background: var(--tone-plum); }
+.card-block--zones > .card-block__title { background: var(--tone-terracotta); }
+.card-block--records > .card-block__title { background: var(--sunrise); }
+.card-block--sync > .card-block__title { background: var(--tone-blue); }
+.card-block--welcome > .card-block__title { background: var(--tone-forest); }
+
+.card-block__title-text {
+  flex: 1 1 auto;
+}
+
+/* A tiny checkerboard, print-registration-style mark — restrained, not a new
+   icon language: just two rows of a diagonal check pattern at low opacity.
+   Shared by every accent-bar title, whether it names the mark as its own
+   element (`card-block__title-mark`) or generates it as a bar's `::after`
+   (`explainer__title`). */
+.card-block__title-mark,
+.explainer__title::after {
+  width: 0.55rem;
+  height: 0.55rem;
+  flex-shrink: 0;
+  opacity: 0.6;
+  background-image:
+    linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%),
+    linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%);
+  background-position: 0 0, 0.275rem 0.275rem;
+  background-size: 0.275rem 0.275rem;
 }
 
 .card-block__subtitle {
@@ -989,6 +1075,9 @@ input[type="radio"] {
 }
 
 .tile {
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
@@ -998,6 +1087,55 @@ input[type="radio"] {
   border-left: 4px solid var(--spine);
   background: var(--surface-alt);
   min-width: 0;
+  /* A soft colour inset along the bottom-right inner edge, in the tile's own
+     accent — negative offsets put an inset shadow's dark band on the far
+     side from the offset, which is what puts it bottom-right here. Sits
+     behind the print texture and the tile's own content (see `.tile::before`
+     and `z-index: 0` above). */
+  box-shadow: inset -8px -8px 11px -6px rgba(var(--tile-accent-rgb, 36, 31, 25), 0.28);
+}
+
+/* The print texture layer: a pseudo-element rather than a background image, so
+   it can sit between the tile's own fill and its text (negative z-index,
+   scoped to the tile's stacking context) without ever affecting layout. */
+.tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Vertical fine-line grain — the default texture, for plain/standard tiles. */
+.tile--grain::before {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(var(--tile-accent-rgb, 36, 31, 25), 0.05) 0,
+    rgba(var(--tile-accent-rgb, 36, 31, 25), 0.05) 1px,
+    transparent 1px,
+    transparent 5px
+  );
+}
+
+/* Restrained diagonal hatch — highlight, threshold and personal-best tiles. */
+.tile--hatch::before {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(var(--tile-accent-rgb, 36, 31, 25), 0.07) 0,
+    rgba(var(--tile-accent-rgb, 36, 31, 25), 0.07) 1px,
+    transparent 1px,
+    transparent 6px
+  );
+}
+
+/* Subtle dot-stipple — secondary/context tiles (a value derived from, or
+   unlocked by, another). */
+.tile--dot::before {
+  background-image: radial-gradient(
+    rgba(var(--tile-accent-rgb, 36, 31, 25), 0.18) 1px,
+    transparent 1.4px
+  );
+  background-size: 7px 7px;
 }
 
 .tile__label {
@@ -1043,54 +1181,32 @@ input[type="radio"] {
   color: var(--muted);
 }
 
+/* One tone per Race-Print section — a card only ever uses its own section's
+   tone, so these double as "which section is this tile in" and "what colour
+   is its texture/inset shadow" (via `--tile-accent-rgb`). */
 .tile--forest {
+  --tile-accent-rgb: var(--tone-forest-rgb);
   border-left-color: var(--tone-forest);
   background: var(--tone-forest-tint);
 }
 
-.tile--moss {
-  border-left-color: var(--moss);
-  background: var(--tone-forest-tint);
-}
-
 .tile--terracotta {
+  --tile-accent-rgb: var(--tone-terracotta-rgb);
   border-left-color: var(--tone-terracotta);
   background: var(--tone-terracotta-tint);
 }
 
-.tile--sunrise {
-  border-left-color: var(--sunrise);
-  background: var(--tone-terracotta-tint);
+.tile--plum {
+  --tile-accent-rgb: var(--tone-plum-rgb);
+  border-left-color: var(--tone-plum);
+  background: var(--tone-plum-tint);
 }
 
-.tile--amber {
-  border-left-color: var(--sunrise);
-  background: var(--tone-terracotta-tint);
-}
-
+/* Neutral — the hero's email tile only, which strips this down to plain text
+   anyway (see `.hero__email .tile`). */
 .tile--slate {
   border-left-color: var(--tone-blue);
   background: var(--tone-blue-tint);
-}
-
-.tile--teal {
-  border-left-color: var(--tone-blue);
-  background: var(--tone-blue-tint);
-}
-
-.tile--plum {
-  border-left-color: var(--tone-plum);
-  background: var(--tone-plum-tint);
-}
-
-.tile--rose {
-  border-left-color: var(--tone-plum);
-  background: var(--tone-plum-tint);
-}
-
-.tile--grey {
-  border-left-color: var(--spine);
-  background: var(--surface-alt);
 }
 
 .tile--editable {
@@ -1131,14 +1247,35 @@ input[type="radio"] {
   gap: 0.6rem;
 }
 
+/* Records are personal bests, so every one carries the diagonal "highlight"
+   hatch — see the same texture on `.tile--hatch`. */
 .record {
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
   padding: 0.6rem 0.75rem;
   border-radius: 8px;
-  background: var(--tone-terracotta-tint);
+  background: var(--sunrise-tint);
   border-left: 4px solid var(--sunrise);
+  box-shadow: inset -8px -8px 11px -6px rgba(var(--sunrise-rgb), 0.28);
+}
+
+.record::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(var(--sunrise-rgb), 0.09) 0,
+    rgba(var(--sunrise-rgb), 0.09) 1px,
+    transparent 1px,
+    transparent 6px
+  );
 }
 
 .record__distance {
@@ -1323,6 +1460,12 @@ input[type="radio"] {
   margin: 0.35rem 0 0.6rem;
 }
 
+/* The last-import date, in the same blue as the section it reports on. */
+.sync__last {
+  color: var(--tone-blue);
+  font-weight: 600;
+}
+
 /* --- Progress bar ---------------------------------------------------------
  *
  * Replaces `<progress>`, which renders as OS chrome and ignores almost every
@@ -1485,6 +1628,9 @@ input[type="radio"] {
   padding: 0.85rem;
   text-decoration: none;
   color: var(--text);
+  /* A hint of the same tactile inset as a stat tile — plain ink, since an
+     athlete's own page can be about anything and has no fixed accent. */
+  box-shadow: inset -8px -8px 11px -6px rgba(36, 31, 25, 0.1);
 }
 
 .card:hover {
@@ -1689,11 +1835,6 @@ input[type="radio"] {
 
 /* --- First run: the email question --------------------------------------- */
 
-.card-block--welcome {
-  border-top: 4px solid var(--tone-forest);
-  margin: 1.5rem 0;
-}
-
 .welcome__title {
   font-size: 1.5rem;
   border-bottom: 4px solid var(--sunrise);
@@ -1738,16 +1879,30 @@ input[type="radio"] {
 .explainer {
   background: var(--surface);
   border: 1px solid var(--spine);
-  border-top: 4px solid var(--tone-blue);
   border-radius: var(--radius);
   padding: 1rem 1.1rem 1.2rem;
   margin: 1.25rem 0 2rem;
+  overflow: hidden;
 }
 
+/* Same solid accent-bar treatment as a `card-block__title` (see the Home
+   screen), under this section's own class names. */
 .explainer__title {
-  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  margin: -1rem -1.1rem 1rem;
+  padding: 0.6rem 1rem;
+  background: var(--tone-blue);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.95rem;
   font-weight: 700;
-  margin: 0 0 0.35rem;
+}
+
+.explainer__title::after {
+  content: "";
+  margin-left: auto;
 }
 
 .explainer__lede {
@@ -1763,25 +1918,48 @@ input[type="radio"] {
 }
 
 .step {
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
   padding: 0.75rem 0.85rem;
   border-radius: 8px;
   border-left: 4px solid var(--spine);
   background: var(--surface-alt);
+  /* Same texture + inset-shadow recipe as `.tile`, in this tile's own accent. */
+  box-shadow: inset -8px -8px 11px -6px rgba(var(--step-accent-rgb, 36, 31, 25), 0.28);
+}
+
+.step::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(var(--step-accent-rgb, 36, 31, 25), 0.05) 0,
+    rgba(var(--step-accent-rgb, 36, 31, 25), 0.05) 1px,
+    transparent 1px,
+    transparent 5px
+  );
 }
 
 .step--forest {
+  --step-accent-rgb: var(--tone-forest-rgb);
   border-left-color: var(--tone-forest);
   background: var(--tone-forest-tint);
 }
 
 .step--terracotta {
+  --step-accent-rgb: var(--tone-terracotta-rgb);
   border-left-color: var(--tone-terracotta);
   background: var(--tone-terracotta-tint);
 }
 
 .step--sunrise {
+  --step-accent-rgb: var(--sunrise-rgb);
   border-left-color: var(--sunrise);
-  background: var(--tone-terracotta-tint);
+  background: var(--sunrise-tint);
 }
 
 .step__icon {
@@ -1959,9 +2137,10 @@ input[type="radio"] {
 }
 
 /* Week totals, to the right of the days: cycling on the left, running on the
-   right, both always shown (even at zero) so the columns don't shift week to
-   week. Grey rather than tone-colored — the tag above each says which sport it
-   is, so color isn't carrying that meaning too. */
+   right, both always shown (even at zero) and each a fixed width, so the
+   columns don't shift week to week regardless of how many digits that week's
+   numbers run to. Grey rather than tone-colored — the tag above each says
+   which sport it is, so color isn't carrying that meaning too. */
 .training-week__summary {
   flex-shrink: 0;
   display: flex;
@@ -1969,7 +2148,8 @@ input[type="radio"] {
 }
 
 .week-summary {
-  min-width: 4.75rem;
+  width: 5.5rem;
+  flex-shrink: 0;
   padding: 0.4rem 0.55rem;
   display: flex;
   flex-direction: column;
@@ -1980,6 +2160,11 @@ input[type="radio"] {
   font-variant-numeric: tabular-nums;
   background: var(--surface-alt);
   color: var(--text);
+  /* The same soft inner shadow as a stat tile, in plain ink: this box is
+     deliberately hue-free (see the comment on `.training-week__summary`), so
+     no section accent to draw it from, and it is too small and dense with
+     numbers for the print texture to stay legible. */
+  box-shadow: inset -6px -6px 8px -5px rgba(36, 31, 25, 0.14);
 }
 
 .week-summary__tag {
@@ -1995,9 +2180,14 @@ input[type="radio"] {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .week-summary__icon {
+  flex-shrink: 0;
+  width: 0.9rem;
   font-size: 0.75rem;
 }
 

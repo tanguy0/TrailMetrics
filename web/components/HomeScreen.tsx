@@ -4,7 +4,7 @@
  * Home: who you are, what your history adds up to, and how your form is trending.
  *
  * Two summary cards side by side — Profile (what you have run) and Health (what
- * you have told us) — then the latest activity, the last 20 weeks of volume, and the
+ * you have told us) — then the latest activity, the last 30 weeks of volume, and the
  * same window of power-to-heart-rate.
  *
  * The charts are not bespoke plots. They are ordinary `metric_trend` panels posted
@@ -19,7 +19,7 @@
  * returning session, which never passes through the OAuth callback again.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 import { ChartView } from "@/components/ChartView";
@@ -51,7 +51,7 @@ import type {
 } from "@/lib/types";
 
 const POLL_MS = 2000;
-const WEEKS_SHOWN = 20;
+const WEEKS_SHOWN = 30;
 
 /**
  * How stale the last import has to be before opening the app triggers another.
@@ -246,9 +246,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
           an account created before it existed, or a skipped `/welcome`. */}
       {athlete.needs_email && (
         <section className="card-block card-block--welcome">
-          <h2 className="card-block__title">
-            <span aria-hidden="true">✉️</span> {t("email.missing")}
-          </h2>
+          <SectionTitle icon="✉️">{t("email.missing")}</SectionTitle>
           <p className="muted">{t("email.body")}</p>
           <EmailForm
             strings={strings}
@@ -278,9 +276,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
 
       {/* Your data: the import controls, then what the data most recently says. */}
       <section className="card-block card-block--sync">
-        <h2 className="card-block__title">
-          <span aria-hidden="true">🔄</span> {t("home.import.title")}
-        </h2>
+        <SectionTitle icon="🔄">{t("home.import.title")}</SectionTitle>
 
         <SyncControls
           athlete={athlete}
@@ -421,13 +417,26 @@ function isoDate(date: Date): string {
 
 // --- Profile ---------------------------------------------------------------
 
+/**
+ * The colored header bar for a Race-Print accent section (History, Health,
+ * Performance, Records) — an icon, the title, and a small print-registration
+ * mark pinned to the far right by the title text growing to fill the middle.
+ */
+function SectionTitle({ icon, children }: { icon: string; children: ReactNode }) {
+  return (
+    <h2 className="card-block__title">
+      <span aria-hidden="true">{icon}</span>
+      <span className="card-block__title-text">{children}</span>
+      <span className="card-block__title-mark" aria-hidden="true" />
+    </h2>
+  );
+}
+
 function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
   const { profile, records } = summary;
   return (
     <section className="card-block card-block--profile">
-      <h2 className="card-block__title">
-        <span aria-hidden="true">🏃</span> {t("home.profile.title")}
-      </h2>
+      <SectionTitle icon="🏃">{t("home.profile.title")}</SectionTitle>
 
       <div className="tile-grid tile-grid--four">
         <Tile
@@ -436,34 +445,35 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
           value={String(profile.activity_count)}
         />
         <Tile
-          tone="terracotta"
+          tone="forest"
           label={t("home.profile.total_distance")}
           value={formatNumber(profile.total_distance_m / 1000, 0)}
           unit={t("common.km")}
         />
         <Tile
-          tone="sunrise"
+          tone="forest"
           label={t("home.profile.total_elevation")}
           value={formatNumber(profile.total_elevation_gain_m, 0)}
           unit={t("common.metres")}
         />
         <Tile
-          tone="moss"
+          tone="forest"
           label={t("home.profile.total_time")}
           value={formatHms(profile.total_moving_s)}
         />
         <Tile
-          tone="slate"
+          tone="forest"
           label={t("home.profile.oldest")}
           value={formatDate(profile.oldest_activity)}
         />
         <Tile
-          tone="slate"
+          tone="forest"
           label={t("home.profile.newest")}
           value={formatDate(profile.newest_activity)}
         />
         <Tile
-          tone="plum"
+          tone="forest"
+          variant="hatch"
           label={t("home.profile.furthest")}
           value={
             profile.furthest_activity?.distance_m != null
@@ -474,7 +484,8 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
           footnote={formatDate(profile.furthest_activity?.date ?? null)}
         />
         <Tile
-          tone="teal"
+          tone="forest"
+          variant="hatch"
           label={t("home.profile.longest")}
           value={formatHms(profile.longest_activity?.moving_s)}
           footnote={formatDate(profile.longest_activity?.date ?? null)}
@@ -495,9 +506,7 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
 function RecordsCard({ records, t }: { records: HomeRecord[]; t: T }) {
   return (
     <section className="card-block card-block--records">
-      <h2 className="card-block__title">
-        <span aria-hidden="true">🏅</span> {t("home.profile.records")}
-      </h2>
+      <SectionTitle icon="🏅">{t("home.profile.records")}</SectionTitle>
       {records.length ? (
         <div className="record-grid">
           {records.map((record) => (
@@ -532,13 +541,11 @@ function HealthCard({
 
   return (
     <section className="card-block card-block--health">
-      <h2 className="card-block__title">
-        <span aria-hidden="true">❤️</span> {t("home.health.title")}
-      </h2>
+      <SectionTitle icon="❤️">{t("home.health.title")}</SectionTitle>
 
       <div className="tile-grid tile-grid--two tile-grid--square">
         <EditableTile
-          tone="rose"
+          tone="plum"
           label={t("home.health.age")}
           value={athlete.age != null ? String(athlete.age) : null}
           unit={athlete.age != null ? t("common.years") : undefined}
@@ -556,14 +563,15 @@ function HealthCard({
         />
 
         <Tile
-          tone="amber"
+          tone="plum"
           label={t("home.health.experience")}
           value={experience != null ? formatNumber(experience, 1) : "—"}
           unit={experience != null ? t("common.years") : undefined}
         />
 
         <EditableTile
-          tone="forest"
+          tone="plum"
+          variant="dot"
           label={t("home.health.weight")}
           value={athlete.weight_kg != null ? formatNumber(athlete.weight_kg, 1) : null}
           unit={athlete.weight_kg != null ? t("common.kg") : undefined}
@@ -576,7 +584,7 @@ function HealthCard({
         />
 
         <EditableTile
-          tone="teal"
+          tone="plum"
           label={t("home.health.height")}
           value={athlete.height_cm != null ? formatNumber(athlete.height_cm, 0) : null}
           unit={athlete.height_cm != null ? t("common.cm") : undefined}
@@ -623,13 +631,12 @@ function ZonesCard({
   t: T;
 }) {
   const bpmTile = (
-    tone: Tone,
     label: string,
     value: number | null,
     onCommit: (raw: string) => Promise<Athlete>,
   ) => (
     <EditableTile
-      tone={tone}
+      tone="terracotta"
       label={label}
       value={value != null ? String(value) : null}
       unit={value != null ? "bpm" : undefined}
@@ -643,14 +650,13 @@ function ZonesCard({
 
   return (
     <section className="card-block card-block--zones">
-      <h2 className="card-block__title">
-        <span aria-hidden="true">🎯</span> {t("home.zones.title")}
-      </h2>
+      <SectionTitle icon="🎯">{t("home.zones.title")}</SectionTitle>
       <p className="data-block__lede">{t("home.zones.subtitle")}</p>
 
       <div className="tile-grid">
         <EditableTile
-          tone="plum"
+          tone="terracotta"
+          variant="hatch"
           label={t("home.zones.vma")}
           value={vma != null ? formatPaceInput(vma) : null}
           unit={vma != null ? "/km" : undefined}
@@ -670,7 +676,10 @@ function ZonesCard({
         {VMA_PACE_ZONES.map((zone) => (
           <Tile
             key={zone.key}
-            tone="grey"
+            tone="terracotta"
+            // Threshold is the other headline number here, so it gets the same
+            // highlight hatch as VMA; the rest are secondary/derived from it.
+            variant={zone.key === "threshold" ? "hatch" : "dot"}
             label={t(`home.zones.pace_${zone.key}`)}
             value={vma != null ? vmaPaceRange(vma, zone.lowPct, zone.highPct) : "—"}
             unit={vma != null ? "/km" : undefined}
@@ -680,15 +689,15 @@ function ZonesCard({
       </div>
 
       <div className="tile-grid tile-grid--two">
-        {bpmTile("teal", t("home.zones.z1"), athlete.hr_zone1_end, (raw) =>
+        {bpmTile(t("home.zones.z1"), athlete.hr_zone1_end, (raw) =>
           updateProfile({ hr_zone1_end: raw === "" ? null : Number(raw) }))}
-        {bpmTile("forest", t("home.zones.z2"), athlete.hr_zone2_end, (raw) =>
+        {bpmTile(t("home.zones.z2"), athlete.hr_zone2_end, (raw) =>
           updateProfile({ hr_zone2_end: raw === "" ? null : Number(raw) }))}
-        {bpmTile("sunrise", t("home.zones.z3"), athlete.hr_zone3_end, (raw) =>
+        {bpmTile(t("home.zones.z3"), athlete.hr_zone3_end, (raw) =>
           updateProfile({ hr_zone3_end: raw === "" ? null : Number(raw) }))}
-        {bpmTile("terracotta", t("home.zones.z4"), athlete.hr_zone4_end, (raw) =>
+        {bpmTile(t("home.zones.z4"), athlete.hr_zone4_end, (raw) =>
           updateProfile({ hr_zone4_end: raw === "" ? null : Number(raw) }))}
-        {bpmTile("rose", t("home.zones.hr_max"), athlete.hr_max, (raw) =>
+        {bpmTile(t("home.zones.hr_max"), athlete.hr_max, (raw) =>
           updateProfile({ hr_max: raw === "" ? null : Number(raw) }))}
       </div>
     </section>
@@ -719,7 +728,7 @@ function LastActivityBlock({
   );
 }
 
-/** The last 20 weeks: distance and climb on one chart, across the full width. */
+/** The last 30 weeks: distance and climb on one chart, across the full width. */
 function RecentHistoryBlock({
   charts,
   hasData,
@@ -756,7 +765,7 @@ function RecentHistoryBlock({
   );
 }
 
-/** The last 20 weeks of power-to-heart-rate: recent form at a glance. */
+/** The last 30 weeks of power-to-heart-rate: recent form at a glance. */
 function RecentFormBlock({
   charts,
   hasData,
@@ -836,7 +845,7 @@ function SyncControls({
             Only {athlete.display_name} can import their own Strava data.
           </span>
           {athlete.sync.last_synced_at && (
-            <span className="muted">
+            <span className="muted sync__last">
               {t("home.import.last")} {formatDate(athlete.sync.last_synced_at)}
             </span>
           )}
@@ -845,7 +854,7 @@ function SyncControls({
         <div className="sync__actions">
           <button
             type="button"
-            className="button"
+            className="button button--blue"
             onClick={() => onImport(false)}
             disabled={busy}
           >
@@ -856,7 +865,7 @@ function SyncControls({
           {athlete.activity_count > 0 && (
             <button
               type="button"
-              className="button button--ghost"
+              className="button button--ghost button--blue"
               onClick={() => onImport(true)}
               disabled={busy}
               title={t("home.import.again_help")}
@@ -870,7 +879,7 @@ function SyncControls({
             </span>
           )}
           {athlete.sync.last_synced_at && (
-            <span className="muted">
+            <span className="muted sync__last">
               {t("home.import.last")} {formatDate(athlete.sync.last_synced_at)}
             </span>
           )}
@@ -890,25 +899,34 @@ function SyncControls({
 
 // --- Small presentational pieces -------------------------------------------
 
-type Tone =
-  | "forest" | "terracotta" | "sunrise" | "moss" | "slate"
-  | "plum" | "teal" | "rose" | "amber" | "grey";
+/** One per Race-Print section — a card only ever uses its own section's tone. */
+type Tone = "forest" | "terracotta" | "plum" | "slate";
+
+/**
+ * The print texture that tells tiles of the same tone apart: `grain` (the
+ * default) for a plain/standard value, `hatch` for a highlight, threshold or
+ * personal-best, `dot` for a value that is secondary to or derived from
+ * another tile.
+ */
+type Variant = "grain" | "hatch" | "dot";
 
 function Tile({
   tone,
+  variant = "grain",
   label,
   value,
   unit,
   footnote,
 }: {
   tone: Tone;
+  variant?: Variant;
   label: string;
   value: string;
   unit?: string;
   footnote?: string | null;
 }) {
   return (
-    <div className={`tile tile--${tone}`}>
+    <div className={`tile tile--${tone} tile--${variant}`}>
       <span className="tile__label">{label}</span>
       <span className="tile__value">
         {value}
@@ -929,6 +947,7 @@ function Tile({
  */
 function EditableTile({
   tone,
+  variant = "grain",
   label,
   value,
   unit,
@@ -938,6 +957,7 @@ function EditableTile({
   t,
 }: {
   tone: Tone;
+  variant?: Variant;
   label: string;
   value: string | null;
   unit?: string;
@@ -979,7 +999,7 @@ function EditableTile({
   };
 
   return (
-    <div className={`tile tile--${tone} tile--editable`}>
+    <div className={`tile tile--${tone} tile--${variant} tile--editable`}>
       <span className="tile__label">
         {label}
         {saving && <span className="tile__saving"> · {t("common.saving")}</span>}
