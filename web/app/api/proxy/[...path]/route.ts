@@ -11,7 +11,7 @@
 
 import { NextRequest } from "next/server";
 
-import { SESSION_COOKIE, VIEW_AS_COOKIE, apiBaseUrl } from "@/lib/session";
+import { LANG_COOKIE, SESSION_COOKIE, VIEW_AS_COOKIE, apiBaseUrl } from "@/lib/session";
 
 // Renders can take a while (a GAP fit is a real model fit), so allow well past the
 // default. Vercel caps this by plan; the API's own timeouts are the real bound.
@@ -26,6 +26,10 @@ const HOP_BY_HOP = new Set([
 async function forward(request: NextRequest, path: string[]): Promise<Response> {
   const target = new URL(`${apiBaseUrl()}/${path.join("/")}`);
   target.search = request.nextUrl.search;
+  // The browser bundle no longer knows the language — it's a server concern
+  // (see `lib/session.ts`'s `lang()`) — so this fills it in from the same
+  // cookie, keeping every proxied call in step with the server-rendered shell.
+  target.searchParams.set("lang", request.cookies.get(LANG_COOKIE)?.value || "en");
 
   const headers = new Headers();
   const contentType = request.headers.get("content-type");

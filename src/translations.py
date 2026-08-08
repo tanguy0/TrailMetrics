@@ -18,7 +18,7 @@ e.g. ``translate("panel.dropped_streamless", lang).format(count=12)``.
 """
 
 LANGUAGES = {"fr": "Français", "en": "English"}
-DEFAULT_LANG = "fr"
+DEFAULT_LANG = "en"
 
 # key -> {"en": ..., "fr": ...}
 TRANSLATIONS = {
@@ -761,6 +761,7 @@ TRANSLATIONS = {
     "ui.common.kg": {"en": "kg", "fr": "kg"},
     "ui.common.cm": {"en": "cm", "fr": "cm"},
     "ui.common.years": {"en": "years", "fr": "ans"},
+    "ui.common.hours": {"en": "h", "fr": "h"},
 
     # Home — profile card
     "ui.home.profile.title": {"en": "Athlete History", "fr": "Historique de l'athlète"},
@@ -769,7 +770,7 @@ TRANSLATIONS = {
     "ui.home.profile.newest": {"en": "Latest run", "fr": "Dernière sortie"},
     "ui.home.profile.total_distance": {"en": "Total distance", "fr": "Distance totale"},
     "ui.home.profile.total_elevation": {"en": "Total climb", "fr": "Dénivelé total"},
-    "ui.home.profile.total_time": {"en": "Time on feet", "fr": "Temps de course"},
+    "ui.home.profile.total_time": {"en": "Total time on feet", "fr": "Temps total de course"},
     "ui.home.profile.furthest": {"en": "Furthest run", "fr": "Sortie la plus longue"},
     "ui.home.profile.longest": {"en": "Longest run", "fr": "Sortie la plus durable"},
     "ui.home.profile.records": {"en": "Current records", "fr": "Records actuels"},
@@ -801,19 +802,30 @@ TRANSLATIONS = {
         "en": "Just for reference — nothing here feeds a calculation.",
         "fr": "Juste pour référence — rien ici n'alimente un calcul.",
     },
-    "ui.home.zones.z1": {"en": "End of Z1", "fr": "Fin Z1"},
-    "ui.home.zones.z2": {"en": "End of Z2", "fr": "Fin Z2"},
-    "ui.home.zones.z3": {"en": "End of Z3", "fr": "Fin Z3"},
-    "ui.home.zones.z4": {"en": "End of Z4", "fr": "Fin Z4"},
+    "ui.home.zones.z1": {"en": "Z1max", "fr": "Z1max"},
+    "ui.home.zones.z2": {"en": "Z2max", "fr": "Z2max"},
+    "ui.home.zones.z3": {"en": "Z3max", "fr": "Z3max"},
+    "ui.home.zones.z4": {"en": "Z4max", "fr": "Z4max"},
     "ui.home.zones.hr_max": {"en": "HRmax", "fr": "FCmax"},
     "ui.home.zones.vma": {"en": "VMA pace", "fr": "Allure VMA"},
-    "ui.home.zones.pace_z2": {"en": "Z2", "fr": "Z2"},
-    "ui.home.zones.pace_endurance": {"en": "Endurance", "fr": "Endurance"},
+    "ui.home.zones.pace_z2": {"en": "Easy endurance", "fr": "Endurance fondamentale"},
+    "ui.home.zones.pace_endurance": {"en": "Active Endurance", "fr": "Endurance active"},
     "ui.home.zones.pace_threshold": {"en": "Threshold", "fr": "Seuil"},
     "ui.home.zones.pace_intervals": {"en": "Intervals", "fr": "Intervalles"},
     "ui.home.zones.pace_reps": {"en": "Reps", "fr": "Répétitions"},
     "ui.home.zones.unlocked_by_vma": {
         "en": "Unlocked by giving VMA", "fr": "Débloqué en renseignant la VMA",
+    },
+    "ui.home.zones.unlocked_by_hrmax": {
+        "en": "Derived from HRmax", "fr": "Déduit de la FCmax",
+    },
+    "ui.home.zones.hr_map_title": {
+        "en": "Pace zones, mapped onto heart rate",
+        "fr": "Allures, projetées sur la fréquence cardiaque",
+    },
+    "ui.home.zones.hr_map_needs_hrmax": {
+        "en": "Set your HRmax above to see where each pace zone falls.",
+        "fr": "Renseignez votre FCmax ci-dessus pour voir où se situe chaque allure.",
     },
 
     # Home — last activity and the weekly volume chart

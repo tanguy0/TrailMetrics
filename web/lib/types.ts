@@ -339,6 +339,8 @@ export interface Athlete {
   hr_zone4_end: number | null;
   hr_max: number | null;
   vma_pace_s_per_km: number | null;
+  /** The athlete's chosen UI language — "en" or "fr". Always set. */
+  lang: string;
   /** Server's verdict on whether the email question has been answered. */
   needs_email: boolean;
   age: number | null;

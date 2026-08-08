@@ -17,6 +17,12 @@ export const SESSION_COOKIE = "tm_session";
 // athlete (from `tm_session`) is actually a coach — so it doesn't need to be
 // signed, just carried along. See api/deps.py's `current_athlete_id`.
 export const VIEW_AS_COOKIE = "tm_view_as";
+// The chosen UI language, mirroring the athlete's `lang` column so server
+// components (the root layout, `loadStrings()`) can pick the right strings
+// synchronously, without a DB round trip on every request. The database row is
+// still the durable, cross-device source of truth — see `/api/lang`, which
+// writes both — this cookie is only the fast path for *this* browser.
+export const LANG_COOKIE = "tm_lang";
 
 export function apiBaseUrl(): string {
   const url = process.env.TRAILMETRICS_API_URL;
@@ -34,7 +40,14 @@ export function appUrl(): string {
   return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
-export function lang(): string {
+/** Not exported: `LANG_COOKIE`'s value is only ever "en" or "fr" (set by
+ *  `/api/lang`), but be defensive against a stale or hand-edited cookie. */
+const KNOWN_LANGS = new Set(["en", "fr"]);
+
+export async function lang(): Promise<string> {
+  const store = await cookies();
+  const cookie = store.get(LANG_COOKIE)?.value;
+  if (cookie && KNOWN_LANGS.has(cookie)) return cookie;
   return process.env.NEXT_PUBLIC_LANG || "en";
 }
 
@@ -63,5 +76,16 @@ export function viewAsCookieOptions() {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/",
+  };
+}
+
+/** A year: long-lived like the choice it remembers, not tied to the session. */
+export function langCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 365 * 24 * 60 * 60,
   };
 }

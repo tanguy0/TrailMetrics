@@ -40,7 +40,7 @@ export default async function WelcomePage({
 async function fetchAthlete(session: string): Promise<Athlete | null> {
   try {
     const response = await fetch(
-      `${apiBaseUrl()}/auth/me?lang=${encodeURIComponent(lang())}`,
+      `${apiBaseUrl()}/auth/me?lang=${encodeURIComponent(await lang())}`,
       {
         headers: { authorization: `Bearer ${session}` },
         cache: "no-store",

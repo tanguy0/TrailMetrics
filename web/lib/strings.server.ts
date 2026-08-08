@@ -21,7 +21,7 @@ import type { UiStrings } from "./types";
 export async function loadStrings(): Promise<Strings> {
   try {
     const response = await fetch(
-      `${apiBaseUrl()}/ui-strings?lang=${encodeURIComponent(lang())}`,
+      `${apiBaseUrl()}/ui-strings?lang=${encodeURIComponent(await lang())}`,
       { next: { revalidate: 3600 } },
     );
     if (!response.ok) return {};

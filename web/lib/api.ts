@@ -29,8 +29,6 @@ import type {
   UiStrings,
 } from "./types";
 
-const LANG = process.env.NEXT_PUBLIC_LANG || "en";
-
 export class ApiError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -47,7 +45,9 @@ async function request<T>(
   init: RequestInit & { query?: Record<string, string> } = {},
 ): Promise<T> {
   const url = new URL(`/api/proxy${path}`, window.location.origin);
-  url.searchParams.set("lang", LANG);
+  // The proxy fills in `lang` itself from the athlete's saved preference (or
+  // the default), so every client call agrees with the server-rendered shell
+  // without the browser bundle having to know or carry it.
   for (const [key, value] of Object.entries(init.query ?? {})) {
     url.searchParams.set(key, value);
   }
@@ -117,7 +117,7 @@ export const updateProfile = (
     Athlete,
     | "weight_kg" | "birthdate" | "height_cm" | "email"
     | "hr_zone1_end" | "hr_zone2_end" | "hr_zone3_end" | "hr_zone4_end"
-    | "hr_max" | "vma_pace_s_per_km"
+    | "hr_max" | "vma_pace_s_per_km" | "lang"
   >>,
 ) =>
   request<Athlete>("/auth/me", {

@@ -48,6 +48,9 @@ class Athlete:
     hr_zone4_end: Optional[int] = None
     hr_max: Optional[int] = None
     vma_pace_s_per_km: Optional[float] = None
+    # The UI language the athlete has chosen. Always set — see the schema
+    # column's comment for why this, unlike the fields above, is never `None`.
+    lang: str = "en"
 
     @property
     def display_name(self) -> str:
@@ -122,6 +125,10 @@ class AthleteRepository(ABC):
     @abstractmethod
     def set_email(self, athlete_id: int, email: Optional[str]) -> None:
         """Set the athlete's email address, which Strava never provides."""
+
+    @abstractmethod
+    def set_lang(self, athlete_id: int, lang: str) -> None:
+        """Set the athlete's preferred UI language."""
 
     @abstractmethod
     def set_zones(

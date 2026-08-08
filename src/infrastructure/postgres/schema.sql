@@ -59,6 +59,13 @@ alter table athletes add column if not exists hr_zone4_end integer;
 alter table athletes add column if not exists hr_max integer;
 alter table athletes add column if not exists vma_pace_s_per_km double precision;
 
+-- The UI language the athlete has chosen, read by every endpoint that returns
+-- translated text (see api/deps.py's `language` dependency). Defaults to
+-- English for every existing and new account; unlike the self-reported fields
+-- above there is no meaningful "unset" state, so this is NOT NULL rather than
+-- gated on presence.
+alter table athletes add column if not exists lang text not null default 'en';
+
 -- Strava tokens, encrypted application-side (Fernet) before they get here.
 create table if not exists strava_credentials (
     athlete_id        bigint primary key references athletes(id) on delete cascade,

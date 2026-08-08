@@ -184,6 +184,7 @@ def athlete_payload(
         "hr_zone4_end": athlete.hr_zone4_end,
         "hr_max": athlete.hr_max,
         "vma_pace_s_per_km": athlete.vma_pace_s_per_km,
+        "lang": athlete.lang,
         # Derived rather than left to the client to infer from a null email, so
         # "have they answered?" has one definition.
         "needs_email": athlete.needs_email,

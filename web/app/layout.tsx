@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Sidebar } from "@/components/Sidebar";
 import { lang, readSession } from "@/lib/session";
 import { loadStrings } from "@/lib/strings.server";
@@ -23,12 +24,17 @@ export default async function RootLayout({
   const strings = signedIn ? await loadStrings() : {};
 
   return (
-    <html lang={lang()}>
+    <html lang={await lang()}>
       <body>
         {signedIn ? (
           <div className="shell">
             <Sidebar strings={strings} />
-            <div className="shell__content">{children}</div>
+            <div className="shell__content">
+              <div className="shell__topbar">
+                <LanguageSwitcher />
+              </div>
+              {children}
+            </div>
           </div>
         ) : (
           children

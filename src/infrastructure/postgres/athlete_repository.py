@@ -42,7 +42,7 @@ class PostgresAthleteRepository(AthleteRepository):
                 updated_at = now()
             returning id, firstname, lastname, profile_url, weight_kg,
                       birthdate, height_cm, email, hr_zone1_end, hr_zone2_end,
-                      hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km
+                      hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km, lang
             """,
             (athlete.id, athlete.firstname, athlete.lastname,
              athlete.profile_url, athlete.weight_kg),
@@ -53,7 +53,7 @@ class PostgresAthleteRepository(AthleteRepository):
         row = self.db.fetch_one(
             "select id, firstname, lastname, profile_url, weight_kg, "
             "birthdate, height_cm, email, hr_zone1_end, hr_zone2_end, "
-            "hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km "
+            "hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km, lang "
             "from athletes where id = %s",
             (athlete_id,),
         )
@@ -63,7 +63,7 @@ class PostgresAthleteRepository(AthleteRepository):
         rows = self.db.fetch_all(
             "select id, firstname, lastname, profile_url, weight_kg, "
             "birthdate, height_cm, email, hr_zone1_end, hr_zone2_end, "
-            "hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km "
+            "hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km, lang "
             "from athletes order by firstname, lastname"
         )
         return [_athlete(row) for row in rows]
@@ -93,6 +93,12 @@ class PostgresAthleteRepository(AthleteRepository):
         self.db.execute(
             "update athletes set email = %s, updated_at = now() where id = %s",
             (cleaned, athlete_id),
+        )
+
+    def set_lang(self, athlete_id: int, lang: str) -> None:
+        self.db.execute(
+            "update athletes set lang = %s, updated_at = now() where id = %s",
+            (lang, athlete_id),
         )
 
     def set_zones(
@@ -213,6 +219,7 @@ def _athlete(row) -> Athlete:
         hr_zone4_end=row.get("hr_zone4_end"),
         hr_max=row.get("hr_max"),
         vma_pace_s_per_km=row.get("vma_pace_s_per_km"),
+        lang=row.get("lang") or "en",
     )
 
 

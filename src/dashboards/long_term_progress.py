@@ -52,12 +52,16 @@ def build_long_term_progress(oldest: date, newest: date, lang: str = "en") -> Pa
         icon="📈",
         builtin_key=LONG_TERM_PROGRESS_KEY,
         panels=[
-            # 1. Records — all-time, so one window over the whole history.
+            # 1. Records — all-time, so one window over the whole history. One
+            #    chart and one table, not a real side-by-side pair, so this is
+            #    columns=1 like Terrain and Efficiency below — a `columns=2`
+            #    grid left the chart at half width with nothing to its right,
+            #    since the table forces itself onto its own full-width row.
             PanelSpec(
                 title=translate("ltp.section.records", lang),
                 description=translate("ltp.section.records.help", lang),
                 source=whole_history(),
-                columns=2,
+                columns=1,
                 plots=[
                     PlotSpec(plot_type="pr_progression", params={
                         "distances": ["5 km", "10 km", "Semi", "Marathon"],

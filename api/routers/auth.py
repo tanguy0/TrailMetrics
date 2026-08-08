@@ -35,6 +35,7 @@ from api.deps import (
 from api.security import create_session_token
 from api.serialization import athlete_payload
 from src.domain.ports.storage import Athlete
+from src.translations import LANGUAGES
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -113,6 +114,11 @@ class ProfileUpdate(BaseModel):
     hr_zone4_end: Optional[int] = Field(default=None, ge=30, le=250)
     hr_max: Optional[int] = Field(default=None, ge=30, le=250)
     vma_pace_s_per_km: Optional[float] = Field(default=None, ge=90, le=900)
+
+    # Unlike the fields above, there is no "unset" state to clear it back to —
+    # see the `Athlete.lang` docstring — so this is validated against the
+    # known languages rather than just typed as `Optional[str]` and trusted.
+    lang: Optional[str] = None
 
     model_config = {"extra": "forbid"}
 
@@ -209,6 +215,15 @@ def update_me(
     if "email" in touched:
         athletes.set_email(athlete.id, payload.email)
         athlete.email = payload.email
+
+    if "lang" in touched:
+        if payload.lang not in LANGUAGES:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Unknown language: {payload.lang!r}",
+            )
+        athletes.set_lang(athlete.id, payload.lang)
+        athlete.lang = payload.lang
 
     zone_fields = (
         "hr_zone1_end", "hr_zone2_end", "hr_zone3_end", "hr_zone4_end",

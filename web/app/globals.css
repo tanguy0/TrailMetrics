@@ -134,6 +134,54 @@ h4 {
   min-width: 0;
 }
 
+/* Top right of the content pane (not the viewport — the sidebar already owns
+   the actual top-left, and on the mobile layout the sidebar becomes a
+   horizontal bar that a viewport-fixed element would collide with). */
+.shell__topbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.75rem 1.25rem 0;
+}
+
+.lang-switch {
+  display: inline-flex;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  background: var(--surface);
+  border: 1px solid var(--spine);
+  border-radius: 999px;
+}
+
+.lang-switch__option {
+  padding: 0.25rem 0.6rem;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.lang-switch__option:hover:not(:disabled) {
+  background: var(--surface-alt);
+}
+
+.lang-switch__option--active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.lang-switch__option--active:hover {
+  background: var(--primary);
+}
+
+.lang-switch__option:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -588,19 +636,21 @@ input[type="radio"] {
   grid-template-columns: 1fr;
 }
 
+/* `auto-fit` rather than a flat `repeat(2, ...)`: an empty track collapses to
+   0 width and the remaining track's `1fr` max takes the freed space, so two
+   plots still sit side by side when there's room for both, but a single
+   leftover plot (the other one was removed, or is a `plot-card--wide` table
+   living in its own row) stretches to the panel's full width instead of
+   being stuck at half with a blank gap beside it. The `minmax` floor is
+   sized so exactly two columns fit a panel at the page's max width — any
+   narrower and it falls back to one, no separate breakpoint needed. */
 .plot-grid--two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr));
 }
 
 /* Tables are unreadable in a half-width column, so they span. */
 .plot-card--wide {
   grid-column: 1 / -1;
-}
-
-@media (max-width: 900px) {
-  .plot-grid--two {
-    grid-template-columns: 1fr;
-  }
 }
 
 .plot-card {
@@ -1106,30 +1156,8 @@ input[type="radio"] {
   pointer-events: none;
 }
 
-/* Vertical fine-line grain — the default texture, for plain/standard tiles. */
-.tile--grain::before {
-  background-image: repeating-linear-gradient(
-    90deg,
-    rgba(var(--tile-accent-rgb, 36, 31, 25), 0.05) 0,
-    rgba(var(--tile-accent-rgb, 36, 31, 25), 0.05) 1px,
-    transparent 1px,
-    transparent 5px
-  );
-}
-
-/* Restrained diagonal hatch — highlight, threshold and personal-best tiles. */
-.tile--hatch::before {
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(var(--tile-accent-rgb, 36, 31, 25), 0.07) 0,
-    rgba(var(--tile-accent-rgb, 36, 31, 25), 0.07) 1px,
-    transparent 1px,
-    transparent 6px
-  );
-}
-
-/* Subtle dot-stipple — secondary/context tiles (a value derived from, or
-   unlocked by, another). */
+/* Dot-stipple — the one print texture every Home tile uses, regardless of
+   section or tone, for a uniform look across the page. */
 .tile--dot::before {
   background-image: radial-gradient(
     rgba(var(--tile-accent-rgb, 36, 31, 25), 0.18) 1px,
@@ -1144,6 +1172,13 @@ input[type="radio"] {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--muted);
+}
+
+/* "Z1max"/"HRmax" read as one word with a meaningful lowercase "max" —
+   uppercasing it like every other label would flatten that to "Z1MAX". */
+.tile__label--mixed-case {
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 /* Values stay in ink: hue is the tile's accent, never the number itself. */
@@ -1238,6 +1273,95 @@ input[type="radio"] {
   font-weight: 700;
 }
 
+/* --- Heart-rate zone map ---------------------------------------------------
+   Pace zones plotted against %HRmax, full width of the Performance card,
+   just under the HR tiles. One tone (terracotta, this section's own) throughout
+   — the zone bands are a plain darkening ramp, not five separate hues. */
+
+.hr-map {
+  margin-top: 1.25rem;
+}
+
+/* A horizontal scroller rather than letting the chart's many labels crush
+   together on a narrow screen — same idiom as `.table-scroll`. */
+.hr-map__scroll {
+  overflow-x: auto;
+}
+
+.hr-map__chart {
+  min-width: 34rem;
+}
+
+.hr-map__zones {
+  position: relative;
+  height: 2.1rem;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--spine);
+}
+
+.hr-map__zone {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--tone-terracotta-rgb), var(--hr-map-zone-alpha));
+  border-right: 1px solid var(--surface);
+}
+
+.hr-map__zone--z1 { --hr-map-zone-alpha: 0.12; }
+.hr-map__zone--z2 { --hr-map-zone-alpha: 0.24; }
+.hr-map__zone--z3 { --hr-map-zone-alpha: 0.36; }
+.hr-map__zone--z4 { --hr-map-zone-alpha: 0.5; }
+.hr-map__zone--z5 { --hr-map-zone-alpha: 0.66; }
+
+.hr-map__zone-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Room for the pace bars to sit clear below the zone row, not on top of it —
+   the two are read together but are visually two different things. */
+.hr-map__paces {
+  position: relative;
+  height: 3rem;
+  margin-top: 0.4rem;
+}
+
+.hr-map__pace {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  padding: 0.2rem 0.15rem;
+  border-radius: 6px;
+  background: var(--tone-terracotta-tint);
+  border: 1px solid var(--tone-terracotta);
+  overflow: hidden;
+}
+
+.hr-map__pace-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--tone-terracotta);
+  text-align: center;
+  line-height: 1.1;
+}
+
+.hr-map__pace-range {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- Records -------------------------------------------------------------- */
 
 /* One tile per distance, across the full width — the numbers people look for. */
@@ -1247,8 +1371,7 @@ input[type="radio"] {
   gap: 0.6rem;
 }
 
-/* Records are personal bests, so every one carries the diagonal "highlight"
-   hatch — see the same texture on `.tile--hatch`. */
+/* Same dot-stipple texture as every other Home tile — see `.tile--dot`. */
 .record {
   position: relative;
   z-index: 0;

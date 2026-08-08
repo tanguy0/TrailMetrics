@@ -459,7 +459,8 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
         <Tile
           tone="forest"
           label={t("home.profile.total_time")}
-          value={formatHms(profile.total_moving_s)}
+          value={formatNumber(profile.total_moving_s / 3600, 0)}
+          unit={t("common.hours")}
         />
         <Tile
           tone="forest"
@@ -473,7 +474,6 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
         />
         <Tile
           tone="forest"
-          variant="hatch"
           label={t("home.profile.furthest")}
           value={
             profile.furthest_activity?.distance_m != null
@@ -485,7 +485,6 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
         />
         <Tile
           tone="forest"
-          variant="hatch"
           label={t("home.profile.longest")}
           value={formatHms(profile.longest_activity?.moving_s)}
           footnote={formatDate(profile.longest_activity?.date ?? null)}
@@ -571,7 +570,6 @@ function HealthCard({
 
         <EditableTile
           tone="plum"
-          variant="dot"
           label={t("home.health.weight")}
           value={athlete.weight_kg != null ? formatNumber(athlete.weight_kg, 1) : null}
           unit={athlete.weight_kg != null ? t("common.kg") : undefined}
@@ -608,10 +606,10 @@ function HealthCard({
  * plans quote them. The pace shown for the low end of the range comes first —
  * lower %VMA is the slower pace. */
 const VMA_PACE_ZONES: { key: string; lowPct: number; highPct: number }[] = [
-  { key: "z2", lowPct: 60, highPct: 70 },
-  { key: "endurance", lowPct: 70, highPct: 80 },
+  { key: "z2", lowPct: 60, highPct: 65 },
+  { key: "endurance", lowPct: 70, highPct: 75 },
   { key: "threshold", lowPct: 85, highPct: 90 },
-  { key: "intervals", lowPct: 95, highPct: 105 },
+  { key: "intervals", lowPct: 95, highPct: 100 },
   { key: "reps", lowPct: 105, highPct: 115 },
 ];
 
@@ -619,6 +617,33 @@ function vmaPaceRange(vmaSecondsPerKm: number, lowPct: number, highPct: number):
   const slow = vmaSecondsPerKm / (lowPct / 100);
   const fast = vmaSecondsPerKm / (highPct / 100);
   return `${formatPaceInput(slow)}–${formatPaceInput(fast)}`;
+}
+
+/**
+ * Each heart-rate zone's ceiling as a %HRmax — replaces what used to be four
+ * separately self-reported bpm values with one derived from HRmax alone, so
+ * there is only ever one number to keep up to date.
+ */
+const HR_ZONE_MAX_PCT: { key: "z1" | "z2" | "z3" | "z4"; pct: number }[] = [
+  { key: "z1", pct: 0.70 },
+  { key: "z2", pct: 0.77 },
+  { key: "z3", pct: 0.87 },
+  { key: "z4", pct: 0.91 },
+];
+
+/** Where each named pace zone's effort sits on the same %HRmax scale — the
+ * boundaries `HrZoneMap` draws, kept beside the tiles that read from it. */
+const HR_PACE_ZONES: { key: string; lowPct: number; highPct: number }[] = [
+  { key: "z2", lowPct: 68, highPct: 73 },
+  { key: "endurance", lowPct: 75, highPct: 81 },
+  { key: "threshold", lowPct: 84, highPct: 89 },
+  { key: "intervals", lowPct: 91, highPct: 94 },
+  { key: "reps", lowPct: 96, highPct: 100 },
+];
+
+/** `pct` as a 0–1 fraction of HRmax, truncated like a real monitor reads bpm. */
+function bpmAtPct(hrMax: number, pct: number): number {
+  return Math.trunc(hrMax * pct);
 }
 
 function ZonesCard({
@@ -630,23 +655,8 @@ function ZonesCard({
   onSaved: (athlete: Athlete) => void;
   t: T;
 }) {
-  const bpmTile = (
-    label: string,
-    value: number | null,
-    onCommit: (raw: string) => Promise<Athlete>,
-  ) => (
-    <EditableTile
-      tone="terracotta"
-      label={label}
-      value={value != null ? String(value) : null}
-      unit={value != null ? "bpm" : undefined}
-      input={{ type: "number", value: value?.toString() ?? "", min: 30, max: 250, step: 1 }}
-      onCommit={async (raw) => onSaved(await onCommit(raw))}
-      t={t}
-    />
-  );
-
   const vma = athlete.vma_pace_s_per_km;
+  const hrMax = athlete.hr_max;
 
   return (
     <section className="card-block card-block--zones">
@@ -656,7 +666,6 @@ function ZonesCard({
       <div className="tile-grid">
         <EditableTile
           tone="terracotta"
-          variant="hatch"
           label={t("home.zones.vma")}
           value={vma != null ? formatPaceInput(vma) : null}
           unit={vma != null ? "/km" : undefined}
@@ -677,9 +686,6 @@ function ZonesCard({
           <Tile
             key={zone.key}
             tone="terracotta"
-            // Threshold is the other headline number here, so it gets the same
-            // highlight hatch as VMA; the rest are secondary/derived from it.
-            variant={zone.key === "threshold" ? "hatch" : "dot"}
             label={t(`home.zones.pace_${zone.key}`)}
             value={vma != null ? vmaPaceRange(vma, zone.lowPct, zone.highPct) : "—"}
             unit={vma != null ? "/km" : undefined}
@@ -689,18 +695,110 @@ function ZonesCard({
       </div>
 
       <div className="tile-grid tile-grid--two">
-        {bpmTile(t("home.zones.z1"), athlete.hr_zone1_end, (raw) =>
-          updateProfile({ hr_zone1_end: raw === "" ? null : Number(raw) }))}
-        {bpmTile(t("home.zones.z2"), athlete.hr_zone2_end, (raw) =>
-          updateProfile({ hr_zone2_end: raw === "" ? null : Number(raw) }))}
-        {bpmTile(t("home.zones.z3"), athlete.hr_zone3_end, (raw) =>
-          updateProfile({ hr_zone3_end: raw === "" ? null : Number(raw) }))}
-        {bpmTile(t("home.zones.z4"), athlete.hr_zone4_end, (raw) =>
-          updateProfile({ hr_zone4_end: raw === "" ? null : Number(raw) }))}
-        {bpmTile(t("home.zones.hr_max"), athlete.hr_max, (raw) =>
-          updateProfile({ hr_max: raw === "" ? null : Number(raw) }))}
+        {HR_ZONE_MAX_PCT.map((zone) => (
+          <Tile
+            key={zone.key}
+            tone="terracotta"
+            mixedCase
+            label={t(`home.zones.${zone.key}`)}
+            value={hrMax != null ? String(bpmAtPct(hrMax, zone.pct)) : "—"}
+            unit={hrMax != null ? "bpm" : undefined}
+            footnote={t("home.zones.unlocked_by_hrmax")}
+          />
+        ))}
+        <EditableTile
+          tone="terracotta"
+          mixedCase
+          label={t("home.zones.hr_max")}
+          value={hrMax != null ? String(hrMax) : null}
+          unit={hrMax != null ? "bpm" : undefined}
+          input={{ type: "number", value: hrMax?.toString() ?? "", min: 30, max: 250, step: 1 }}
+          onCommit={async (raw) =>
+            onSaved(await updateProfile({ hr_max: raw === "" ? null : Number(raw) }))
+          }
+          t={t}
+        />
       </div>
+
+      <HrZoneMap hrMax={hrMax} t={t} />
     </section>
+  );
+}
+
+/** The map's visible window: below 60% is all Z1 and none of the pace zones
+ * ever reach it, so cropping there gives the part that matters the whole
+ * width instead of shrinking it into a corner. */
+const HR_MAP_MIN_PCT = 60;
+const HR_MAP_MAX_PCT = 100;
+
+function hrMapPosition(pct: number): number {
+  return ((pct - HR_MAP_MIN_PCT) / (HR_MAP_MAX_PCT - HR_MAP_MIN_PCT)) * 100;
+}
+
+/** The heart-rate zone bands the map's background shows — derived from
+ * `HR_ZONE_MAX_PCT` itself (plus the open-ended top zone above Z4max) so the
+ * tiles and the graph can never drift out of step with each other again. */
+const HR_MAP_BANDS: { key: string; label: string; endPct: number }[] = [
+  ...HR_ZONE_MAX_PCT.map((zone) => ({
+    key: zone.key,
+    label: zone.key.toUpperCase(),
+    endPct: zone.pct * 100,
+  })),
+  { key: "z5", label: "Z5", endPct: 100 },
+];
+
+/**
+ * Where each named pace zone's effort falls in heart rate — a picture, not
+ * another table, so the relationship between the two tile-grids above reads
+ * at a glance instead of being cross-referenced by hand.
+ */
+function HrZoneMap({ hrMax, t }: { hrMax: number | null; t: T }) {
+  return (
+    <div className="hr-map">
+      <h3 className="card-block__subtitle">{t("home.zones.hr_map_title")}</h3>
+      {hrMax == null ? (
+        <p className="muted">{t("home.zones.hr_map_needs_hrmax")}</p>
+      ) : (
+        <div className="hr-map__scroll">
+          <div className="hr-map__chart">
+            <div className="hr-map__zones">
+              {HR_MAP_BANDS.map((band, index) => {
+                const startPct = index === 0 ? HR_MAP_MIN_PCT : HR_MAP_BANDS[index - 1].endPct;
+                const left = hrMapPosition(startPct);
+                return (
+                  <div
+                    key={band.key}
+                    className={`hr-map__zone hr-map__zone--${band.key}`}
+                    style={{ left: `${left}%`, width: `${hrMapPosition(band.endPct) - left}%` }}
+                  >
+                    <span className="hr-map__zone-label">{band.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="hr-map__paces">
+              {HR_PACE_ZONES.map((zone) => {
+                const left = hrMapPosition(zone.lowPct);
+                return (
+                  <div
+                    key={zone.key}
+                    className="hr-map__pace"
+                    style={{ left: `${left}%`, width: `${hrMapPosition(zone.highPct) - left}%` }}
+                  >
+                    <span className="hr-map__pace-label">
+                      {t(`home.zones.pace_${zone.key}`)}
+                    </span>
+                    <span className="hr-map__pace-range">
+                      {bpmAtPct(hrMax, zone.lowPct / 100)}–{bpmAtPct(hrMax, zone.highPct / 100)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -902,32 +1000,29 @@ function SyncControls({
 /** One per Race-Print section — a card only ever uses its own section's tone. */
 type Tone = "forest" | "terracotta" | "plum" | "slate";
 
-/**
- * The print texture that tells tiles of the same tone apart: `grain` (the
- * default) for a plain/standard value, `hatch` for a highlight, threshold or
- * personal-best, `dot` for a value that is secondary to or derived from
- * another tile.
- */
-type Variant = "grain" | "hatch" | "dot";
-
 function Tile({
   tone,
-  variant = "grain",
   label,
   value,
   unit,
   footnote,
+  // "Z1max"/"HRmax" read as one word with a meaningful lowercase "max"; the
+  // label's default uppercasing would flatten that to "Z1MAX"/"HRMAX".
+  mixedCase,
 }: {
   tone: Tone;
-  variant?: Variant;
   label: string;
   value: string;
   unit?: string;
   footnote?: string | null;
+  mixedCase?: boolean;
 }) {
   return (
-    <div className={`tile tile--${tone} tile--${variant}`}>
-      <span className="tile__label">{label}</span>
+    // Every Home tile uses the same dot-stipple print texture — see `.tile--dot`.
+    <div className={`tile tile--${tone} tile--dot`}>
+      <span className={`tile__label${mixedCase ? " tile__label--mixed-case" : ""}`}>
+        {label}
+      </span>
       <span className="tile__value">
         {value}
         {unit && <span className="tile__unit">{unit}</span>}
@@ -947,7 +1042,6 @@ function Tile({
  */
 function EditableTile({
   tone,
-  variant = "grain",
   label,
   value,
   unit,
@@ -955,9 +1049,9 @@ function EditableTile({
   input,
   onCommit,
   t,
+  mixedCase,
 }: {
   tone: Tone;
-  variant?: Variant;
   label: string;
   value: string | null;
   unit?: string;
@@ -972,6 +1066,7 @@ function EditableTile({
   };
   onCommit: (raw: string) => Promise<void>;
   t: T;
+  mixedCase?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(input.value);
@@ -999,8 +1094,8 @@ function EditableTile({
   };
 
   return (
-    <div className={`tile tile--${tone} tile--${variant} tile--editable`}>
-      <span className="tile__label">
+    <div className={`tile tile--${tone} tile--dot tile--editable`}>
+      <span className={`tile__label${mixedCase ? " tile__label--mixed-case" : ""}`}>
         {label}
         {saving && <span className="tile__saving"> · {t("common.saving")}</span>}
       </span>
