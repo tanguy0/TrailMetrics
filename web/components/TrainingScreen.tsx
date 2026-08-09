@@ -61,6 +61,10 @@ const INITIAL_PAST_WEEKS = 4;
 const INITIAL_FUTURE_WEEKS = 1;
 const PAGE_WEEKS = 4;
 
+// Fixed display order within a day cell: note, then workout, then goal.
+// Completed sessions always render last (see `DayCell`'s JSX order).
+const KIND_ORDER: Record<PlannedItemKind, number> = { note: 0, workout: 1, goal: 2 };
+
 // --- Date helpers: everything here is local-calendar-date arithmetic on plain
 // "YYYY-MM-DD" strings, so there is no timezone shifting to reason about. ------
 
@@ -284,8 +288,8 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
     try {
       const created = await createPlannedItem({
         kind: item.kind,
-        date: todayIso,
-        end_date: todayIso,
+        date: item.date,
+        end_date: item.date,
         title: item.title,
         body: item.body,
         importance: item.importance,
@@ -589,7 +593,7 @@ function DayCell({
       </div>
 
       <div className="training-day__items">
-        {items.map((item) => {
+        {[...items].sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind]).map((item) => {
           const spansDays = item.end_date !== item.date;
           return (
             <div
