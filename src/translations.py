@@ -1031,6 +1031,7 @@ TRANSLATIONS = {
     },
     "ui.training.form.save": {"en": "Save", "fr": "Enregistrer"},
     "ui.training.form.delete": {"en": "Delete", "fr": "Supprimer"},
+    "ui.training.form.duplicate": {"en": "Duplicate", "fr": "Dupliquer"},
     "ui.training.form.importance_primary": {"en": "Primary", "fr": "Principal"},
     "ui.training.form.importance_secondary": {"en": "Secondary", "fr": "Secondaire"},
     "ui.training.form.end_date_label": {"en": "Until", "fr": "Jusqu'au"},

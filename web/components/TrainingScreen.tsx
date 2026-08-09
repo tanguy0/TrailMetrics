@@ -280,6 +280,24 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
     }
   };
 
+  const duplicateItem = async (item: PlannedItem) => {
+    try {
+      const created = await createPlannedItem({
+        kind: item.kind,
+        date: todayIso,
+        end_date: todayIso,
+        title: item.title,
+        body: item.body,
+        importance: item.importance,
+      });
+      setPlannedItems((current) => ({ ...current, [created.id]: created }));
+      setModal(null);
+    } catch (caught) {
+      setError((caught as Error).message);
+      throw caught;
+    }
+  };
+
   const removeItem = async (id: string) => {
     try {
       await deletePlannedItem(id);
@@ -380,6 +398,9 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
             saveEditedItem(modal.item.id, title, body, importance, endDate)
           }
           onDelete={() => removeItem(modal.item.id)}
+          onDuplicate={
+            modal.item.kind === "workout" ? () => duplicateItem(modal.item) : undefined
+          }
           t={t}
         />
       )}
@@ -643,6 +664,7 @@ function ItemForm({
   onCancel,
   onSave,
   onDelete,
+  onDuplicate,
   t,
 }: {
   title: string;
@@ -662,6 +684,7 @@ function ItemForm({
     endDate: string,
   ) => Promise<void>;
   onDelete?: () => Promise<void>;
+  onDuplicate?: () => Promise<void>;
   t: T;
 }) {
   const [draftKind, setDraftKind] = useState<PlannedItemKind>(fixedKind ?? "workout");
@@ -757,6 +780,23 @@ function ItemForm({
               }}
             >
               {t("training.form.delete")}
+            </button>
+          )}
+          {onDuplicate && (
+            <button
+              type="button"
+              className="button button--ghost"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await onDuplicate();
+                } catch {
+                  setBusy(false);
+                }
+              }}
+            >
+              {t("training.form.duplicate")}
             </button>
           )}
           <button
