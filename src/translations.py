@@ -850,6 +850,16 @@ TRANSLATIONS = {
         "en": "The route could not be fetched from Strava just now.",
         "fr": "Le parcours n'a pas pu être récupéré depuis Strava pour le moment.",
     },
+
+    # Session detail — comments
+    "ui.session.comments.placeholder": {
+        "en": "Add a comment…", "fr": "Ajouter un commentaire…",
+    },
+    "ui.session.comments.add": {"en": "Add", "fr": "Ajouter"},
+    "ui.session.comments.save": {"en": "Save", "fr": "Enregistrer"},
+    "ui.session.comments.cancel": {"en": "Cancel", "fr": "Annuler"},
+    "ui.session.comments.edit": {"en": "Edit", "fr": "Modifier"},
+    "ui.session.comments.delete": {"en": "Delete", "fr": "Supprimer"},
     "ui.home.form.title": {"en": "Recent form", "fr": "Forme récente"},
     "ui.home.form.subtitle": {
         "en": "Power per heartbeat, weekly, smoothed over four weeks. It rises when "

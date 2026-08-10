@@ -25,6 +25,9 @@ from src.domain.ports.storage import (
     StreamStore,
 )
 from src.domain.charts.ir import PlotOutput
+from src.infrastructure.postgres.activity_comment_repository import (
+    PostgresActivityCommentRepository,
+)
 from src.infrastructure.postgres.activity_repository import PostgresActivityRepository
 from src.infrastructure.postgres.athlete_repository import PostgresAthleteRepository
 from src.infrastructure.postgres.page_repository import PostgresPageRepository
@@ -121,6 +124,10 @@ def get_page_repository(athlete_id: int) -> PageRepository:
 
 def get_planned_item_repository(athlete_id: int) -> PostgresPlannedItemRepository:
     return PostgresPlannedItemRepository(get_database(), athlete_id)
+
+
+def get_activity_comment_repository(athlete_id: int) -> PostgresActivityCommentRepository:
+    return PostgresActivityCommentRepository(get_database(), athlete_id)
 
 
 def get_plot_output_repository(athlete_id: int) -> PostgresPlotOutputRepository:

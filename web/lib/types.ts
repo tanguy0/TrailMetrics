@@ -386,6 +386,14 @@ export interface ActivityCard {
   avg_hr: number | null;
 }
 
+export interface ActivityComment {
+  id: string;
+  activity_id: number;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface HomeProfile {
   activity_count: number;
   oldest_activity: string | null;

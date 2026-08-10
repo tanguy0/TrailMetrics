@@ -9,6 +9,7 @@
 "use client";
 
 import type {
+  ActivityComment,
   ActivitySummary,
   AssetUpload,
   Athlete,
@@ -155,6 +156,24 @@ export const getSyncStatus = () => request<SyncStatus>("/activities/sync");
 /** Any activity's route — the generalized form of `getLastActivityRoute`. */
 export const getActivityRoute = (activityId: number) =>
   request<RouteResult>(`/activities/${activityId}/route`);
+
+export const listComments = (activityId: number) =>
+  request<{ comments: ActivityComment[] }>(`/activities/${activityId}/comments`);
+
+export const createComment = (activityId: number, body: string) =>
+  request<ActivityComment>(`/activities/${activityId}/comments`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
+
+export const updateComment = (activityId: number, commentId: string, body: string) =>
+  request<ActivityComment>(`/activities/${activityId}/comments/${commentId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ body }),
+  });
+
+export const deleteComment = (activityId: number, commentId: string) =>
+  request<void>(`/activities/${activityId}/comments/${commentId}`, { method: "DELETE" });
 
 // --- Background computation ------------------------------------------------
 

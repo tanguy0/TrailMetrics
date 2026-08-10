@@ -252,6 +252,26 @@ alter table planned_items add column if not exists end_date date;
 create index if not exists planned_items_athlete_date_idx
     on planned_items (athlete_id, date);
 
+-- --- Activity comments -------------------------------------------------------
+
+-- Free-text notes an athlete attaches to one of their own completed activities.
+-- Multiple per activity, each independently editable and deletable. `activity_id`
+-- is not foreign-keyed to `activities` (nothing else in this schema references
+-- that composite-keyed table either) — a comment on an activity later re-synced
+-- or removed is harmless orphaned text, not a referential-integrity problem.
+create table if not exists activity_comments (
+    id          text primary key,
+    athlete_id  bigint not null references athletes(id) on delete cascade,
+    activity_id bigint not null,
+    body        text not null,
+    created_at  timestamptz not null default now(),
+    updated_at  timestamptz not null default now()
+);
+
+-- The detail card always queries "this athlete, this activity, oldest first".
+create index if not exists activity_comments_athlete_activity_idx
+    on activity_comments (athlete_id, activity_id, created_at);
+
 -- --- Uploaded images -------------------------------------------------------
 
 -- Images an athlete puts in a panel. Bytes live in Postgres rather than in the
@@ -286,3 +306,4 @@ alter table plot_outputs enable row level security;
 alter table precompute_jobs enable row level security;
 alter table planned_items enable row level security;
 alter table assets enable row level security;
+alter table activity_comments enable row level security;

@@ -19,12 +19,20 @@ import { useEffect, useState } from "react";
 
 import { ChartView } from "@/components/ChartView";
 import { RouteMap } from "@/components/RouteMap";
-import { getActivityRoute, renderPanel } from "@/lib/api";
+import {
+  createComment,
+  deleteComment,
+  getActivityRoute,
+  listComments,
+  renderPanel,
+  updateComment,
+} from "@/lib/api";
 import { formatDate, formatHms, formatNumber, formatPace } from "@/lib/format";
 import { sportTone } from "@/lib/sport";
 import type { Translate } from "@/lib/strings";
 import type {
   ActivityCard,
+  ActivityComment,
   ChartData,
   DataSourceSpec,
   PanelSpec,
@@ -113,6 +121,8 @@ export function SessionDetail({
         <span className="last-activity__date">{formatDate(activity.date)}</span>
       </p>
 
+      <CommentsSection activityId={activityId} t={t} />
+
       <dl className="metric-row">
         <Metric
           label={t("home.last.distance")}
@@ -172,6 +182,157 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div className="metric">
       <dt className="metric__label">{label}</dt>
       <dd className="metric__value">{value}</dd>
+    </div>
+  );
+}
+
+function CommentsSection({ activityId, t }: { activityId: number; t: Translate }) {
+  const [comments, setComments] = useState<ActivityComment[] | null>(null);
+  const [draft, setDraft] = useState("");
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    setComments(null);
+    listComments(activityId)
+      .then((result) => live && setComments(result.comments))
+      .catch(() => live && setComments([]));
+    return () => {
+      live = false;
+    };
+  }, [activityId]);
+
+  const handleAdd = async () => {
+    const body = draft.trim();
+    if (!body) return;
+    setPosting(true);
+    try {
+      const created = await createComment(activityId, body);
+      setComments((current) => [...(current ?? []), created]);
+      setDraft("");
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  return (
+    <div className="session-comments">
+      {comments?.map((comment) => (
+        <CommentRow
+          key={comment.id}
+          activityId={activityId}
+          comment={comment}
+          t={t}
+          onChange={(updated) =>
+            setComments((current) =>
+              (current ?? []).map((c) => (c.id === updated.id ? updated : c)),
+            )
+          }
+          onDelete={() =>
+            setComments((current) => (current ?? []).filter((c) => c.id !== comment.id))
+          }
+        />
+      ))}
+      <div className="session-comments__form">
+        <textarea
+          className="session-comments__input"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={t("session.comments.placeholder")}
+          rows={2}
+        />
+        <button
+          type="button"
+          className="button button--ghost button--small"
+          disabled={posting || !draft.trim()}
+          onClick={handleAdd}
+        >
+          {t("session.comments.add")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CommentRow({
+  activityId,
+  comment,
+  t,
+  onChange,
+  onDelete,
+}: {
+  activityId: number;
+  comment: ActivityComment;
+  t: Translate;
+  onChange: (updated: ActivityComment) => void;
+  onDelete: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(comment.body);
+  const [busy, setBusy] = useState(false);
+
+  if (editing) {
+    return (
+      <div className="session-comments__form">
+        <textarea
+          className="session-comments__input"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          rows={2}
+          autoFocus
+        />
+        <div className="session-comments__actions">
+          <button
+            type="button"
+            className="button button--ghost button--small"
+            disabled={busy}
+            onClick={() => {
+              setDraft(comment.body);
+              setEditing(false);
+            }}
+          >
+            {t("session.comments.cancel")}
+          </button>
+          <button
+            type="button"
+            className="button button--ghost button--small"
+            disabled={busy || !draft.trim()}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                onChange(await updateComment(activityId, comment.id, draft.trim()));
+                setEditing(false);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {t("session.comments.save")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="session-comments__item">
+      <p className="session-comments__body">{comment.body}</p>
+      <div className="session-comments__actions">
+        <button
+          type="button"
+          className="button button--ghost button--small"
+          onClick={() => setEditing(true)}
+        >
+          {t("session.comments.edit")}
+        </button>
+        <button
+          type="button"
+          className="button button--danger button--small"
+          onClick={() => deleteComment(activityId, comment.id).then(onDelete)}
+        >
+          {t("session.comments.delete")}
+        </button>
+      </div>
     </div>
   );
 }

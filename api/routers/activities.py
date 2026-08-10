@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from api.deps import (
     block_when_viewing_as,
     current_athlete,
+    get_activity_comment_repository,
     get_activity_repository,
     get_athlete_repository,
     get_stream_store,
@@ -43,6 +44,10 @@ class SyncRequest(BaseModel):
     force: bool = False
     # Cap the import, mostly to try things out without spending the rate limit.
     max_activities: Optional[int] = Field(default=None, ge=1, le=5000)
+
+
+class CommentRequest(BaseModel):
+    body: str = Field(..., min_length=1, max_length=4000)
 
 
 @router.get("")
@@ -87,6 +92,46 @@ def activity_route(
     from api.routers.home import resolve_activity_route
 
     return resolve_activity_route(athlete, activity_id)
+
+
+@router.get("/{activity_id}/comments")
+def list_comments(
+    activity_id: int,
+    athlete: Athlete = Depends(current_athlete),
+) -> dict:
+    comments = get_activity_comment_repository(athlete.id).list_for_activity(activity_id)
+    return {"comments": comments}
+
+
+@router.post("/{activity_id}/comments", status_code=status.HTTP_201_CREATED)
+def create_comment(
+    activity_id: int,
+    payload: CommentRequest,
+    athlete: Athlete = Depends(current_athlete),
+) -> dict:
+    return get_activity_comment_repository(athlete.id).create(activity_id, payload.body)
+
+
+@router.patch("/{activity_id}/comments/{comment_id}")
+def update_comment(
+    activity_id: int,
+    comment_id: str,
+    payload: CommentRequest,
+    athlete: Athlete = Depends(current_athlete),
+) -> dict:
+    updated = get_activity_comment_repository(athlete.id).update(comment_id, payload.body)
+    if updated is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="comment not found")
+    return updated
+
+
+@router.delete("/{activity_id}/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_comment(
+    activity_id: int,
+    comment_id: str,
+    athlete: Athlete = Depends(current_athlete),
+) -> None:
+    get_activity_comment_repository(athlete.id).delete(comment_id)
 
 
 @router.get("/sync")
