@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from typing import Callable, List, Optional, Sequence
 
 from src.domain.dataset.features import build_activity_features
+from src.domain.dataset.sport import CYCLING_SPORT_TYPES, RUNNING_SPORT_TYPES
 from src.domain.models.activity import ActivityStream
 from src.domain.ports.storage import (
     ActivityRepository,
@@ -33,9 +34,11 @@ from src.usecases.base import UseCase
 
 logger = logging.getLogger(__name__)
 
-# Sport types imported: every running variant, plus cycling. Everything else on
-# Strava is neither and stays out.
-DEFAULT_SPORT_TYPES = ["TrailRun", "Run", "VirtualRun", "Ride"]
+# Sport types imported: every running and cycling variant known to
+# src.domain.dataset.sport. Everything else on Strava is neither and stays out.
+# Derived rather than listed here again, so this can't drift from the family
+# definitions the rest of the app classifies activities by.
+DEFAULT_SPORT_TYPES = sorted(RUNNING_SPORT_TYPES | CYCLING_SPORT_TYPES)
 
 # Rows are flushed this often, so a crash costs at most this much work.
 BATCH_SIZE = 25

@@ -1,7 +1,9 @@
 """Which broad sport family an activity belongs to.
 
 Two families exist: **running** (the app's original domain — "Run", "TrailRun",
-"VirtualRun") and **cycling** ("Ride"). A panel's data has to stay within one
+"VirtualRun") and **cycling** (every one of Strava's bike ``sport_type`` values —
+a gravel or mountain ride is still "usual cycling" to every panel here, since
+none of them distinguish bike sub-types). A panel's data has to stay within one
 family — GAP and the modelled power-per-kg are running biomechanics, calibrated
 to a "balanced runner" reference curve that means nothing for a bike, and even a
 mechanically sport-agnostic number like "fastest 10 km" is not a comparable
@@ -12,7 +14,9 @@ resolved down to one family.
 """
 
 RUNNING_SPORT_TYPES = frozenset({"Run", "TrailRun", "VirtualRun"})
-CYCLING_SPORT_TYPES = frozenset({"Ride"})
+CYCLING_SPORT_TYPES = frozenset({
+    "Ride", "MountainBikeRide", "GravelRide", "VirtualRide"
+})
 
 RUNNING = "running"
 CYCLING = "cycling"

@@ -10,7 +10,9 @@
  */
 
 export const RUNNING_SPORT_TYPES = ["Run", "TrailRun", "VirtualRun"];
-export const CYCLING_SPORT_TYPES = ["Ride"];
+export const CYCLING_SPORT_TYPES = [
+  "Ride", "MountainBikeRide", "GravelRide", "VirtualRide",
+];
 
 /** Colour a sport type reads as, wherever one is shown: the calendar's
  * completed-session chip and the session detail's sport tag share this so a
