@@ -135,6 +135,26 @@ alter table activities add column if not exists relative_effort double precision
 -- plots read. Nullable — older imports predate it, and indoor runs have no route.
 alter table activities add column if not exists summary_polyline text;
 
+-- Power, beyond running's existing `avg_power_w_per_kg`: real meter data always
+-- wins when Strava has it (either sport — a footpod-equipped run counts too), so
+-- it gets its own absolute column rather than reusing the per-kg one. Cycling's
+-- modelled estimate (src/domain/cycling/power.py) is also absolute rather than
+-- per-kg: unlike running's, its aero term is a fixed population constant, not
+-- proportional to rider mass, so "compute once at 1 kg and rescale on read"
+-- would corrupt it — it is instead computed once against whatever weight was on
+-- file at sync time, like every other cached feature. `power_source` says which
+-- of the three (measured / running's per-kg model / cycling's absolute model)
+-- produced the number, for a UI badge; it is not a `_SCALAR_COLUMNS` entry (those
+-- all run through a float coercion), so it is written like `summary_polyline`.
+alter table activities add column if not exists avg_power_w_measured double precision;
+alter table activities add column if not exists avg_power_w_modelled double precision;
+alter table activities add column if not exists power_source text;
+
+-- Power-to-HR pairs with avg_power_w_measured the same way power_to_hr_per_kg
+-- pairs with avg_power_w_per_kg: an already-absolute ratio (real watts ÷ HR),
+-- so it needs no weight to use, unlike the running-modelled figure.
+alter table activities add column if not exists power_to_hr_measured double precision;
+
 -- Selection queries are always "this athlete, ordered by date".
 create index if not exists activities_athlete_date_idx
     on activities (athlete_id, start_date);

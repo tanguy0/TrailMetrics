@@ -3,7 +3,6 @@
 from src.domain.dataset.features import (
     FEATURE_COLUMNS,
     GENERATED_COLUMNS,
-    MASS_SCALED_COLUMNS,
     STORED_COLUMNS,
     FeatureStore,
     apply_mass,
@@ -40,7 +39,6 @@ __all__ = [
     "GROUP_COLUMN",
     "GROUP_INDEX_COLUMN",
     "InMemoryActivityData",
-    "MASS_SCALED_COLUMNS",
     "ResolvedGroup",
     "ResolvedPanelData",
     "STORED_COLUMNS",

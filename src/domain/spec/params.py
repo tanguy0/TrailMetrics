@@ -187,9 +187,14 @@ def evaluate(condition: Optional[Condition], values: Dict[str, Any]) -> bool:
     if op is ConditionOp.EMPTY:
         return not bool(current)
     if op is ConditionOp.METRIC_ALLOWS_AGG:
-        # Imported lazily: the metric registry sits above this module.
-        from src.domain.dataset.metrics import metric_or_default
-        return not metric_or_default(current).is_fixed_agg
+        # Imported lazily: the metric registry sits above this module. Checked
+        # against FITNESS_FATIGUE_METRICS first — metric_trend is the one place
+        # those keys are selectable, and they're deliberately absent from
+        # ACTIVITY_METRICS (see that dict's docstring), so metric_or_default
+        # alone would never find them and would fall back to the default metric.
+        from src.domain.dataset.metrics import FITNESS_FATIGUE_METRICS, metric_or_default
+        metric = FITNESS_FATIGUE_METRICS.get(current) or metric_or_default(current)
+        return not metric.is_fixed_agg
     return True
 
 

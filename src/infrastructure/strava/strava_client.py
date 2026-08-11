@@ -60,7 +60,7 @@ class StravaClient(ActivityStreamSource):
     in the caller (the API's token service, or a notebook).
     """
 
-    DEFAULT_STREAM_TYPES = ["time", "distance", "altitude", "heartrate"]
+    DEFAULT_STREAM_TYPES = ["time", "distance", "altitude", "heartrate", "watts"]
 
     def __init__(self, client: Client, throttle_seconds: float = 0.1):
         self.client = client
@@ -215,6 +215,13 @@ class StravaClient(ActivityStreamSource):
             if "heartrate" in raw
             else np.full(n, np.nan)
         )
+        # Real power-meter watts, when Strava has them — absent for any activity
+        # without a power source, filled with NaN like altitude/heartrate.
+        watts = (
+            np.array(raw["watts"].data, dtype=float)
+            if "watts" in raw
+            else np.full(n, np.nan)
+        )
         return ActivityStream(
             activity_id=activity_id,
             sport_type=sport_type,
@@ -222,6 +229,7 @@ class StravaClient(ActivityStreamSource):
             distance=distance,
             altitude=altitude,
             heartrate=heartrate,
+            watts=watts,
             start_date=start_date,
             summary_relative_effort=relative_effort,
         )

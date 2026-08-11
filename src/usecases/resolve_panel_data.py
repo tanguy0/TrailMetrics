@@ -113,6 +113,13 @@ class ResolvePanelData(UseCase):
           the athlete's *first* hand-picked activity belongs to;
         * otherwise (a window, or no filter and no picks yet) → running, which
           is what every existing page already assumes with no filter set.
+
+        One documented exception: the ``fitness_fatigue`` plot
+        (:mod:`src.domain.plots.fitness_fatigue`) needs every sport's training
+        load, so it reads ``resolved.all_summaries()`` directly instead of the
+        family-filtered activities this method returns. It is not a bug that it
+        ignores this filtering — training load has no running-vs-cycling
+        comparability problem the way GAP or modelled power does.
         """
         if not candidates:
             return candidates, 0

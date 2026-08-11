@@ -22,18 +22,32 @@ from src.domain.progress.models import GRADIENT_BANDS, PR_DISTANCES
 from src.infrastructure.postgres.pool import Database
 
 # Bump when build_activity_features changes in a way that invalidates stored rows.
-FEATURE_VERSION = 1
+# v2: real power-meter watts (both sports) and the cycling power model — every
+# activity needs its streams re-fetched (for the new `watts` stream) and its
+# row re-featurized to pick these up.
+# v3: fixed a bug where an activity with real power-meter watts never got a
+# power_to_hr figure at all (the measured branch didn't compute one) — same
+# full resync as any other bump, even though the underlying watts stream
+# itself is unchanged since v2.
+FEATURE_VERSION = 3
 
 # Scalar feature columns that are real SQL columns.
 _SCALAR_COLUMNS = [
     "distance_m", "elevation_gain_m", "moving_s", "elapsed_s", "gap_distance_m",
     "avg_hr", "max_hr", "avg_power_w_per_kg", "power_to_hr_per_kg",
+    "avg_power_w_measured", "avg_power_w_modelled", "power_to_hr_measured",
     "relative_effort",
 ]
 
+# Text column carrying power's provenance ("measured" / "estimated"). Not in
+# _SCALAR_COLUMNS: every entry there is run through `_clean()`'s float()
+# coercion, which a string would fail — wired alongside `summary_polyline`
+# instead, both below.
+_TEXT_COLUMNS = ["power_source"]
+
 _SUMMARY_COLUMNS = [
     "activity_id", "start_date", "sport_type", "has_streams",
-    "distance_m", "moving_s",
+    "distance_m", "moving_s", "relative_effort",
 ]
 
 
@@ -52,13 +66,13 @@ class PostgresActivityRepository(ActivityRepository):
         if not rows:
             return 0
         columns = ["athlete_id", "activity_id", "start_date", "sport_type",
-                   "has_streams", *_SCALAR_COLUMNS, "features", "feature_version",
-                   "summary_polyline"]
+                   "has_streams", *_SCALAR_COLUMNS, *_TEXT_COLUMNS,
+                   "features", "feature_version", "summary_polyline"]
         placeholders = ", ".join(["%s"] * len(columns))
         updates = ", ".join(
             f"{name} = excluded.{name}"
             for name in ("start_date", "sport_type", "has_streams",
-                         *_SCALAR_COLUMNS, "features", "feature_version")
+                         *_SCALAR_COLUMNS, *_TEXT_COLUMNS, "features", "feature_version")
         )
         # The route is *coalesced* rather than overwritten: a re-featurize passes no
         # polyline, and that must not erase one already fetched on demand.
@@ -89,6 +103,7 @@ class PostgresActivityRepository(ActivityRepository):
             str(row.get("sport_type") or ""),
             bool(row.get("has_streams", False)),
             *[_clean(row.get(name)) for name in _SCALAR_COLUMNS],
+            *[row.get(name) or None for name in _TEXT_COLUMNS],
             json.dumps(generated),
             FEATURE_VERSION,
             row.get("summary_polyline") or None,
@@ -158,7 +173,7 @@ class PostgresActivityRepository(ActivityRepository):
     ) -> List[Dict[str, Any]]:
         selected = ", ".join([
             "activity_id", "start_date", "sport_type", "has_streams",
-            *_SCALAR_COLUMNS, "features",
+            *_SCALAR_COLUMNS, *_TEXT_COLUMNS, "features",
         ])
         if activity_ids is None:
             raw = self.db.fetch_all(
@@ -217,7 +232,7 @@ def _to_feature_row(row: Dict[str, Any]) -> Dict[str, Any]:
         "sport_type": row["sport_type"],
         "has_streams": bool(row["has_streams"]),
     }
-    for name in _SCALAR_COLUMNS:
+    for name in (*_SCALAR_COLUMNS, *_TEXT_COLUMNS):
         out[name] = row.get(name)
     for key, _, _ in GRADIENT_BANDS:
         column = band_column(key)

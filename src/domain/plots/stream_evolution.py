@@ -64,6 +64,7 @@ SIGNALS: Dict[str, Tuple[str, str, str, int, bool]] = {
     "pace": ("pace_s_per_km", "signal.pace.y", "pace", 0, False),
     "heartrate": ("heartrate", "plot.races.hr.y", "number", 0, False),
     "power": ("power_w", "plot.races.power.y", "number", 0, True),
+    "power_per_kg": ("power_per_kg", "plot.races.power_per_kg.y", "number", 2, True),
     "power_to_hr": ("power_to_hr", "plot.races.p2hr.y", "number", 2, True),
     "altitude": ("altitude_m", "signal.altitude.y", "number", 0, False),
     "gradient": ("gradient_pct", "signal.gradient.y", "number", 1, False),
@@ -80,9 +81,10 @@ _X_AXES = {
 # Dashes distinguish the *activities* once colour is spent on the signal.
 _ACTIVITY_DASHES = ["-", "--", "-.", ":"]
 
-# One entry per signal sharing a y-axis: its legend label, unit, tick decimals, and
-# whether it is being shown as speed rather than pace.
-_AxisEntry = Tuple[str, str, int, bool]
+# One entry per signal sharing a y-axis: its legend label, unit, tick decimals,
+# whether it is being shown as speed rather than pace, and its signal key (so the
+# axis title can tell a plain "pace" from "gap_pace" — see _combined_axis).
+_AxisEntry = Tuple[str, str, int, bool, str]
 
 
 def _filter_group(key: str, label_key: str, default: FilterConfig) -> ParamSpec:
@@ -212,7 +214,7 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
             single_activity=single_activity,
         )
 
-        entry: _AxisEntry = (label, value_kind, decimals, signal_as_speed)
+        entry: _AxisEntry = (label, value_kind, decimals, signal_as_speed, key)
         if on_primary:
             primary_entries.append(entry)
             primary_color = color if len(primary_entries) == 1 else None
@@ -252,9 +254,14 @@ def _combined_axis(entries: List[_AxisEntry], lang: str) -> Axis:
     assigned to the axis decides the tick formatting, and the title lists all of
     them so the reader knows what else is drawn against it.
     """
-    _, value_kind, decimals, as_speed = entries[0]
-    title = (translate("plot.races.gap_speed.y", lang) if as_speed
-             else " · ".join(label for label, *_ in entries))
+    _, value_kind, decimals, as_speed, _ = entries[0]
+    has_gap = any(key == "gap_pace" for *_, key in entries)
+    if as_speed:
+        title = translate(
+            "plot.races.gap_speed.y" if has_gap else "plot.races.speed.y", lang,
+        )
+    else:
+        title = " · ".join(label for label, *_ in entries)
     return _y_axis(title, value_kind, as_speed, decimals)
 
 

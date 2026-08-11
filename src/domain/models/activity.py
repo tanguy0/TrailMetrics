@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
@@ -20,6 +20,10 @@ class ActivityStream:
     distance: np.ndarray
     altitude: np.ndarray
     heartrate: np.ndarray
+    # Real power-meter watts, when Strava has them (a metered ride, or a
+    # footpod-equipped run). NaN-filled like altitude/heartrate when absent —
+    # never a modelled estimate, that lives downstream in the feature pipeline.
+    watts: np.ndarray = field(default_factory=lambda: np.full(0, np.nan))
     # When the activity took place. Optional so older callers/mocks stay valid;
     # used by the app to filter pre-fetched history by date without re-fetching.
     start_date: Optional[datetime] = None

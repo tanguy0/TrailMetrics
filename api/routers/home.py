@@ -127,10 +127,10 @@ def summary(athlete: Athlete = Depends(current_athlete)) -> dict:
     today = date.today()
 
     return {
-        "profile": _profile(rows),
+        "profile": _profile(rows, athlete.weight_kg),
         "health": _health(athlete, rows, today),
         "records": _records(rows),
-        "last_activity": _last_activity(rows),
+        "last_activity": _last_activity(rows, athlete.weight_kg),
     }
 
 
@@ -138,7 +138,7 @@ def _running_only(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [row for row in rows if row.get("sport_type") in RUNNING_SPORT_TYPES]
 
 
-def _profile(rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+def _profile(rows: Sequence[Dict[str, Any]], weight_kg: Optional[float] = None) -> Dict[str, Any]:
     """Volume totals and the two 'biggest ever' activities."""
     distances = [(_num(r.get("distance_m")), r) for r in rows]
     with_distance = [(value, r) for value, r in distances if value is not None]
@@ -160,8 +160,8 @@ def _profile(rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
         "total_moving_s": sum(value for value, _ in with_moving),
         # "Furthest" is by distance, "longest" is by time — on hilly terrain they
         # are routinely different activities, so both are worth showing.
-        "furthest_activity": _activity_card(furthest[1]) if furthest else None,
-        "longest_activity": _activity_card(longest[1]) if longest else None,
+        "furthest_activity": _activity_card(furthest[1], weight_kg) if furthest else None,
+        "longest_activity": _activity_card(longest[1], weight_kg) if longest else None,
     }
 
 
@@ -221,13 +221,15 @@ def _records(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return records
 
 
-def _last_activity(rows: Sequence[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def _last_activity(
+    rows: Sequence[Dict[str, Any]], weight_kg: Optional[float] = None,
+) -> Optional[Dict[str, Any]]:
     """The most recent activity. Rows arrive oldest-first, so it is the last one."""
-    return _activity_card(rows[-1]) if rows else None
+    return _activity_card(rows[-1], weight_kg) if rows else None
 
 
-def _activity_card(row: Dict[str, Any]) -> Dict[str, Any]:
-    """The fields the Home widgets show for a single activity."""
+def _activity_card(row: Dict[str, Any], weight_kg: Optional[float] = None) -> Dict[str, Any]:
+    """The fields the Home widgets and the training calendar show for one activity."""
     return {
         "activity_id": row.get("activity_id"),
         "date": _iso(_row_date(row)),
@@ -237,7 +239,26 @@ def _activity_card(row: Dict[str, Any]) -> Dict[str, Any]:
         "elevation_gain_m": _num(row.get("elevation_gain_m")),
         "moving_s": _num(row.get("moving_s")),
         "avg_hr": _num(row.get("avg_hr")),
+        "avg_power_w": _avg_power_w(row, weight_kg),
+        "power_source": row.get("power_source"),
     }
+
+
+def _avg_power_w(row: Dict[str, Any], weight_kg: Optional[float]) -> Optional[float]:
+    """Real watts, else cycling's modelled absolute figure, else running's modelled
+    per-kg figure scaled by the current weight — mirrors the fallback in
+    :func:`src.domain.dataset.features.apply_mass`, which this raw-dict-based
+    endpoint doesn't go through."""
+    measured = _num(row.get("avg_power_w_measured"))
+    if measured is not None:
+        return measured
+    modelled_cycling = _num(row.get("avg_power_w_modelled"))
+    if modelled_cycling is not None:
+        return modelled_cycling
+    per_kg = _num(row.get("avg_power_w_per_kg"))
+    if per_kg is not None and weight_kg:
+        return per_kg * weight_kg
+    return None
 
 
 def _row_date(row: Dict[str, Any]) -> Optional[datetime]:

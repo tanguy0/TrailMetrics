@@ -167,9 +167,24 @@ class ResolvedPanelData:
         return summary.label if summary else f"Activity {activity_id}"
 
     def _summary(self, activity_id: int) -> Optional[ActivitySummary]:
+        return self._summary_cache().get(activity_id)
+
+    def _summary_cache(self) -> Dict[int, ActivitySummary]:
         if self._summaries is None:
             self._summaries = {s.activity_id: s for s in self.data.summaries()}
-        return self._summaries.get(activity_id)
+        return self._summaries
+
+    def all_summaries(self) -> List[ActivitySummary]:
+        """Every one of the athlete's activities, cross-sport, unfiltered.
+
+        The one documented exception to "a panel stays within one sport family"
+        (see the docstring on ``_filter_family`` in
+        :mod:`src.usecases.resolve_panel_data`): training load has no
+        running-vs-cycling comparability problem, so the Fitness & Fatigue plot
+        reads every activity here rather than ``self.groups``' already
+        family-filtered selection.
+        """
+        return list(self._summary_cache().values())
 
     # --- Memoization for the expensive levels ------------------------------
 

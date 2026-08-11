@@ -9,10 +9,21 @@ start, as a line / step / bar / area, optionally smoothed and split by sport.
 The group-aligned x-axis (``x_mode="elapsed"``) is the old "season overlay":
 several time windows in the panel's data source, each drawn from a common 0, so
 blocks of different lengths compare directly.
+
+"Fitness" and "Fatigue" are selectable here too, each on its own like any other
+metric (or together, one as ``metric`` and one as ``metric2``) — but they are
+*not* ACTIVITY_METRICS entries, since neither is a column on the per-activity
+feature table: see ``_is_ff`` and :mod:`src.domain.dataset.training_load`. They
+always bin daily and read every sport, regardless of the granularity and
+split-by-sport controls, which is why those are silently overridden rather than
+disabled in the UI — the standalone :mod:`src.domain.plots.fitness_fatigue`
+remains the place to see both curves together with no picking required.
 """
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
+
+import pandas as pd
 
 from src.domain.charts.ir import (
     Axis,
@@ -33,8 +44,15 @@ from src.domain.dataset.binning import (
     max_window_months,
     to_date,
 )
-from src.domain.dataset.metrics import NO_METRIC, metric_or_default, optional_metric
+from src.domain.dataset.metrics import (
+    FITNESS_FATIGUE_METRICS,
+    NO_METRIC,
+    ActivityMetric,
+    metric_or_default,
+    optional_metric,
+)
 from src.domain.dataset.resolved import DataLevel, ResolvedGroup, ResolvedPanelData
+from src.domain.dataset.training_load import daily_training_load, fitness_fatigue_series
 from src.domain.plots.base import (
     PlotDefinition,
     group_color,
@@ -75,8 +93,13 @@ _GROUP_DASHES = ["-", "--", "-.", ":"]
 
 
 PARAMS: List[ParamSpec] = [
+    # "trend_metrics"/"trend_metrics_optional" (api/serialization.py) are this
+    # plot's own choice lists: ACTIVITY_METRICS plus Fitness/Fatigue (see
+    # `_is_ff` below) — every other metric picker in the app uses the plain
+    # "activity_metrics"/"activity_metrics_optional" lists, which deliberately
+    # exclude them (see FITNESS_FATIGUE_METRICS's docstring).
     choice("metric", "param.metric", "distance_km",
-           choices_from="activity_metrics", help_key="param.metric.help"),
+           choices_from="trend_metrics", help_key="param.metric.help"),
     # Ratios and counts fix their own aggregation, so the control is hidden.
     choice("aggregation", "param.aggregation", "sum",
            choices_from="aggregations",
@@ -84,7 +107,7 @@ PARAMS: List[ParamSpec] = [
     # A second metric on the same figure, against its own right-hand axis. Both
     # sub-controls stay hidden until one is actually chosen.
     choice("metric2", "param.metric2", NO_METRIC,
-           choices_from="activity_metrics_optional", help_key="param.metric2.help"),
+           choices_from="trend_metrics_optional", help_key="param.metric2.help"),
     choice("aggregation2", "param.aggregation2", "sum",
            choices_from="aggregations",
            visible_when=when.all_of(
@@ -123,9 +146,76 @@ PARAMS: List[ParamSpec] = [
 ]
 
 
+# Fallback display window for a fitness/fatigue trace when its group has no
+# window (a hand-picked activity list) — same constant as the standalone
+# Fitness & Fatigue plot (src/domain/plots/fitness_fatigue.py).
+_FF_FALLBACK_DISPLAY_DAYS = 182  # ~6 months
+
+
+def _is_ff(metric: Optional[ActivityMetric]) -> bool:
+    return metric is not None and metric.key in FITNESS_FATIGUE_METRICS
+
+
+def _metric_or_default(key: Optional[str]) -> ActivityMetric:
+    """Like :func:`~src.domain.dataset.metrics.metric_or_default`, but also
+    resolving "fitness"/"fatigue" — kept out of ACTIVITY_METRICS itself (see
+    that dict's docstring), so the shared helper alone would never find them."""
+    if key in FITNESS_FATIGUE_METRICS:
+        return FITNESS_FATIGUE_METRICS[key]
+    return metric_or_default(key)
+
+
+def _optional_metric(key: Optional[str]) -> Optional[ActivityMetric]:
+    if key in FITNESS_FATIGUE_METRICS:
+        return FITNESS_FATIGUE_METRICS[key]
+    return optional_metric(key)
+
+
+def _ff_daily_frame(resolved: ResolvedPanelData) -> pd.DataFrame:
+    """One row per calendar day, every day from the athlete's very first
+    activity to today, with both a ``fitness`` and a ``fatigue`` column —
+    computed once per render and shared by every fitness/fatigue trace on the
+    panel (memoized on ``resolved``), cross-sport and independent of
+    ``resolved.features``, exactly like the standalone Fitness & Fatigue plot.
+    """
+    def build() -> pd.DataFrame:
+        daily, _missing = daily_training_load(resolved.all_summaries())
+        if not daily:
+            return pd.DataFrame({"date": [], "fitness": [], "fatigue": []})
+        dates, fitness, fatigue = fitness_fatigue_series(
+            daily, min(daily), date.today(),
+        )
+        return pd.DataFrame({"date": dates, "fitness": fitness, "fatigue": fatigue})
+
+    return resolved.memo("ff_daily_frame", build)
+
+
+def _ff_window(group: ResolvedGroup, *, fallback_end: date) -> Tuple[date, date]:
+    if group.window is not None:
+        return group.window.start, group.window.end
+    return fallback_end - timedelta(days=_FF_FALLBACK_DISPLAY_DAYS), fallback_end
+
+
+def _ff_group_frame(resolved: ResolvedPanelData, group: ResolvedGroup) -> pd.DataFrame:
+    """The daily fitness/fatigue frame, sliced to one group's own date range."""
+    frame = _ff_daily_frame(resolved)
+    if frame.empty:
+        return frame
+    lo, hi = _ff_window(group, fallback_end=date.today())
+    return frame[(frame["date"] >= lo) & (frame["date"] <= hi)]
+
+
+def _frame_for(resolved: ResolvedPanelData, group: ResolvedGroup, metric: ActivityMetric) -> pd.DataFrame:
+    """Which frame a metric's values live in: the normal per-activity feature
+    table, or the daily fitness/fatigue frame — see ``_is_ff``."""
+    if _is_ff(metric):
+        return _ff_group_frame(resolved, group)
+    return resolved.group_features(group)
+
+
 def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     lang = resolved.lang
-    metric = metric_or_default(params.get("metric"))
+    metric = _metric_or_default(params.get("metric"))
     granularity = params.get("granularity") or "week"
     x_mode = params.get("x_mode") or "calendar"
     chart_kind = _CHART_KINDS.get(params.get("chart") or "line", TraceKind.LINE)
@@ -133,8 +223,17 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     if metric.is_fixed_agg:
         aggregation = metric.default_agg
 
-    frame = resolved.features
-    if frame.empty:
+    # Decided before drawing anything: the second metric changes how the *first*
+    # one is encoded, so it cannot be an afterthought.
+    metric2 = _optional_metric(params.get("metric2"))
+    dual = metric2 is not None and metric2.key != metric.key
+
+    # Fitness/Fatigue live in their own cross-sport daily frame (`_ff_daily_frame`),
+    # not `resolved.features` — so an empty family-filtered selection must not
+    # blank the chart out from under them. Only bail here when every metric in
+    # play actually depends on `resolved.features` and it has nothing in it.
+    needs_features = not _is_ff(metric) or (dual and not _is_ff(metric2))
+    if needs_features and resolved.features.empty:
         return empty_output(translate("plot.no_data", lang))
 
     notes: List[str] = []
@@ -149,11 +248,6 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
         rolling_window=int(params.get("smooth_rolling") or 0) or None,
         savgol_window=int(params.get("smooth_savgol") or 0) or None,
     )
-
-    # Decided before drawing anything: the second metric changes how the *first*
-    # one is encoded, so it cannot be an afterthought.
-    metric2 = optional_metric(params.get("metric2"))
-    dual = metric2 is not None and metric2.key != metric.key
 
     # Power is stored per kilogram, so without a body weight its columns are all NaN
     # and every bin drops out. The chart would then be empty for a reason that has
@@ -245,14 +339,21 @@ def _metric_traces(
     """
     traces: List[Trace] = []
     series_index = 0
+    # Fitness/Fatigue is cross-sport by construction (there's no "split by
+    # sport" for a number that already sums every sport together) and only
+    # ever daily (see FITNESS_FATIGUE_METRICS's docstring) — both forced here
+    # regardless of the panel's own split/granularity controls.
+    ff = _is_ff(metric)
+    effective_split_by_sport = split_by_sport and not ff
+    effective_granularity = "day" if ff else granularity
 
     for group in resolved.groups:
-        group_frame = resolved.group_features(group)
+        group_frame = _frame_for(resolved, group, metric)
         if group_frame.empty:
             continue
-        for label, subset in _subsets(group, group_frame, split_by_sport):
+        for label, subset in _subsets(group, group_frame, effective_split_by_sport):
             points = _bin_points(subset, group, metric, aggregation,
-                                 granularity, x_mode)
+                                 effective_granularity, x_mode)
             if not points:
                 continue
             x_values = [p[0] for p in points]
@@ -374,7 +475,7 @@ def _totals_table(resolved: ResolvedPanelData, metric, aggregation: str, lang: s
     """Per-group aggregate beside the curves — the old per-season totals table."""
     rows = []
     for group in resolved.groups:
-        group_frame = resolved.group_features(group)
+        group_frame = _frame_for(resolved, group, metric)
         if group_frame.empty:
             continue
         rows.append({

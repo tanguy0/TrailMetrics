@@ -34,6 +34,7 @@ import pandas as pd
 from src.domain.dataset.binning import naive
 from src.domain.dataset.sport import RUNNING, sport_family
 from src.domain.models.activity import ActivityStream
+from src.domain.cycling.power import compute_cycling_power_series
 from src.domain.progress.models import GRADIENT_BANDS, PR_DISTANCES
 from src.domain.progress.records import best_effort_time
 from src.domain.races.metrics import compute_power_series, gradient_adjustment_factor
@@ -69,6 +70,13 @@ STORED_COLUMNS: List[str] = (
         "distance_m", "elevation_gain_m", "moving_s", "elapsed_s",
         "gap_distance_m", "avg_hr", "max_hr",
         "avg_power_w_per_kg", "power_to_hr_per_kg",
+        # Real power-meter watts (either sport) and cycling's modelled absolute
+        # estimate — see the note on avg_power_w_modelled below and in apply_mass
+        # for why these aren't per-kg like running's. power_to_hr_measured pairs
+        # with avg_power_w_measured the same way power_to_hr_per_kg pairs with
+        # avg_power_w_per_kg — an absolute ratio, needing no weight to use.
+        "avg_power_w_measured", "avg_power_w_modelled", "power_to_hr_measured",
+        "power_source",
         # Strava's Relative Effort. The one column that is *reported* rather than
         # computed here — it comes off the activity summary, because Strava derives
         # it from the athlete's own heart-rate zones, which its API does not expose.
@@ -78,14 +86,13 @@ STORED_COLUMNS: List[str] = (
     + [best_column(label) for label, _ in PR_DISTANCES]
 )
 
-# Columns derived from the stored ones at read time (see :func:`apply_mass`).
-MASS_SCALED_COLUMNS: Dict[str, str] = {
-    "avg_power_w": "avg_power_w_per_kg",
-    "power_to_hr": "power_to_hr_per_kg",
-}
+# Derived at read time via the fallback logic in :func:`apply_mass` (real watts
+# win, else whichever per-sport model produced a value) rather than a plain
+# column × mass.
+DERIVED_POWER_COLUMNS: List[str] = ["avg_power_w", "power_per_kg", "power_to_hr"]
 
 # What a plot sees.
-FEATURE_COLUMNS: List[str] = STORED_COLUMNS + list(MASS_SCALED_COLUMNS)
+FEATURE_COLUMNS: List[str] = STORED_COLUMNS + DERIVED_POWER_COLUMNS
 
 # The generated column families, exposed so the storage layer can round-trip them
 # without hard-coding the current list of bands and PR distances.
@@ -108,19 +115,26 @@ class FeatureStore:
         cache: Optional[Dict[Any, Dict[str, Any]]] = None,
         altitude_filter: Optional[FilterConfig] = None,
         polyorder: int = 2,
+        mass_kg: Optional[float] = None,
     ):
         self.cache = cache if cache is not None else {}
         self.altitude_filter = altitude_filter or default_smoothing_params().altitude
         self.polyorder = polyorder
+        # Rows are weight-independent for every column except cycling's modelled
+        # power (see build_activity_features) — keyed into the cache below so a
+        # weight change in the same process recomputes only the rows that
+        # actually depend on it, at the cost of one extra dict key.
+        self.mass_kg = mass_kg
 
     def row(self, stream: ActivityStream) -> Optional[Dict[str, Any]]:
-        """Feature row for one activity, computing it at most once per cache."""
-        key = int(stream.activity_id)
+        """Feature row for one activity, computing it at most once per (id, weight)."""
+        key = (int(stream.activity_id), self.mass_kg)
         if key not in self.cache:
             self.cache[key] = build_activity_features(
                 stream,
                 altitude_filter=self.altitude_filter,
                 polyorder=self.polyorder,
+                mass_kg=self.mass_kg,
             )
         return self.cache[key]
 
@@ -138,17 +152,43 @@ def frame_from_rows(rows: Sequence[Dict[str, Any]]) -> pd.DataFrame:
 def apply_mass(frame: pd.DataFrame, mass_kg: Optional[float]) -> pd.DataFrame:
     """Materialize the weight-dependent power columns.
 
-    Without a weight, power is unmodellable and the columns stay ``NaN`` — plots
-    that need them say so rather than inventing a default body mass.
+    Without a weight, neither modelled estimate exists (both running's and
+    cycling's need one — see :mod:`src.domain.cycling.power`), so
+    :data:`avg_power_w` stays ``NaN`` unless real power-meter watts are
+    present, in which case it's already absolute and needs no weight at all.
     """
     if frame is None or frame.empty:
         return frame
     out = frame.copy()
-    for target, source in MASS_SCALED_COLUMNS.items():
-        if mass_kg and source in out.columns:
-            out[target] = pd.to_numeric(out[source], errors="coerce") * float(mass_kg)
-        else:
-            out[target] = np.nan
+
+    def _numeric(column: str) -> pd.Series:
+        return pd.to_numeric(out[column], errors="coerce")
+
+    def _scaled_by_mass(per_kg_column: str) -> pd.Series:
+        if mass_kg and per_kg_column in out.columns:
+            return _numeric(per_kg_column) * float(mass_kg)
+        return pd.Series(np.nan, index=out.index)
+
+    # Absolute average power: real watts always win; otherwise whichever
+    # per-sport model produced a value. Cycling's modelled figure is already
+    # absolute; running's is per-kg and needs the current weight to scale up.
+    out["avg_power_w"] = (
+        _numeric("avg_power_w_measured")
+        .fillna(_numeric("avg_power_w_modelled"))
+        .fillna(_scaled_by_mass("avg_power_w_per_kg"))
+    )
+
+    # Same fallback for power-to-HR: the measured ratio is already absolute
+    # (real watts ÷ HR, no mass involved) and needs no weight either — only the
+    # modelled (running-only) figure does.
+    out["power_to_hr"] = (
+        _numeric("power_to_hr_measured")
+        .fillna(_scaled_by_mass("power_to_hr_per_kg"))
+    )
+
+    # Watts/kg is a per-kg unit by definition, so it needs a weight regardless
+    # of where avg_power_w came from.
+    out["power_per_kg"] = out["avg_power_w"] / mass_kg if mass_kg else np.nan
     return out
 
 
@@ -168,6 +208,7 @@ def build_activity_features(
     *,
     altitude_filter: Optional[FilterConfig] = None,
     polyorder: int = 2,
+    mass_kg: Optional[float] = None,
 ) -> Optional[Dict[str, Any]]:
     """One per-second pass over an activity, producing its whole feature row.
 
@@ -176,6 +217,12 @@ def build_activity_features(
     (manual entries) still get a row from Strava's summary — distance, elevation
     and time are known, the stream-derived columns stay ``NaN`` — so they show up
     in volume trends instead of silently vanishing.
+
+    ``mass_kg`` only matters for cycling's modelled power: unlike running's (which
+    is computed at a fixed 1 kg and rescaled on read, see below), cycling's aero
+    term is a fixed population constant rather than proportional to rider mass, so
+    it has to be computed once against a real weight if one is on file — a later
+    weight change needs a recompute (a resync) to take effect, unlike running.
     """
     if not isinstance(stream.start_date, datetime):
         return None
@@ -246,10 +293,29 @@ def build_activity_features(
 
     row["avg_power_w_per_kg"] = np.nan
     row["power_to_hr_per_kg"] = np.nan
-    # `compute_power_series` models running's cost of transport (P = m·v·(Cr +
-    # g·s)) — a bike's power comes from a real power meter or not at all, never
-    # from this formula, so a ride gets no modelled figure rather than a wrong one.
-    if is_running:
+    row["avg_power_w_measured"] = np.nan
+    row["avg_power_w_modelled"] = np.nan
+    row["power_to_hr_measured"] = np.nan
+    row["power_source"] = None
+
+    # Real power-meter watts always win — either sport, a footpod-equipped run
+    # counts too — over any modelled estimate.
+    watts = np.asarray(stream.watts, dtype=float)
+    step_watts = watts[1:] if watts.size == n else np.full(n - 1, np.nan)
+    watts_valid = moving & np.isfinite(step_watts)
+
+    if watts_valid.any():
+        row["avg_power_w_measured"] = float(np.mean(step_watts[watts_valid]))
+        row["power_source"] = "measured"
+        both = watts_valid & hr_valid
+        if both.any():
+            mean_hr = float(np.mean(step_hr[both]))
+            if mean_hr > 0:
+                row["power_to_hr_measured"] = float(np.mean(step_watts[both])) / mean_hr
+    elif is_running:
+        # `compute_power_series` models running's cost of transport (P = m·v·(Cr +
+        # g·s)) — a bike's power comes from a real power meter or the cycling
+        # model below, never from this formula.
         speed = np.divide(
             delta_dist, delta_time, out=np.zeros_like(delta_dist), where=delta_time > 0
         )
@@ -262,11 +328,21 @@ def build_activity_features(
             power_valid = moving & np.isfinite(power)
             if power_valid.any():
                 row["avg_power_w_per_kg"] = float(np.mean(power[power_valid]))
+                row["power_source"] = "estimated"
             both = power_valid & hr_valid
             if both.any():
                 mean_hr = float(np.mean(step_hr[both]))
                 if mean_hr > 0:
                     row["power_to_hr_per_kg"] = float(np.mean(power[both])) / mean_hr
+    else:
+        power = compute_cycling_power_series(
+            time=time, distance=distance, altitude=altitude_smoothed, mass_kg=mass_kg,
+        )
+        if power is not None:
+            power_valid = moving & np.isfinite(power)
+            if power_valid.any():
+                row["avg_power_w_modelled"] = float(np.mean(power[power_valid]))
+                row["power_source"] = "estimated"
 
     # Best efforts run on the *raw* cumulative streams: elapsed time spans real
     # wall-clock, so a paused stretch inflates a segment and self-excludes.
@@ -295,6 +371,10 @@ def _summary_only_row(stream: ActivityStream) -> Optional[Dict[str, Any]]:
         "max_hr": np.nan,
         "avg_power_w_per_kg": np.nan,
         "power_to_hr_per_kg": np.nan,
+        "avg_power_w_measured": np.nan,
+        "avg_power_w_modelled": np.nan,
+        "power_to_hr_measured": np.nan,
+        "power_source": None,
         # Reported by Strava, so it survives even with no per-second data.
         "relative_effort": _optional_float(stream.summary_relative_effort),
     }
