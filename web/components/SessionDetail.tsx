@@ -27,8 +27,8 @@ import {
   renderPanel,
   updateComment,
 } from "@/lib/api";
-import { formatDate, formatHms, formatNumber, formatPace } from "@/lib/format";
-import { sportTone } from "@/lib/sport";
+import { formatDate, formatHms, formatNumber, formatPace, formatSpeed } from "@/lib/format";
+import { CYCLING_SPORT_TYPES, sportTone } from "@/lib/sport";
 import type { Translate } from "@/lib/strings";
 import type {
   ActivityCard,
@@ -49,7 +49,7 @@ function singleActivitySource(activityId: number): DataSourceSpec {
   };
 }
 
-function paceGapHrPanel(activityId: number): PanelSpec {
+function paceGapHrPanel(activityId: number, isCycling: boolean): PanelSpec {
   return {
     id: `panel_session_pace_${activityId}`,
     title: "",
@@ -61,7 +61,11 @@ function paceGapHrPanel(activityId: number): PanelSpec {
         id: `plot_session_pace_${activityId}`,
         plot_type: "stream_evolution",
         title: null,
-        params: { signals: ["gap_pace", "pace", "heartrate"] },
+        // GAP is a running-biomechanics model and means nothing for a bike, so
+        // cycling drops it and reads its pace signal as speed instead.
+        params: isCycling
+          ? { signals: ["pace", "heartrate"], as_speed: true }
+          : { signals: ["gap_pace", "pace", "heartrate"] },
       },
     ],
   };
@@ -93,10 +97,12 @@ export function SessionDetail({
     };
   }, [activityId]);
 
+  const isCycling = CYCLING_SPORT_TYPES.includes(activity.sport_type);
+
   useEffect(() => {
     let live = true;
     setCharts(null);
-    renderPanel(paceGapHrPanel(activityId))
+    renderPanel(paceGapHrPanel(activityId, isCycling))
       .then((result) => {
         if (!live) return;
         setCharts(result.panel.plots.flatMap((plot) => plot.output?.charts ?? []));
@@ -107,10 +113,12 @@ export function SessionDetail({
     return () => {
       live = false;
     };
-  }, [activityId]);
+  }, [activityId, isCycling]);
 
   const km = activity.distance_m != null ? activity.distance_m / 1000 : null;
   const pace = km && km > 0 && activity.moving_s != null ? activity.moving_s / km : null;
+  const speedKmh = activity.moving_s && activity.moving_s > 0 && activity.distance_m != null
+    ? (activity.distance_m / activity.moving_s) * 3.6 : null;
 
   return (
     <div className="session-detail">
@@ -129,7 +137,11 @@ export function SessionDetail({
           value={km != null ? `${formatNumber(km, 2)} ${t("common.km")}` : "—"}
         />
         <Metric label={t("home.last.time")} value={formatHms(activity.moving_s)} />
-        <Metric label={t("home.last.pace")} value={formatPace(pace)} />
+        {isCycling ? (
+          <Metric label={t("home.last.speed")} value={formatSpeed(speedKmh)} />
+        ) : (
+          <Metric label={t("home.last.pace")} value={formatPace(pace)} />
+        )}
         <Metric
           label={t("home.last.climb")}
           value={
@@ -142,6 +154,12 @@ export function SessionDetail({
           <Metric
             label={t("home.last.heart_rate")}
             value={`${formatNumber(activity.avg_hr, 0)} bpm`}
+          />
+        )}
+        {activity.avg_power_w != null && (
+          <Metric
+            label={t("home.last.power")}
+            value={`${formatNumber(activity.avg_power_w, 0)} W`}
           />
         )}
       </dl>

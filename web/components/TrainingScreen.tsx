@@ -39,7 +39,7 @@ import {
   getTrainingCalendar,
   updatePlannedItem,
 } from "@/lib/api";
-import { formatDistanceAdaptive, formatHms, formatNumber, formatPace } from "@/lib/format";
+import { formatDistanceAdaptive, formatHms, formatNumber, formatPace, formatSpeed } from "@/lib/format";
 import { CYCLING_SPORT_TYPES, RUNNING_SPORT_TYPES, sportTone } from "@/lib/sport";
 import { translator, type Strings, type Translate } from "@/lib/strings";
 import type {
@@ -624,8 +624,11 @@ function DayCell({
 
         {sessions.map((activity) => {
           const km = activity.distance_m != null ? activity.distance_m / 1000 : null;
+          const isCycling = CYCLING_SPORT_TYPES.includes(activity.sport_type);
           const pace = km && km > 0 && activity.moving_s != null
             ? activity.moving_s / km : null;
+          const speedKmh = activity.moving_s && activity.moving_s > 0 && activity.distance_m != null
+            ? (activity.distance_m / activity.moving_s) * 3.6 : null;
           return (
             <button
               key={activity.activity_id}
@@ -637,7 +640,8 @@ function DayCell({
               <span className="training-session__sport">{activity.sport_type}</span>
               <span className="training-session__stats">
                 {formatHms(activity.moving_s)} ·{" "}
-                {km != null ? `${formatNumber(km, 1)} km` : "—"} · {formatPace(pace)}
+                {km != null ? `${formatNumber(km, 1)} km` : "—"} ·{" "}
+                {isCycling ? formatSpeed(speedKmh) : formatPace(pace)}
               </span>
             </button>
           );

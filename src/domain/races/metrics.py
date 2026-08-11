@@ -21,6 +21,7 @@ from typing import Optional
 
 import numpy as np
 
+from src.domain.cycling.power import compute_cycling_power_series
 from src.domain.gap.reference_curves import balanced_runner
 from src.domain.models.activity import ActivityStream
 from src.domain.races.smoothing import (
@@ -73,6 +74,7 @@ class RaceSeries:
     heartrate: np.ndarray
     power_w: Optional[np.ndarray] = None
     power_to_hr: Optional[np.ndarray] = None
+    power_per_kg: Optional[np.ndarray] = None
     # Raw (unadjusted) pace and the traces it derives from. Kept alongside GAP so
     # a panel can plot any within-activity signal, not just the four the race
     # comparator originally shipped.
@@ -157,6 +159,17 @@ def compute_race(
     # exclude it everywhere so it can't create phantom pace/gradient/distance.
     moving_step = (delta_time > 0) & (delta_time <= _PAUSE_THRESHOLD_S)
 
+    # Imported here rather than at module level: src.domain.dataset (which
+    # defines sport_family) imports src.domain.dataset.features, which imports
+    # *this* module for compute_power_series/gradient_adjustment_factor — a
+    # module-level import here would run into that half-initialized module
+    # whenever something imports src.domain.races.metrics before
+    # src.domain.dataset has already been loaded.
+    from src.domain.dataset.sport import RUNNING, sport_family
+
+    sport = str(getattr(stream.sport_type, "root", stream.sport_type))
+    is_running = sport_family(sport) == RUNNING
+
     # --- Altitude (full grid) → gradient + elevation gain --------------------
     altitude_smoothed = apply_signal_filters(
         altitude, timestamps_s=time, distance_m=distance,
@@ -172,13 +185,23 @@ def compute_race(
     gradient_m_per_km = gradient_pct * 10.0
     factor = gradient_adjustment_factor(gradient_m_per_km)
 
-    # --- Pace (clipped to 3–20 km/h) and heart rate --------------------------
+    # --- Pace/speed and heart rate --------------------------------------------
     speed = np.divide(
         delta_dist, delta_time, out=np.zeros_like(delta_dist), where=delta_time > 0
     )
-    speed = np.clip(speed, _MIN_SPEED_M_PER_S, _MAX_SPEED_M_PER_S)
+    if is_running:
+        # A run rarely leaves 3–20 km/h; clamping catches GPS glitches and
+        # keeps a near-stop from blowing pace up to an absurd value.
+        speed = np.clip(speed, _MIN_SPEED_M_PER_S, _MAX_SPEED_M_PER_S)
+        pace_where = moving_step
+    else:
+        # Cycling has no comparable natural ceiling — a fast descent is easily
+        # 3x a running sprint — so speed is left unbounded. Only a genuine
+        # zero-movement sample (a dead stop) is excluded, as a gap rather than
+        # the infinite pace dividing by zero speed would otherwise produce.
+        pace_where = moving_step & (speed > 0)
     pace = np.divide(
-        1000.0, speed, out=np.full_like(speed, np.nan), where=moving_step
+        1000.0, speed, out=np.full_like(speed, np.nan), where=pace_where
     )
     pace_smoothed = apply_signal_filters(
         pace, timestamps_s=timestamps, distance_m=step_distance,
@@ -199,12 +222,27 @@ def compute_race(
         1000.0, pace_smoothed, out=np.full_like(pace_smoothed, np.nan),
         where=pace_smoothed > 0,
     )
-    power = compute_power_series(
-        speed_m_per_s=speed_smoothed,
-        gradient_m_per_km=gradient_m_per_km,
-        mass_kg=mass_kg,
-    )
+    # Real power-meter watts always win — either sport, a footpod-equipped run
+    # counts too — over any modelled estimate.
+    watts = np.asarray(stream.watts, dtype=float)
+    step_watts = watts[1:] if watts.size == time.size else np.full(time.size - 1, np.nan)
+    watts_valid = moving_step & np.isfinite(step_watts)
+
+    if watts_valid.any():
+        power = step_watts
+    elif is_running:
+        power = compute_power_series(
+            speed_m_per_s=speed_smoothed,
+            gradient_m_per_km=gradient_m_per_km,
+            mass_kg=mass_kg,
+        )
+    else:
+        power = compute_cycling_power_series(
+            time=time, distance=distance, altitude=altitude_smoothed, mass_kg=mass_kg,
+        )
+
     power_to_hr = None
+    power_per_kg = None
     if power is not None:
         power = apply_signal_filters(
             power, timestamps_s=timestamps, distance_m=step_distance,
@@ -214,11 +252,20 @@ def compute_race(
             power, heartrate_smoothed,
             out=np.full_like(power, np.nan), where=heartrate_smoothed > 0,
         )
+        if mass_kg:
+            power_per_kg = power / float(mass_kg)
 
     # Moving-time / moving-distance axes: paused steps contribute 0, collapsing
     # the gap so the curves stay continuous and the x-axes show only real effort.
     moving_time = np.cumsum(np.where(moving_step, delta_time, 0.0))
     moving_distance = np.cumsum(np.where(moving_step, delta_dist, 0.0))
+
+    # Running's pace is clamped to the same 3–20 km/h range as `speed` above;
+    # cycling's is left exactly as smoothed, unbounded.
+    pace_series = (
+        np.clip(pace_smoothed, _MIN_PACE_S_PER_KM, _MAX_PACE_S_PER_KM)
+        if is_running else pace_smoothed
+    )
 
     series = RaceSeries(
         label=label,
@@ -228,7 +275,8 @@ def compute_race(
         heartrate=heartrate_smoothed,
         power_w=power,
         power_to_hr=power_to_hr,
-        pace_s_per_km=np.clip(pace_smoothed, _MIN_PACE_S_PER_KM, _MAX_PACE_S_PER_KM),
+        power_per_kg=power_per_kg,
+        pace_s_per_km=pace_series,
         altitude_m=altitude_smoothed[1:],
         gradient_pct=gradient_pct,
     )

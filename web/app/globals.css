@@ -819,6 +819,27 @@ input[type="radio"] {
   flex-wrap: wrap;
 }
 
+.sport-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.85rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 1px solid var(--spine);
+}
+
+.sport-picker__family {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.sport-picker__family .mode {
+  flex: 0 1 auto;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto;
+}
+
 .mode {
   display: grid;
   grid-template-columns: auto 1fr;

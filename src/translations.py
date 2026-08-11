@@ -175,7 +175,12 @@ TRANSLATIONS = {
         "en": "GAP speed (km/h, higher = faster)",
         "fr": "Vitesse GAP (km/h, plus haut = plus rapide)",
     },
+    "plot.races.speed.y": {
+        "en": "Speed (km/h, higher = faster)",
+        "fr": "Vitesse (km/h, plus haut = plus rapide)",
+    },
     "plot.races.power.y": {"en": "Power (W)", "fr": "Puissance (W)"},
+    "plot.races.power_per_kg.y": {"en": "Power (W/kg)", "fr": "Puissance (W/kg)"},
     "plot.races.hr.y": {"en": "Heart rate (bpm)", "fr": "Fréquence cardiaque (bpm)"},
     "plot.races.p2hr.y": {"en": "Power / HR (W/bpm)", "fr": "Puissance / FC (W/bpm)"},
     "plot.races.x.time": {"en": "Time (min)", "fr": "Temps (min)"},
@@ -315,7 +320,7 @@ TRANSLATIONS = {
     "plotcat.tables": {"en": "Tables", "fr": "Tableaux"},
     "plotcat.content": {"en": "Text & images", "fr": "Texte et images"},
 
-    "plot.metric_trend.label": {"en": "Metric over time", "fr": "Métrique dans le temps"},
+    "plot.metric_trend.label": {"en": "Metrics over time", "fr": "Métriques dans le temps"},
     "plot.metric_trend.description": {
         "en": "Any metric, binned by day/week/month/quarter, per period or "
         "cumulative, on the calendar or aligned to each group's start.",
@@ -354,6 +359,30 @@ TRANSLATIONS = {
         "altitude, gradient), over time or distance.",
         "fr": "Une courbe par activité pour un signal choisi (GAP, allure, FC, "
         "puissance, altitude, pente), en temps ou en distance.",
+    },
+    "plot.fitness_fatigue.label": {
+        "en": "Fitness & Fatigue", "fr": "Forme & Fatigue",
+    },
+    "plot.fitness_fatigue.description": {
+        "en": "Daily training load (Strava's Relative Effort, every sport "
+        "combined), split into a slow-building Fitness curve and a "
+        "fast-reacting Fatigue curve — the classic Banister model.",
+        "fr": "Charge d'entraînement quotidienne (Effort relatif Strava, tous "
+        "sports confondus), décomposée en une courbe de Forme à évolution "
+        "lente et une courbe de Fatigue à réaction rapide — le modèle de "
+        "Banister.",
+    },
+    "plot.fitness_fatigue.fitness": {"en": "Fitness", "fr": "Forme"},
+    "plot.fitness_fatigue.fatigue": {"en": "Fatigue", "fr": "Fatigue"},
+    "plot.fitness_fatigue.y": {
+        "en": "Training load (Relative Effort)",
+        "fr": "Charge d'entraînement (Effort relatif)",
+    },
+    "plot.fitness_fatigue.missing_relative_effort": {
+        "en": "{count} activities without heart-rate data were not counted "
+        "toward training load.",
+        "fr": "{count} activités sans fréquence cardiaque n'ont pas été "
+        "comptées dans la charge d'entraînement.",
     },
     "plot.gap_curve.label": {"en": "GAP curves", "fr": "Courbes GAP"},
     "plot.gap_curve.description": {
@@ -462,6 +491,7 @@ TRANSLATIONS = {
     "metric.avg_hr": {"en": "Average heart rate", "fr": "Fréquence cardiaque moyenne"},
     "metric.max_hr": {"en": "Max heart rate", "fr": "Fréquence cardiaque max"},
     "metric.avg_power_w": {"en": "Average power", "fr": "Puissance moyenne"},
+    "metric.power_per_kg": {"en": "Power (W/kg)", "fr": "Puissance (W/kg)"},
     "metric.power_to_hr": {"en": "Power-to-HR", "fr": "Puissance / FC"},
     "metric.relative_effort": {
         "en": "Relative Effort (Strava)", "fr": "Effort relatif (Strava)",
@@ -496,6 +526,7 @@ TRANSLATIONS = {
     "signal.pace.y": {"en": "Pace (min/km)", "fr": "Allure (min/km)"},
     "signal.heartrate": {"en": "Heart rate", "fr": "Fréquence cardiaque"},
     "signal.power": {"en": "Power", "fr": "Puissance"},
+    "signal.power_per_kg": {"en": "Power (W/kg)", "fr": "Puissance (W/kg)"},
     "signal.power_to_hr": {"en": "Power-to-HR", "fr": "Puissance / FC"},
     "signal.altitude": {"en": "Altitude", "fr": "Altitude"},
     "signal.altitude.y": {"en": "Altitude (m)", "fr": "Altitude (m)"},
@@ -837,6 +868,8 @@ TRANSLATIONS = {
     "ui.home.last.climb": {"en": "Climb", "fr": "Dénivelé"},
     "ui.home.last.time": {"en": "Moving time", "fr": "Temps en mouvement"},
     "ui.home.last.pace": {"en": "Pace", "fr": "Allure"},
+    "ui.home.last.speed": {"en": "Speed", "fr": "Vitesse"},
+    "ui.home.last.power": {"en": "Avg power", "fr": "Puissance moyenne"},
     "ui.home.last.heart_rate": {"en": "Avg HR", "fr": "FC moyenne"},
     "ui.home.last.map_loading": {
         "en": "Loading the route…", "fr": "Chargement du parcours…",

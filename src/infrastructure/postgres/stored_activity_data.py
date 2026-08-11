@@ -48,6 +48,10 @@ class StoredActivityData(ActivityDataSource):
                     has_streams=bool(row["has_streams"]),
                     distance_m=float(row["distance_m"] or 0.0),
                     moving_s=float(row["moving_s"] or 0.0),
+                    relative_effort=(
+                        float(row["relative_effort"])
+                        if row.get("relative_effort") is not None else None
+                    ),
                 )
                 for row in self.activities.summaries(self.athlete_id)
             ]

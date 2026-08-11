@@ -28,6 +28,7 @@ import {
   listActivities,
   savePage,
 } from "@/lib/api";
+import { RUNNING_SPORT_TYPES } from "@/lib/sport";
 import { translator, type Strings } from "@/lib/strings";
 import type {
   ActivitySummary,
@@ -272,7 +273,6 @@ export function PageWorkspace({
           onRemove={() => removePanel(panel.id)}
           registry={registry}
           activities={activities}
-          sportTypes={athlete.sport_types}
           oldest={athlete.oldest_activity}
           newest={athlete.newest_activity}
           editable
@@ -388,6 +388,13 @@ function blankSource(athlete: Athlete | null): PanelSpec["source"] {
         end: (athlete?.newest_activity ?? today).slice(0, 10),
       },
     ],
-    filters: { sport_types: [], min_distance_km: null, max_distance_km: null },
+    // Explicit, not empty: a brand-new panel should read as "Running, every
+    // sub-sport" in the sport picker rather than lean on the implicit
+    // empty-means-everything fallback (see DataSourceEditor.tsx).
+    filters: {
+      sport_types: [...RUNNING_SPORT_TYPES],
+      min_distance_km: null,
+      max_distance_km: null,
+    },
   };
 }

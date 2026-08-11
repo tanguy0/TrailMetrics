@@ -21,6 +21,7 @@ from src.domain.plots.base import (  # noqa: F401
 
 # Each import has the side effect of registering its plot type(s).
 from src.domain.plots import metric_trend      # noqa: F401
+from src.domain.plots import fitness_fatigue   # noqa: F401
 from src.domain.plots import gradient_map      # noqa: F401
 from src.domain.plots import records           # noqa: F401
 from src.domain.plots import stream_evolution  # noqa: F401

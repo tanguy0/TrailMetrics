@@ -12,12 +12,54 @@
 import { useMemo, useState } from "react";
 
 import { formatDistanceKm } from "@/lib/format";
+import { CYCLING_SPORT_TYPES, RUNNING_SPORT_TYPES } from "@/lib/sport";
 import type {
+  ActivityFilter,
   ActivitySummary,
   DataSourceSpec,
   SourceMode,
   TimeWindow,
 } from "@/lib/types";
+
+// Running vs cycling can never be plotted together (GAP, modelled power and
+// records aren't comparable between a foot split and a bike split — see
+// src/usecases/resolve_panel_data.py's `_filter_family`), so this is a single
+// choice, not a flat list of every sport type: pick the family first, then
+// which of its sub-sports count, same rule for every plot/panel in the app.
+type SportFamily = "running" | "cycling";
+
+const FAMILY_SPORTS: Record<SportFamily, string[]> = {
+  running: RUNNING_SPORT_TYPES,
+  cycling: CYCLING_SPORT_TYPES,
+};
+
+// Sentinels for "this family, but every sub-sport unticked." An empty
+// `sport_types` list already means "everything" server-side (every page saved
+// before this control existed relies on that), so "nothing" has to be encoded
+// as a non-empty, never-matching value instead — one per family, so unticking
+// every box doesn't lose track of which family was showing.
+const NONE_RUNNING = "__no_sport_running__";
+const NONE_CYCLING = "__no_sport_cycling__";
+
+function familyOf(sportTypes: string[]): SportFamily {
+  if (sportTypes.includes(NONE_CYCLING)) return "cycling";
+  if (sportTypes.includes(NONE_RUNNING)) return "running";
+  // A non-empty list that is entirely cycling reads as cycling; anything else
+  // (empty, or a running/mixed list) reads as running — matching the backend's
+  // own default and tie-break.
+  return sportTypes.length > 0 && sportTypes.every((s) => CYCLING_SPORT_TYPES.includes(s))
+    ? "cycling"
+    : "running";
+}
+
+function checkedSports(sportTypes: string[], family: SportFamily): Set<string> {
+  if (sportTypes.includes(NONE_RUNNING) || sportTypes.includes(NONE_CYCLING)) {
+    return new Set();
+  }
+  const familySports = FAMILY_SPORTS[family];
+  if (sportTypes.length === 0) return new Set(familySports);
+  return new Set(sportTypes.filter((s) => familySports.includes(s)));
+}
 
 const MODES: { value: SourceMode; label: string; hint: string }[] = [
   {
@@ -41,7 +83,6 @@ interface Props {
   source: DataSourceSpec;
   onChange: (source: DataSourceSpec) => void;
   activities: ActivitySummary[];
-  sportTypes: string[];
   oldest: string | null;
   newest: string | null;
   /** Stable per editor instance, so each panel's radios form their own group. */
@@ -52,7 +93,6 @@ export function DataSourceEditor({
   source,
   onChange,
   activities,
-  sportTypes,
   oldest,
   newest,
   groupName,
@@ -61,6 +101,12 @@ export function DataSourceEditor({
 
   return (
     <div className="source-editor">
+      <SportPicker
+        filters={source.filters}
+        onChange={(changes) => patch({ filters: { ...source.filters, ...changes } })}
+        groupName={groupName}
+      />
+
       <div className="source-editor__modes">
         {MODES.map((mode) => (
           <label
@@ -104,7 +150,7 @@ export function DataSourceEditor({
         />
       )}
 
-      <Filters source={source} onChange={patch} sportTypes={sportTypes} />
+      <Filters source={source} onChange={patch} />
     </div>
   );
 }
@@ -308,49 +354,95 @@ function ActivityPicker({
   );
 }
 
+/**
+ * The one, shared sport picker: family first (running vs cycling, mutually
+ * exclusive — they can never share a plot, see this file's header comment),
+ * then which of that family's sub-sports count. Shown up front, unconditionally
+ * — not tucked inside the collapsed `Filters` below — since which sport a panel
+ * covers is a primary decision, not an advanced one.
+ */
+function SportPicker({
+  filters,
+  onChange,
+  groupName,
+}: {
+  filters: ActivityFilter;
+  onChange: (changes: Partial<ActivityFilter>) => void;
+  groupName: string;
+}) {
+  const family = familyOf(filters.sport_types);
+  const checked = checkedSports(filters.sport_types, family);
+
+  const selectFamily = (next: SportFamily) => {
+    if (next === family) return;
+    // Always the explicit, full list — never empty — so the choice round-trips
+    // unambiguously instead of leaning on "empty means everything."
+    onChange({ sport_types: [...FAMILY_SPORTS[next]] });
+  };
+
+  const toggleSport = (sport: string) => {
+    const next = new Set(checked);
+    if (next.has(sport)) next.delete(sport);
+    else next.add(sport);
+    onChange({
+      sport_types: next.size > 0
+        ? [...next]
+        : [family === "running" ? NONE_RUNNING : NONE_CYCLING],
+    });
+  };
+
+  return (
+    <div className="sport-picker">
+      <div className="sport-picker__family">
+        {(["running", "cycling"] as const).map((value) => (
+          <label
+            key={value}
+            className={`mode ${family === value ? "mode--active" : ""}`}
+          >
+            <input
+              type="radio"
+              name={`sport-family-${groupName}`}
+              checked={family === value}
+              onChange={() => selectFamily(value)}
+            />
+            <span className="mode__label">{value === "running" ? "Running" : "Cycling"}</span>
+          </label>
+        ))}
+      </div>
+      <div className="multichoice">
+        {FAMILY_SPORTS[family].map((sport) => (
+          <label key={sport} className="multichoice__item">
+            <input
+              type="checkbox"
+              checked={checked.has(sport)}
+              onChange={() => toggleSport(sport)}
+            />
+            <span>{sport}</span>
+          </label>
+        ))}
+      </div>
+      {checked.size === 0 && (
+        <p className="note note--error">No sport selected — nothing will be shown.</p>
+      )}
+    </div>
+  );
+}
+
 function Filters({
   source,
   onChange,
-  sportTypes,
 }: {
   source: DataSourceSpec;
   onChange: (changes: Partial<DataSourceSpec>) => void;
-  sportTypes: string[];
 }) {
   const filters = source.filters;
   const setFilters = (changes: Partial<DataSourceSpec["filters"]>) =>
     onChange({ filters: { ...filters, ...changes } });
 
-  const toggleSport = (sport: string) =>
-    setFilters({
-      sport_types: filters.sport_types.includes(sport)
-        ? filters.sport_types.filter((s) => s !== sport)
-        : [...filters.sport_types, sport],
-    });
-
   return (
     <details className="filters">
-      <summary>
-        Filters
-        {filters.sport_types.length > 0 && ` · ${filters.sport_types.join(", ")}`}
-      </summary>
+      <summary>Distance filters</summary>
       <div className="filters__body">
-        <div className="param">
-          <span className="param__label">Sport types</span>
-          <div className="multichoice">
-            {sportTypes.map((sport) => (
-              <label key={sport} className="multichoice__item">
-                <input
-                  type="checkbox"
-                  checked={filters.sport_types.includes(sport)}
-                  onChange={() => toggleSport(sport)}
-                />
-                <span>{sport}</span>
-              </label>
-            ))}
-          </div>
-          <p className="param__help">None checked means every sport.</p>
-        </div>
         <div className="param">
           <label className="param__label">Min distance (km)</label>
           <input

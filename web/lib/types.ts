@@ -384,6 +384,8 @@ export interface ActivityCard {
   elevation_gain_m: number | null;
   moving_s: number | null;
   avg_hr: number | null;
+  avg_power_w: number | null;
+  power_source: "measured" | "estimated" | null;
 }
 
 export interface ActivityComment {

@@ -30,7 +30,7 @@ class InMemoryActivityData(ActivityDataSource):
             if isinstance(stream.start_date, datetime):
                 self._streams[int(stream.activity_id)] = stream
         self.mass_kg = mass_kg
-        self.store = FeatureStore(cache=feature_cache)
+        self.store = FeatureStore(cache=feature_cache, mass_kg=mass_kg)
         self._summaries: Optional[List[ActivitySummary]] = None
 
     def summaries(self) -> List[ActivitySummary]:
@@ -65,6 +65,7 @@ class InMemoryActivityData(ActivityDataSource):
             has_streams=bool(getattr(stream, "has_streams", True)),
             distance_m=distance,
             moving_s=moving,
+            relative_effort=stream.summary_relative_effort,
         )
 
     def features(self, activity_ids: Sequence[int]) -> pd.DataFrame:

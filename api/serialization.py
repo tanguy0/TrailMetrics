@@ -15,7 +15,12 @@ from datetime import date
 from typing import Any, Dict, List, Optional
 
 from src.domain.dataset.binning import GRANULARITIES
-from src.domain.dataset.metrics import ACTIVITY_METRICS, AGGREGATIONS, NO_METRIC
+from src.domain.dataset.metrics import (
+    ACTIVITY_METRICS,
+    AGGREGATIONS,
+    FITNESS_FATIGUE_METRICS,
+    NO_METRIC,
+)
 from src.domain.plots import all_plots
 from src.domain.progress.models import GRADIENT_BAND_KEYS, PR_DISTANCES
 from src.domain.ports.activity_data import ActivitySummary
@@ -31,8 +36,12 @@ def registry_payload(lang: str) -> Dict[str, Any]:
     """Everything the client needs to render plot pickers and parameter forms."""
     return {
         "plots": [_plot_definition(definition, lang) for definition in all_plots()],
+        # Fitness/Fatigue are included here (metadata lookup by key, e.g. for the
+        # client's own metric_allows_agg check) even though they're absent from
+        # the "activity_metrics" choice list every other picker uses — see
+        # FITNESS_FATIGUE_METRICS's docstring and _providers' "trend_metrics".
         "metrics": {key: _metric(metric, lang)
-                    for key, metric in ACTIVITY_METRICS.items()},
+                    for key, metric in {**ACTIVITY_METRICS, **FITNESS_FATIGUE_METRICS}.items()},
         "providers": _providers(lang),
         "source_modes": [
             {"value": "activities", "label": translate("param.rows.activity", lang)},
@@ -83,6 +92,10 @@ def _providers(lang: str) -> Dict[str, List[Dict[str, str]]]:
         {"value": key, "label": translate(metric.label_key, lang)}
         for key, metric in ACTIVITY_METRICS.items()
     ]
+    trend_only_metrics = [
+        {"value": key, "label": translate(metric.label_key, lang)}
+        for key, metric in FITNESS_FATIGUE_METRICS.items()
+    ]
     return {
         "activity_metrics": metrics,
         # For the "plot a second metric too" controls: same list, plus an explicit
@@ -90,6 +103,16 @@ def _providers(lang: str) -> Dict[str, List[Dict[str, str]]]:
         "activity_metrics_optional": [
             {"value": NO_METRIC, "label": translate("param.metric2.none", lang)},
             *metrics,
+        ],
+        # metric_trend's own metric/metric2 pickers (only): every ACTIVITY_METRICS
+        # entry, plus Fitness/Fatigue — a cross-sport daily recursion that isn't a
+        # column on the per-activity feature table, so it would silently break
+        # any other plot type's metric picker (scatter, distribution, table, ...)
+        # if it were mixed into "activity_metrics" instead.
+        "trend_metrics": metrics + trend_only_metrics,
+        "trend_metrics_optional": [
+            {"value": NO_METRIC, "label": translate("param.metric2.none", lang)},
+            *metrics, *trend_only_metrics,
         ],
         "aggregations": [
             {"value": agg, "label": translate(f"agg.{agg}", lang)}

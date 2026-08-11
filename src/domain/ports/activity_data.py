@@ -36,6 +36,11 @@ class ActivitySummary:
     has_streams: bool
     distance_m: float = 0.0
     moving_s: float = 0.0
+    # Strava's Relative Effort — carried on the cheap summary (not just the full
+    # feature row) so a cross-sport, whole-history read (the Fitness & Fatigue
+    # plot) never has to pull every activity's feature row just for this one
+    # number. ``None`` when the activity has no heart rate.
+    relative_effort: Optional[float] = None
 
     @property
     def label(self) -> str:

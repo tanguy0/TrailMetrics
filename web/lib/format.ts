@@ -25,6 +25,11 @@ export function formatPace(secondsPerKm: number | null | undefined): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}/km`;
 }
 
+export function formatSpeed(kmh: number | null | undefined): string {
+  if (kmh == null || !Number.isFinite(kmh)) return "—";
+  return `${kmh.toFixed(1)} km/h`;
+}
+
 /** A pace as `M:SS`, for an editable field — no `/km` suffix to re-parse out. */
 export function formatPaceInput(secondsPerKm: number | null | undefined): string {
   if (secondsPerKm == null || !Number.isFinite(secondsPerKm)) return "";

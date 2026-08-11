@@ -33,7 +33,6 @@ interface Props {
   onMove?: (direction: -1 | 1) => void;
   registry: Registry;
   activities: ActivitySummary[];
-  sportTypes: string[];
   oldest: string | null;
   newest: string | null;
   editable: boolean;
@@ -53,7 +52,6 @@ export function PanelEditor({
   onMove,
   registry,
   activities,
-  sportTypes,
   oldest,
   newest,
   editable,
@@ -255,7 +253,6 @@ export function PanelEditor({
           source={panel.source}
           onChange={(source) => onChange({ ...panel, source })}
           activities={activities}
-          sportTypes={sportTypes}
           oldest={oldest}
           newest={newest}
           groupName={panel.id}

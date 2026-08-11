@@ -226,13 +226,25 @@ def _intensity_metrics() -> List[ActivityMetric]:
             key="avg_power_w", label_key="metric.avg_power_w", unit="W",
             column="avg_power_w", default_agg="mean",
             allowed_aggs=("mean", "median", "max", "min"), decimals=0,
+            # Real power-meter watts don't actually need a weight (see
+            # apply_mass), but that's a rare enough case not to special-case in
+            # the "set your weight" messaging — both modelled estimates
+            # (running and cycling) need one, same as before.
+            higher_is_better=True, needs_streams=True, needs_weight=True,
+        ),
+        ActivityMetric(
+            key="power_per_kg", label_key="metric.power_per_kg", unit="W/kg",
+            column="power_per_kg", default_agg="mean",
+            allowed_aggs=("mean", "median", "max", "min"), decimals=2,
             higher_is_better=True, needs_streams=True, needs_weight=True,
         ),
         ActivityMetric(
             key="power_to_hr", label_key="metric.power_to_hr", unit="W/bpm",
             column="power_to_hr", default_agg="mean",
             allowed_aggs=("mean", "median", "max", "min"), decimals=2,
-            higher_is_better=True, needs_streams=True, needs_weight=True,
+            # Real power-meter watts ÷ HR needs no weight (see apply_mass);
+            # only the running-modelled fallback does.
+            higher_is_better=True, needs_streams=True, needs_weight=False,
         ),
         # Strava's Relative Effort — its training-load score for a session.
         # Summed over a week it is training load; averaged it is typical session
@@ -292,6 +304,26 @@ ACTIVITY_METRICS: Dict[str, ActivityMetric] = {
 # Order shown in pickers: volume first (what most people ask for), then
 # intensity, then the long tail.
 METRIC_ORDER: List[str] = list(ACTIVITY_METRICS)
+
+# Fitness & Fatigue (see src.domain.plots.fitness_fatigue) are deliberately kept
+# OUT of ACTIVITY_METRICS: they aren't columns on the per-activity feature table
+# at all — the value at any date is a cross-sport recursion over Relative Effort
+# going back to the athlete's first activity, nothing to do with any one row —
+# so a generic scatter/distribution/table plot that merely reads a column off
+# `resolved.features` would silently break on them. Only
+# src.domain.plots.metric_trend knows how to compute them (see its `_is_ff`)
+# and is the only picker that offers them, via its own "trend_metrics"
+# choices_from (api/serialization.py) rather than the shared "activity_metrics".
+FITNESS_FATIGUE_METRICS: Dict[str, ActivityMetric] = {
+    "fitness": ActivityMetric(
+        key="fitness", label_key="plot.fitness_fatigue.fitness", unit="",
+        column="fitness", default_agg="mean", allowed_aggs=(), decimals=0,
+    ),
+    "fatigue": ActivityMetric(
+        key="fatigue", label_key="plot.fitness_fatigue.fatigue", unit="",
+        column="fatigue", default_agg="mean", allowed_aggs=(), decimals=0,
+    ),
+}
 
 
 def get_metric(key: str) -> Optional[ActivityMetric]:

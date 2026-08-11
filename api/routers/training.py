@@ -89,7 +89,7 @@ def calendar(
 
     rows = get_activity_repository().rows(athlete.id)
     activities: List[Dict[str, Any]] = [
-        _activity_card(row) for row in rows
+        _activity_card(row, athlete.weight_kg) for row in rows
         if (row_date := _row_date(row)) is not None and start <= row_date.date() <= end
     ]
 

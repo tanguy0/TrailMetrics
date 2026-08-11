@@ -21,7 +21,14 @@ from src.domain.models.activity import ActivityStream
 # Bumped if the payload layout changes, so a reader can refuse what it can't parse.
 FORMAT_VERSION = 1
 
-_ARRAYS = ("time", "distance", "altitude", "heartrate")
+# time/distance define the activity and have always been written. altitude/
+# heartrate/watts are optional signals — an archive written before a given one
+# was added simply lacks that key, so it decodes as NaN rather than KeyError-ing
+# (see decode_stream). That keeps old blobs readable across a deploy that adds a
+# new stream, with no need to bump FORMAT_VERSION or force an early resync.
+_REQUIRED_ARRAYS = ("time", "distance")
+_OPTIONAL_ARRAYS = ("altitude", "heartrate", "watts")
+_ARRAYS = _REQUIRED_ARRAYS + _OPTIONAL_ARRAYS
 
 
 def encode_stream(stream: ActivityStream) -> bytes:
@@ -53,8 +60,16 @@ def decode_stream(payload: bytes) -> Optional[ActivityStream]:
             if int(metadata.get("format_version", 0)) > FORMAT_VERSION:
                 return None
             arrays = {
-                name: np.asarray(archive[name], dtype=float) for name in _ARRAYS
+                name: np.asarray(archive[name], dtype=float)
+                for name in _REQUIRED_ARRAYS
             }
+            n = arrays["time"].size
+            for name in _OPTIONAL_ARRAYS:
+                arrays[name] = (
+                    np.asarray(archive[name], dtype=float)
+                    if name in archive
+                    else np.full(n, np.nan)
+                )
     except (ValueError, KeyError, OSError, json.JSONDecodeError):
         return None
 

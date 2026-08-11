@@ -91,6 +91,15 @@ class SyncAthleteActivities(UseCase):
     ) -> SyncAthleteActivitiesOutput:
         athlete_id = params.athlete_id
         result = SyncAthleteActivitiesOutput()
+        # Cycling's modelled power (src/domain/cycling/power.py) isn't linear in
+        # mass the way running's is, so it can't be cached per-kg and rescaled on
+        # read — it's computed once here, against whatever weight is on file right
+        # now. A weight change later needs a resync to refresh past rides, same as
+        # any other cached feature.
+        mass_kg = None
+        if self.athletes is not None:
+            athlete = self.athletes.get(athlete_id)
+            mass_kg = athlete.weight_kg if athlete else None
 
         self._report(athlete_id, SyncState(
             status="running", message="listing activities",
@@ -128,7 +137,7 @@ class SyncAthleteActivities(UseCase):
         batch: List[dict] = []
         for index, activity in enumerate(pending, start=1):
             try:
-                if self._import_one(athlete_id, activity, batch):
+                if self._import_one(athlete_id, activity, batch, mass_kg):
                     result.imported += 1
                 else:
                     result.failed += 1
@@ -158,14 +167,17 @@ class SyncAthleteActivities(UseCase):
 
     # --- One activity ------------------------------------------------------
 
-    def _import_one(self, athlete_id: int, activity: dict, batch: List[dict]) -> bool:
+    def _import_one(
+        self, athlete_id: int, activity: dict, batch: List[dict],
+        mass_kg: Optional[float] = None,
+    ) -> bool:
         """Fetch, featurize and queue one activity. Returns whether it produced a row."""
         activity_id = int(activity["id"])
         stream = self.strava.fetch_activity(activity)
         if stream is None:
             return False
 
-        row = build_activity_features(stream)
+        row = build_activity_features(stream, mass_kg=mass_kg)
         if row is None:
             return False
         # Route metadata rides along on the row rather than through the feature
