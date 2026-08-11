@@ -229,7 +229,22 @@ class SyncAthleteActivities(UseCase):
 
     def _flush(self, athlete_id: int, batch: List[dict]) -> None:
         if batch:
-            self.activities.upsert_rows(athlete_id, batch)
+            try:
+                self.activities.upsert_rows(athlete_id, batch)
+            except Exception as error:
+                # A batch that fails to write must not abort the whole sync (the
+                # same principle as the per-activity guard in `execute`): the
+                # affected activities simply stay un-stamped at the current
+                # feature_version and are picked up again as "pending" on the
+                # next sync, exactly like any activity not yet processed at all.
+                # Without this, one bad batch would propagate out of `execute`,
+                # skip the final "done" report entirely, and leave
+                # `last_synced_at` unset — which makes the frontend's
+                # sync-if-stale check retry (and fail the same way) forever.
+                logger.warning(
+                    "could not write %d activities for athlete %s: %s",
+                    len(batch), athlete_id, error,
+                )
             batch.clear()
         # Stream paths are set after the rows exist, since they update them.
         for activity_id, path in self._pending_objects:
