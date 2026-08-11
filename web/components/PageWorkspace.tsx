@@ -280,8 +280,14 @@ export function PageWorkspace({
         />
       ))}
 
-      <button type="button" className="button button--wide" onClick={addPanel}>
-        {t("page.add_panel")}
+      <button
+        type="button"
+        className="button button--wide"
+        onClick={addPanel}
+        aria-label={t("page.add_panel")}
+        title={t("page.add_panel")}
+      >
+        +
       </button>
     </main>
   );

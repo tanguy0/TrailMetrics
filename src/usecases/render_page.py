@@ -195,16 +195,6 @@ class RenderPage(UseCase):
             result.error = f"{type(error).__name__}: {error}"
             return result
 
-        if resolved.dropped_streamless and definition.requires_streams:
-            output.notes.append(
-                translate("panel.dropped_streamless", context.lang).format(
-                    count=resolved.dropped_streamless)
-            )
-        if resolved.dropped_cross_sport:
-            output.notes.append(
-                translate("panel.dropped_cross_sport", context.lang).format(
-                    count=resolved.dropped_cross_sport)
-            )
         context.output_cache.set(signature, plot.plot_type, output)
         result.output = output
         return result

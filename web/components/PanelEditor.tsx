@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlotOutputView } from "./PlotOutputView";
 import { ParamForm } from "./ParamForm";
 import { DataSourceEditor } from "./DataSourceEditor";
+import { Modal } from "./Modal";
 import { ApiError, renderPanel } from "@/lib/api";
 import type {
   ActivitySummary,
@@ -268,11 +269,8 @@ export function PanelEditor({
           const plotResult = resultsByPlot.get(plot.id);
           // Tables read badly in a narrow column, so they always span the grid.
           const spans = !plotResult || plotResult.output.tables.length > 0;
-          // A content block *is* the page's prose. Reading it, the type label and the
-          // catalogue description are noise around a paragraph — so they stay in the
-          // editor and disappear once the page is being read.
+          // A content block *is* the page's prose, so it renders without card chrome.
           const isContent = definition ? !definition.requires_data : false;
-          const chrome = editable || !isContent;
           return (
             <article
               key={plot.id}
@@ -284,9 +282,8 @@ export function PanelEditor({
                 .filter(Boolean)
                 .join(" ")}
             >
-              <header className="plot-card__header">
-                {chrome && <h3>{plot.title || definition?.label || plot.plot_type}</h3>}
-                {editable && (
+              {editable && (
+                <header className="plot-card__header">
                   <div className="plot-card__actions">
                     <button
                       type="button"
@@ -324,13 +321,7 @@ export function PanelEditor({
                       Remove
                     </button>
                   </div>
-                )}
-              </header>
-
-              {/* The catalogue description helps while choosing a plot; above the
-                  author's own paragraph it just repeats what the block obviously is. */}
-              {definition && !isContent && (
-                <p className="muted">{definition.description}</p>
+                </header>
               )}
 
               {editable && expanded.has(plot.id) && definition && (
@@ -370,7 +361,7 @@ function PlotPicker({
   registry: Registry;
   onAdd: (plotType: string) => void;
 }) {
-  const [choice, setChoice] = useState("");
+  const [open, setOpen] = useState(false);
 
   const grouped = useMemo(() => {
     const byCategory = new Map<string, typeof registry.plots>();
@@ -383,31 +374,41 @@ function PlotPicker({
   }, [registry.plots]);
 
   return (
-    <div className="plot-picker">
-      <select value={choice} onChange={(event) => setChoice(event.target.value)}>
-        <option value="">Add a plot…</option>
-        {grouped.map(([category, definitions]) => (
-          <optgroup key={category} label={category}>
-            {definitions.map((definition) => (
-              <option key={definition.key} value={definition.key}>
-                {definition.label}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
+    <>
       <button
         type="button"
-        className="button"
-        disabled={!choice}
-        onClick={() => {
-          onAdd(choice);
-          setChoice("");
-        }}
+        className="button button--wide"
+        onClick={() => setOpen(true)}
+        aria-label="Add a plot"
+        title="Add a plot"
       >
-        Add
+        +
       </button>
-    </div>
+      {open && (
+        <Modal title="Add a plot" onClose={() => setOpen(false)}>
+          <div className="plot-picker-list">
+            {grouped.map(([category, definitions]) => (
+              <div key={category} className="plot-picker-list__group">
+                <h4>{category}</h4>
+                {definitions.map((definition) => (
+                  <button
+                    key={definition.key}
+                    type="button"
+                    className="button button--ghost button--wide"
+                    onClick={() => {
+                      onAdd(definition.key);
+                      setOpen(false);
+                    }}
+                  >
+                    {definition.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
 

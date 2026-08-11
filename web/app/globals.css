@@ -688,14 +688,20 @@ input[type="radio"] {
   padding: 0.25rem 0.75rem;
 }
 
-.plot-card--content .plot-card__header:empty {
-  display: none;
+.plot-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.plot-picker {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+.plot-picker-list__group h4 {
+  margin: 0 0 0.4rem;
+  color: var(--muted);
+}
+
+.plot-picker-list__group .button {
+  text-align: left;
+  margin-top: 0.3rem;
 }
 
 /* --- Charts & tables ------------------------------------------------------ */
