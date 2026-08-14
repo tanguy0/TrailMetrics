@@ -20,6 +20,7 @@ export function Sidebar({ strings }: { strings: Strings }) {
     { href: "/home", label: t("nav.home"), icon: "🏠" },
     { href: "/pages", label: t("nav.analysis"), icon: "📊" },
     { href: "/training", label: t("nav.training"), icon: "📅" },
+    { href: "/blog", label: t("nav.blog"), icon: "📰" },
   ];
 
   return (

@@ -17,3 +17,9 @@ PyJWT>=2.8
 httpx>=0.27
 # Multipart parsing — FastAPI needs it for the image upload endpoint (UploadFile).
 python-multipart>=0.0.9
+# Rasterizes an uploaded blog PDF into one PNG per page. A pure wheel (bundles its
+# own PDFium build) — no poppler/ghostscript system package to add to the Docker
+# image, unlike pdf2image.
+pypdfium2>=4.30
+# Encodes the rasterized pages as PNG.
+Pillow>=10.0

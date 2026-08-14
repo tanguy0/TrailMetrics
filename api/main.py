@@ -27,6 +27,7 @@ from api.routers import (
     activities,
     assets,
     auth,
+    blog,
     coach,
     home,
     pages,
@@ -50,7 +51,7 @@ settings = get_settings()
 async def lifespan(_: FastAPI):
     """Open the pool and converge the schema on boot; close cleanly on shutdown."""
     if settings.has_database:
-        from api.deps import get_database, get_stream_store
+        from api.deps import get_blog_media_store, get_database, get_stream_store
 
         try:
             database = get_database()
@@ -64,6 +65,10 @@ async def lifespan(_: FastAPI):
                 get_stream_store().ensure_bucket()
             except Exception:
                 logger.exception("could not ensure the storage bucket")
+            try:
+                get_blog_media_store().ensure_bucket()
+            except Exception:
+                logger.exception("could not ensure the blog media bucket")
     else:
         logger.warning(
             "No DATABASE_URL — /registry works, but data endpoints will 503."
@@ -168,6 +173,7 @@ app.include_router(training.router)
 app.include_router(precompute.router)
 app.include_router(assets.router)
 app.include_router(coach.router)
+app.include_router(blog.router)
 
 
 @app.get("/health", tags=["ops"])

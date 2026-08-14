@@ -312,6 +312,28 @@ create table if not exists assets (
 create index if not exists assets_athlete_created_idx
     on assets (athlete_id, created_at desc);
 
+-- --- Blog -------------------------------------------------------------------
+
+-- Written by the single "master" operator account (see api/deps.py's
+-- `require_master`), read by anyone — the blog is public, unlike the rest of the
+-- app. The PDF and its rasterized pages live in object storage (see
+-- src/domain/ports/blog_media.py); this row is just the metadata and `pdf_path`,
+-- the prefix under which those objects are found.
+create table if not exists blog_posts (
+    id           text primary key,
+    slug         text not null unique,
+    title        text not null default '',
+    body_text    text not null default '',
+    pdf_path     text not null default '',
+    page_count   integer not null default 0,
+    published    boolean not null default true,
+    created_at   timestamptz not null default now(),
+    updated_at   timestamptz not null default now()
+);
+
+create index if not exists blog_posts_published_created_idx
+    on blog_posts (published, created_at desc);
+
 -- --- Row-level security -----------------------------------------------------
 
 -- No policies defined: this is a default-deny backstop for any role other than
@@ -327,3 +349,4 @@ alter table precompute_jobs enable row level security;
 alter table planned_items enable row level security;
 alter table assets enable row level security;
 alter table activity_comments enable row level security;
+alter table blog_posts enable row level security;

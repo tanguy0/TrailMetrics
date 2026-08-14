@@ -13,6 +13,8 @@ import type {
   ActivitySummary,
   AssetUpload,
   Athlete,
+  BlogPost,
+  BlogPostSummary,
   CoachAthlete,
   HomeSummary,
   PageSpec,
@@ -303,3 +305,55 @@ export const deletePlannedItem = (id: string) =>
 /** Every athlete a coach account can switch into viewing. 403s for anyone else. */
 export const listCoachAthletes = () =>
   request<{ athletes: CoachAthlete[] }>("/coach/athletes");
+
+// --- Blog --------------------------------------------------------------------
+
+/** The public blog index — published articles only. */
+export const listBlogPosts = () => request<{ posts: BlogPostSummary[] }>("/blog");
+
+/** Every article, drafts included. 403s for anyone but the master account. */
+export const listAllBlogPosts = () =>
+  request<{ posts: BlogPostSummary[] }>("/blog/admin");
+
+export const getBlogPost = (slug: string) =>
+  request<BlogPost>(`/blog/${encodeURIComponent(slug)}`);
+
+/** master-only: `pdf`'s pages become the carousel, rasterized server-side. */
+export const createBlogPost = (input: {
+  title: string;
+  body_text: string;
+  slug?: string;
+  published: boolean;
+  pdf: File;
+}) => {
+  const form = new FormData();
+  form.append("title", input.title);
+  form.append("body_text", input.body_text);
+  if (input.slug) form.append("slug", input.slug);
+  form.append("published", String(input.published));
+  form.append("pdf", input.pdf);
+  return request<BlogPost>("/blog", { method: "POST", body: form });
+};
+
+/** master-only. Passing `pdf` replaces the carousel; omitting it keeps the old one. */
+export const updateBlogPost = (
+  id: string,
+  changes: {
+    title?: string;
+    body_text?: string;
+    slug?: string;
+    published?: boolean;
+    pdf?: File;
+  },
+) => {
+  const form = new FormData();
+  if (changes.title !== undefined) form.append("title", changes.title);
+  if (changes.body_text !== undefined) form.append("body_text", changes.body_text);
+  if (changes.slug !== undefined) form.append("slug", changes.slug);
+  if (changes.published !== undefined) form.append("published", String(changes.published));
+  if (changes.pdf) form.append("pdf", changes.pdf);
+  return request<BlogPost>(`/blog/${id}`, { method: "PATCH", body: form });
+};
+
+export const deleteBlogPost = (id: string) =>
+  request<void>(`/blog/${id}`, { method: "DELETE" });

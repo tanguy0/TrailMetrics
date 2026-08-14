@@ -263,4 +263,8 @@ def _me_payload(athlete: Athlete, session: dict) -> dict:
         sport_types=sorted({row["sport_type"] for row in summaries}),
     )
     payload.update(session)
+    # Whether *this* athlete (not the signed-in one, unlike `is_coach`) can write
+    # blog posts — there is no "viewing as" for the master account, so the two
+    # never need to diverge the way coach status does.
+    payload["is_master"] = get_settings().is_master(athlete.email)
     return payload

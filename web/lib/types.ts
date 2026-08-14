@@ -353,6 +353,8 @@ export interface Athlete {
   is_coach: boolean;
   /** True when a coach is browsing this account rather than their own. */
   viewing_as: boolean;
+  /** Whether *this* account is the one allowed to write blog posts. */
+  is_master: boolean;
 }
 
 /** One entry in a coach's athlete switcher — not the full profile. */
@@ -482,4 +484,32 @@ export interface UiStrings {
   lang: string;
   languages: Record<string, string>;
   strings: Record<string, string>;
+}
+
+// --- Blog --------------------------------------------------------------------
+
+/** One card in the public blog index. */
+export interface BlogPostSummary {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  cover_url: string | null;
+  page_count: number;
+  created_at: string | null;
+  /** Only present on `/blog/admin` — the public index omits it (always true there). */
+  published?: boolean;
+}
+
+/** One full article: the carousel is `page_urls`, in reading order. */
+export interface BlogPost {
+  id: string;
+  slug: string;
+  title: string;
+  body_text: string;
+  page_urls: string[];
+  page_count: number;
+  published: boolean;
+  created_at: string | null;
+  updated_at: string | null;
 }

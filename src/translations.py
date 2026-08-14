@@ -777,6 +777,7 @@ TRANSLATIONS = {
     "ui.nav.home": {"en": "Home", "fr": "Accueil"},
     "ui.nav.analysis": {"en": "Analysis", "fr": "Analysis"},
     "ui.nav.training": {"en": "Training", "fr": "Entraînement"},
+    "ui.nav.blog": {"en": "Blog", "fr": "Blog"},
     "ui.nav.sign_out": {"en": "Sign out", "fr": "Se déconnecter"},
 
     "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},
