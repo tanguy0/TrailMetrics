@@ -286,27 +286,43 @@ h4 {
   gap: 0.3rem;
 }
 
+/*
+ * Golden is the app's one "this is an action" color (see `.card-block--records`'s
+ * comment for the other half of that rule) — these four are the most-pressed
+ * buttons in the product, so they get it as a solid fill, not just an accent.
+ */
 .sidebar__link {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.55rem 0.6rem;
-  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--radius);
   text-decoration: none;
-  color: var(--text);
-  font-weight: 600;
+  color: #fff;
+  font-weight: 700;
   font-size: 0.95rem;
-  border-left: 3px solid transparent;
+  background: var(--sunrise);
+  border: 1px solid var(--sunrise);
 }
 
-.sidebar__link:hover {
-  background: var(--surface-alt);
+.sidebar__link:not(.sidebar__link--disabled):hover {
+  filter: brightness(1.06);
 }
 
 .sidebar__link--active {
-  background: var(--tone-forest-tint);
-  border-left-color: var(--primary);
-  color: var(--primary);
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* Shown in place of a link for a section that needs an athlete's own data — the
+   rail stays fully visible before sign-in, but these four are inert until then. */
+.sidebar__link--disabled {
+  background: var(--surface-alt);
+  border-color: var(--spine);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.75;
+  filter: none;
 }
 
 .sidebar__icon {
@@ -1063,7 +1079,10 @@ input[type="radio"] {
 .card-block--profile > .card-block__title { background: var(--tone-forest); }
 .card-block--health > .card-block__title { background: var(--tone-plum); }
 .card-block--zones > .card-block__title { background: var(--tone-terracotta); }
-.card-block--records > .card-block__title { background: var(--sunrise); }
+/* Not `--sunrise`: that gold is reserved for buttons, highlights and the like
+   (the sidebar's nav buttons, `.cell--best`, `.note`'s accent) — a section
+   header is none of those, so records gets the palette's other green instead. */
+.card-block--records > .card-block__title { background: var(--moss); }
 .card-block--sync > .card-block__title { background: var(--tone-blue); }
 .card-block--welcome > .card-block__title { background: var(--tone-forest); }
 
@@ -2653,4 +2672,146 @@ input[type="radio"] {
 .new-page__hint {
   font-size: 0.82rem;
   color: var(--muted);
+}
+
+/* --- Blog ------------------------------------------------------------------ */
+
+.blog-index__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.blog-card {
+  padding: 0;
+  overflow: hidden;
+  box-shadow: inset -8px -8px 11px -6px rgba(36, 31, 25, 0.1);
+}
+
+.blog-card__link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.85rem;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.blog-card__cover {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: calc(var(--radius) - 4px);
+  margin-bottom: 0.4rem;
+  background: var(--surface-alt);
+}
+
+.blog-card__edit {
+  display: block;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.85rem 0.7rem;
+  color: var(--primary);
+}
+
+.blog-post h1 {
+  margin-bottom: 0.5rem;
+}
+
+.blog-carousel {
+  margin: 1.5rem 0;
+}
+
+.blog-carousel__viewport {
+  position: relative;
+  background: var(--surface-alt);
+  border: 1px solid var(--spine);
+  border-radius: var(--radius);
+  overflow: hidden;
+  /* Keeps the frame stable while a slide of a different aspect ratio loads. */
+  aspect-ratio: 4 / 3;
+}
+
+.blog-carousel__slide {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.blog-carousel__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 253, 249, 0.85);
+  border: 1px solid var(--spine);
+  border-radius: 999px;
+  width: 2.2rem;
+  height: 2.2rem;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.blog-carousel__arrow--prev {
+  left: 0.6rem;
+}
+
+.blog-carousel__arrow--next {
+  right: 0.6rem;
+}
+
+.blog-carousel__dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.blog-carousel__dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--spine);
+  cursor: pointer;
+}
+
+.blog-carousel__dot--active {
+  background: var(--primary);
+}
+
+.blog-signature {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--spine);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.blog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  max-width: 34rem;
+}
+
+.blog-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.blog-form__checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem !important;
+}
+
+.blog-form__actions {
+  display: flex;
+  gap: 0.6rem;
 }

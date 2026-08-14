@@ -69,7 +69,8 @@ export default async function Home({
       </p>
 
       <p className="muted">
-        <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a>
+        <a href="/blog">Blog</a> · <a href="/privacy">Privacy Policy</a> ·{" "}
+        <a href="/terms">Terms of Service</a>
       </p>
     </main>
   );

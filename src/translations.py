@@ -777,6 +777,11 @@ TRANSLATIONS = {
     "ui.nav.home": {"en": "Home", "fr": "Accueil"},
     "ui.nav.analysis": {"en": "Analysis", "fr": "Analysis"},
     "ui.nav.training": {"en": "Training", "fr": "Entraînement"},
+    "ui.nav.blog": {"en": "Blog", "fr": "Blog"},
+    "ui.nav.sign_in_required": {
+        "en": "Sign in to access this",
+        "fr": "Connectez-vous pour y accéder",
+    },
     "ui.nav.sign_out": {"en": "Sign out", "fr": "Se déconnecter"},
 
     "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},

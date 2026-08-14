@@ -18,27 +18,24 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // The rail is navigation between an athlete's own screens, so it only exists
-  // once there is a session — the sign-in page has nowhere to navigate to.
+  // The rail is always there — brand + wayfinding — even for a visitor with no
+  // session yet. `Sidebar` is the one that decides which of its links actually
+  // go anywhere.
   const signedIn = Boolean(await readSession());
-  const strings = signedIn ? await loadStrings() : {};
+  const strings = await loadStrings();
 
   return (
     <html lang={await lang()}>
       <body>
-        {signedIn ? (
-          <div className="shell">
-            <Sidebar strings={strings} />
-            <div className="shell__content">
-              <div className="shell__topbar">
-                <LanguageSwitcher />
-              </div>
-              {children}
+        <div className="shell">
+          <Sidebar strings={strings} authenticated={signedIn} />
+          <div className="shell__content">
+            <div className="shell__topbar">
+              <LanguageSwitcher />
             </div>
+            {children}
           </div>
-        ) : (
-          children
-        )}
+        </div>
       </body>
     </html>
   );

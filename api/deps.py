@@ -42,7 +42,10 @@ from src.infrastructure.postgres.precompute_repository import (
     PostgresPrecomputeRepository,
 )
 from src.infrastructure.postgres.stored_activity_data import StoredActivityData
+from src.domain.ports.blog_media import BlogMediaStore
+from src.infrastructure.storage.local_blog_media_store import LocalBlogMediaStore
 from src.infrastructure.storage.local_stream_store import LocalStreamStore
+from src.infrastructure.storage.supabase_blog_media_store import SupabaseBlogMediaStore
 from src.infrastructure.storage.supabase_stream_store import SupabaseStreamStore
 from src.infrastructure.strava.token_service import StravaTokenService
 from src.translations import DEFAULT_LANG, LANGUAGES
@@ -85,6 +88,20 @@ def get_stream_store() -> StreamStore:
         )
     logger.info("using local stream store at %s", settings.local_stream_root)
     return LocalStreamStore(settings.local_stream_root)
+
+
+@lru_cache(maxsize=1)
+def get_blog_media_store() -> BlogMediaStore:
+    """Supabase Storage (public bucket) when configured, otherwise local disk."""
+    settings = get_settings()
+    if settings.uses_supabase_storage:
+        return SupabaseBlogMediaStore(
+            settings.supabase_url,
+            settings.supabase_service_key,
+            bucket=settings.blog_media_bucket,
+        )
+    logger.info("using local blog media store at %s", settings.local_blog_media_root)
+    return LocalBlogMediaStore(settings.local_blog_media_root)
 
 
 @lru_cache(maxsize=1)
@@ -315,6 +332,13 @@ def current_athlete(athlete_id: int = Depends(current_athlete_id)) -> Athlete:
     athlete = get_athlete_repository().get(athlete_id)
     if athlete is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Unknown athlete.")
+    return athlete
+
+
+def require_master(athlete: Athlete = Depends(current_athlete)) -> Athlete:
+    """Gate for writing blog posts — one hardcoded operator account, by email."""
+    if not get_settings().is_master(athlete.email):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not the master account.")
     return athlete
 
 

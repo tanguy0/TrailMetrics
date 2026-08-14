@@ -54,6 +54,13 @@ class Settings:
     supabase_bucket: str = "activity-streams"
     # Where streams go when Supabase isn't configured (local development).
     local_stream_root: Path = field(default_factory=lambda: Path(".streams"))
+    # Blog PDFs and their rasterized pages. A separate, *public* bucket — unlike the
+    # streams bucket, these are meant to be fetched directly by a browser with no
+    # session.
+    blog_media_bucket: str = "blog-media"
+    local_blog_media_root: Path = field(
+        default_factory=lambda: Path(".streams/blog-media")
+    )
 
     # --- Strava -------------------------------------------------------------
     strava_client_id: str = ""
@@ -84,9 +91,15 @@ class Settings:
     # the deployment.
     coach_athlete_ids: List[int] = field(default_factory=list)
 
+    # The one account allowed to write blog posts. Not a role stored in the
+    # database — same shape as `coach_athlete_ids`, but by email (an athlete id
+    # differs per environment; this operator's email does not).
+    master_email: str = "tanguy.blervacque@gmail.com"
+
     @classmethod
     def from_env(cls) -> "Settings":
         local_root = _env("LOCAL_STREAM_ROOT")
+        local_blog_root = _env("LOCAL_BLOG_MEDIA_ROOT")
         origins = [o for o in _env("EXTRA_CORS_ORIGINS").split(",") if o.strip()]
         return cls(
             database_url=_env("DATABASE_URL"),
@@ -94,6 +107,12 @@ class Settings:
             supabase_service_key=_env("SUPABASE_SERVICE_KEY"),
             supabase_bucket=_env("SUPABASE_BUCKET", "activity-streams"),
             local_stream_root=Path(local_root) if local_root else Path(".streams"),
+            blog_media_bucket=_env("BLOG_MEDIA_BUCKET", "blog-media"),
+            local_blog_media_root=(
+                Path(local_blog_root) if local_blog_root
+                else Path(".streams/blog-media")
+            ),
+            master_email=_env("MASTER_EMAIL", "tanguy.blervacque@gmail.com"),
             strava_client_id=_env("STRAVA_CLIENT_ID"),
             strava_client_secret=_env("STRAVA_CLIENT_SECRET"),
             session_secret=_env("SESSION_SECRET"),
@@ -128,6 +147,9 @@ class Settings:
 
     def is_coach(self, athlete_id: int) -> bool:
         return athlete_id in self.coach_athlete_ids
+
+    def is_master(self, email: Optional[str]) -> bool:
+        return bool(email) and email.strip().lower() == self.master_email.lower()
 
     @property
     def cors_origins(self) -> List[str]:
