@@ -286,27 +286,43 @@ h4 {
   gap: 0.3rem;
 }
 
+/*
+ * Golden is the app's one "this is an action" color (see `.card-block--records`'s
+ * comment for the other half of that rule) — these four are the most-pressed
+ * buttons in the product, so they get it as a solid fill, not just an accent.
+ */
 .sidebar__link {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.55rem 0.6rem;
-  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--radius);
   text-decoration: none;
-  color: var(--text);
-  font-weight: 600;
+  color: #fff;
+  font-weight: 700;
   font-size: 0.95rem;
-  border-left: 3px solid transparent;
+  background: var(--sunrise);
+  border: 1px solid var(--sunrise);
 }
 
-.sidebar__link:hover {
-  background: var(--surface-alt);
+.sidebar__link:not(.sidebar__link--disabled):hover {
+  filter: brightness(1.06);
 }
 
 .sidebar__link--active {
-  background: var(--tone-forest-tint);
-  border-left-color: var(--primary);
-  color: var(--primary);
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* Shown in place of a link for a section that needs an athlete's own data — the
+   rail stays fully visible before sign-in, but these four are inert until then. */
+.sidebar__link--disabled {
+  background: var(--surface-alt);
+  border-color: var(--spine);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.75;
+  filter: none;
 }
 
 .sidebar__icon {
@@ -1063,7 +1079,10 @@ input[type="radio"] {
 .card-block--profile > .card-block__title { background: var(--tone-forest); }
 .card-block--health > .card-block__title { background: var(--tone-plum); }
 .card-block--zones > .card-block__title { background: var(--tone-terracotta); }
-.card-block--records > .card-block__title { background: var(--sunrise); }
+/* Not `--sunrise`: that gold is reserved for buttons, highlights and the like
+   (the sidebar's nav buttons, `.cell--best`, `.note`'s accent) — a section
+   header is none of those, so records gets the palette's other green instead. */
+.card-block--records > .card-block__title { background: var(--moss); }
 .card-block--sync > .card-block__title { background: var(--tone-blue); }
 .card-block--welcome > .card-block__title { background: var(--tone-forest); }
 
