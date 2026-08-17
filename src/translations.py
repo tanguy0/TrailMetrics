@@ -1088,6 +1088,8 @@ TRANSLATIONS = {
     "ui.training.badge.completed": {"en": "Completed", "fr": "Terminé"},
     "ui.training.week.running": {"en": "Running", "fr": "Course"},
     "ui.training.week.cycling": {"en": "Cycling", "fr": "Vélo"},
+    "ui.training.week.hiking": {"en": "Hiking", "fr": "Randonnée"},
+    "ui.training.week.swimming": {"en": "Swimming", "fr": "Natation"},
 
 }
 

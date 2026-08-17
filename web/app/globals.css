@@ -1563,6 +1563,16 @@ input[type="radio"] {
   color: var(--tone-plum);
 }
 
+.last-activity__sport--hiking {
+  background: var(--tone-terracotta-tint);
+  color: var(--tone-terracotta);
+}
+
+.last-activity__sport--swimming {
+  background: var(--moss-tint);
+  color: var(--moss);
+}
+
 .last-activity__sport--neutral {
   background: var(--tone-terracotta-tint);
   color: var(--text);
@@ -2531,6 +2541,20 @@ input[type="radio"] {
   border-color: var(--tone-plum);
 }
 
+.training-session--hiking {
+  background: var(--tone-terracotta-tint);
+  border-color: var(--tone-terracotta);
+}
+
+/* The four `--tone-*` widget accents are already spoken for (trail, run,
+   cycling, hiking), so swimming reuses `--moss` — the other green already in
+   the palette for the Current Records section — rather than adding a fifth
+   hue to the system. */
+.training-session--swimming {
+  background: var(--moss-tint);
+  border-color: var(--moss);
+}
+
 .training-session--neutral {
   background: var(--surface-alt);
   border-color: var(--spine);
@@ -2551,6 +2575,14 @@ input[type="radio"] {
 
 .training-session--cycling .training-session__sport {
   color: var(--tone-plum);
+}
+
+.training-session--hiking .training-session__sport {
+  color: var(--tone-terracotta);
+}
+
+.training-session--swimming .training-session__sport {
+  color: var(--moss);
 }
 
 .training-session--neutral .training-session__sport {
