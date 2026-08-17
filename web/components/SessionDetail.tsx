@@ -28,7 +28,7 @@ import {
   updateComment,
 } from "@/lib/api";
 import { formatDate, formatHms, formatNumber, formatPace, formatSpeed } from "@/lib/format";
-import { CYCLING_SPORT_TYPES, sportTone } from "@/lib/sport";
+import { CYCLING_SPORT_TYPES, HIKING_SPORT_TYPES, SWIMMING_SPORT_TYPES, sportTone } from "@/lib/sport";
 import type { Translate } from "@/lib/strings";
 import type {
   ActivityCard,
@@ -49,7 +49,7 @@ function singleActivitySource(activityId: number): DataSourceSpec {
   };
 }
 
-function paceGapHrPanel(activityId: number, isCycling: boolean): PanelSpec {
+function paceGapHrPanel(activityId: number, isCycling: boolean, dropGap: boolean): PanelSpec {
   return {
     id: `panel_session_pace_${activityId}`,
     title: "",
@@ -61,11 +61,14 @@ function paceGapHrPanel(activityId: number, isCycling: boolean): PanelSpec {
         id: `plot_session_pace_${activityId}`,
         plot_type: "stream_evolution",
         title: null,
-        // GAP is a running-biomechanics model and means nothing for a bike, so
-        // cycling drops it and reads its pace signal as speed instead.
+        // GAP is a running-biomechanics model and means nothing for a bike, a
+        // hike or a swim, so all three drop it; cycling additionally reads
+        // its pace signal as speed instead.
         params: isCycling
           ? { signals: ["pace", "heartrate"], as_speed: true }
-          : { signals: ["gap_pace", "pace", "heartrate"] },
+          : dropGap
+            ? { signals: ["pace", "heartrate"] }
+            : { signals: ["gap_pace", "pace", "heartrate"] },
       },
     ],
   };
@@ -98,11 +101,13 @@ export function SessionDetail({
   }, [activityId]);
 
   const isCycling = CYCLING_SPORT_TYPES.includes(activity.sport_type);
+  const dropGap = HIKING_SPORT_TYPES.includes(activity.sport_type)
+    || SWIMMING_SPORT_TYPES.includes(activity.sport_type);
 
   useEffect(() => {
     let live = true;
     setCharts(null);
-    renderPanel(paceGapHrPanel(activityId, isCycling))
+    renderPanel(paceGapHrPanel(activityId, isCycling, dropGap))
       .then((result) => {
         if (!live) return;
         setCharts(result.panel.plots.flatMap((plot) => plot.output?.charts ?? []));
@@ -113,7 +118,7 @@ export function SessionDetail({
     return () => {
       live = false;
     };
-  }, [activityId, isCycling]);
+  }, [activityId, isCycling, dropGap]);
 
   const km = activity.distance_m != null ? activity.distance_m / 1000 : null;
   const pace = km && km > 0 && activity.moving_s != null ? activity.moving_s / km : null;

@@ -40,7 +40,13 @@ import {
   updatePlannedItem,
 } from "@/lib/api";
 import { formatDistanceAdaptive, formatHms, formatNumber, formatPace, formatSpeed } from "@/lib/format";
-import { CYCLING_SPORT_TYPES, RUNNING_SPORT_TYPES, sportTone } from "@/lib/sport";
+import {
+  CYCLING_SPORT_TYPES,
+  HIKING_SPORT_TYPES,
+  RUNNING_SPORT_TYPES,
+  SWIMMING_SPORT_TYPES,
+  sportTone,
+} from "@/lib/sport";
 import { translator, type Strings, type Translate } from "@/lib/strings";
 import type {
   ActivityCard,
@@ -476,8 +482,8 @@ function WeekRow({
   );
 }
 
-/** Totals for the week: cycling on the left, running on the right — both shown
- * every week, zero or not, so the two columns stay in the same place. */
+/** Totals for the week: cycling, running, hiking, swimming — all shown every
+ * week, zero or not, so the columns stay in the same place. */
 function WeekSummary({
   days,
   activitiesByDate,
@@ -487,14 +493,20 @@ function WeekSummary({
   activitiesByDate: Record<string, ActivityCard[]>;
   t: T;
 }) {
-  const totals = { run: _emptyTotals(), ride: _emptyTotals() };
+  const totals = {
+    run: _emptyTotals(), ride: _emptyTotals(), hike: _emptyTotals(), swim: _emptyTotals(),
+  };
   for (const date of days) {
     for (const activity of activitiesByDate[date] ?? []) {
       const bucket = RUNNING_SPORT_TYPES.includes(activity.sport_type)
         ? totals.run
         : CYCLING_SPORT_TYPES.includes(activity.sport_type)
           ? totals.ride
-          : null;
+          : HIKING_SPORT_TYPES.includes(activity.sport_type)
+            ? totals.hike
+            : SWIMMING_SPORT_TYPES.includes(activity.sport_type)
+              ? totals.swim
+              : null;
       if (!bucket) continue;
       bucket.distance_m += activity.distance_m ?? 0;
       bucket.elevation_gain_m += activity.elevation_gain_m ?? 0;
@@ -507,6 +519,8 @@ function WeekSummary({
     <div className="training-week__summary">
       <SportTotals tone="cycling" totals={totals.ride} label={t("training.week.cycling")} />
       <SportTotals tone="running" totals={totals.run} label={t("training.week.running")} />
+      <SportTotals tone="hiking" totals={totals.hike} label={t("training.week.hiking")} />
+      <SportTotals tone="swimming" totals={totals.swim} label={t("training.week.swimming")} />
     </div>
   );
 }
@@ -520,7 +534,7 @@ function SportTotals({
   totals,
   label,
 }: {
-  tone: "running" | "cycling";
+  tone: "running" | "cycling" | "hiking" | "swimming";
   totals: { distance_m: number; elevation_gain_m: number; moving_s: number };
   label: string;
 }) {

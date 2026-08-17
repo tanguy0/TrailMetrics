@@ -32,7 +32,7 @@ import numpy as np
 import pandas as pd
 
 from src.domain.dataset.binning import naive
-from src.domain.dataset.sport import RUNNING, sport_family
+from src.domain.dataset.sport import CYCLING, RUNNING, sport_family
 from src.domain.models.activity import ActivityStream
 from src.domain.cycling.power import compute_cycling_power_series
 from src.domain.progress.models import GRADIENT_BANDS, PR_DISTANCES
@@ -334,7 +334,7 @@ def build_activity_features(
                 mean_hr = float(np.mean(step_hr[both]))
                 if mean_hr > 0:
                     row["power_to_hr_per_kg"] = float(np.mean(power[both])) / mean_hr
-    else:
+    elif sport_family(sport) == CYCLING:
         power = compute_cycling_power_series(
             time=time, distance=distance, altitude=altitude_smoothed, mass_kg=mass_kg,
         )
@@ -343,6 +343,10 @@ def build_activity_features(
             if power_valid.any():
                 row["avg_power_w_modelled"] = float(np.mean(power[power_valid]))
                 row["power_source"] = "estimated"
+    # Hiking and swimming get neither model: running's cost-of-transport curve
+    # and the cycling aero model are both calibrated to a gait/cadence neither
+    # has, so those rows keep their power columns at NaN unless a real power
+    # meter supplied them above.
 
     # Best efforts run on the *raw* cumulative streams: elapsed time spans real
     # wall-clock, so a paused stretch inflates a segment and self-excludes.

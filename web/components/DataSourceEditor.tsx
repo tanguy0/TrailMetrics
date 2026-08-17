@@ -12,7 +12,12 @@
 import { useMemo, useState } from "react";
 
 import { formatDistanceKm } from "@/lib/format";
-import { CYCLING_SPORT_TYPES, RUNNING_SPORT_TYPES } from "@/lib/sport";
+import {
+  CYCLING_SPORT_TYPES,
+  HIKING_SPORT_TYPES,
+  RUNNING_SPORT_TYPES,
+  SWIMMING_SPORT_TYPES,
+} from "@/lib/sport";
 import type {
   ActivityFilter,
   ActivitySummary,
@@ -21,16 +26,26 @@ import type {
   TimeWindow,
 } from "@/lib/types";
 
-// Running vs cycling can never be plotted together (GAP, modelled power and
-// records aren't comparable between a foot split and a bike split — see
+// Running, cycling, hiking and swimming can never be plotted together (GAP,
+// modelled power and records aren't comparable across a foot split, a bike
+// split, a hiking split and a swim split — see
 // src/usecases/resolve_panel_data.py's `_filter_family`), so this is a single
 // choice, not a flat list of every sport type: pick the family first, then
 // which of its sub-sports count, same rule for every plot/panel in the app.
-type SportFamily = "running" | "cycling";
+type SportFamily = "running" | "cycling" | "hiking" | "swimming";
 
 const FAMILY_SPORTS: Record<SportFamily, string[]> = {
   running: RUNNING_SPORT_TYPES,
   cycling: CYCLING_SPORT_TYPES,
+  hiking: HIKING_SPORT_TYPES,
+  swimming: SWIMMING_SPORT_TYPES,
+};
+
+const FAMILY_LABELS: Record<SportFamily, string> = {
+  running: "Running",
+  cycling: "Cycling",
+  hiking: "Hiking",
+  swimming: "Swimming",
 };
 
 // Sentinels for "this family, but every sub-sport unticked." An empty
@@ -40,20 +55,37 @@ const FAMILY_SPORTS: Record<SportFamily, string[]> = {
 // every box doesn't lose track of which family was showing.
 const NONE_RUNNING = "__no_sport_running__";
 const NONE_CYCLING = "__no_sport_cycling__";
+const NONE_HIKING = "__no_sport_hiking__";
+const NONE_SWIMMING = "__no_sport_swimming__";
+const NONE_SENTINELS: Record<SportFamily, string> = {
+  running: NONE_RUNNING,
+  cycling: NONE_CYCLING,
+  hiking: NONE_HIKING,
+  swimming: NONE_SWIMMING,
+};
 
 function familyOf(sportTypes: string[]): SportFamily {
   if (sportTypes.includes(NONE_CYCLING)) return "cycling";
+  if (sportTypes.includes(NONE_HIKING)) return "hiking";
+  if (sportTypes.includes(NONE_SWIMMING)) return "swimming";
   if (sportTypes.includes(NONE_RUNNING)) return "running";
-  // A non-empty list that is entirely cycling reads as cycling; anything else
-  // (empty, or a running/mixed list) reads as running — matching the backend's
-  // own default and tie-break.
-  return sportTypes.length > 0 && sportTypes.every((s) => CYCLING_SPORT_TYPES.includes(s))
-    ? "cycling"
-    : "running";
+  // A non-empty list that is entirely one other family reads as that family;
+  // anything else (empty, or a running/mixed list) reads as running —
+  // matching the backend's own default and tie-break.
+  if (sportTypes.length > 0 && sportTypes.every((s) => CYCLING_SPORT_TYPES.includes(s))) {
+    return "cycling";
+  }
+  if (sportTypes.length > 0 && sportTypes.every((s) => HIKING_SPORT_TYPES.includes(s))) {
+    return "hiking";
+  }
+  if (sportTypes.length > 0 && sportTypes.every((s) => SWIMMING_SPORT_TYPES.includes(s))) {
+    return "swimming";
+  }
+  return "running";
 }
 
 function checkedSports(sportTypes: string[], family: SportFamily): Set<string> {
-  if (sportTypes.includes(NONE_RUNNING) || sportTypes.includes(NONE_CYCLING)) {
+  if (Object.values(NONE_SENTINELS).some((sentinel) => sportTypes.includes(sentinel))) {
     return new Set();
   }
   const familySports = FAMILY_SPORTS[family];
@@ -385,16 +417,14 @@ function SportPicker({
     if (next.has(sport)) next.delete(sport);
     else next.add(sport);
     onChange({
-      sport_types: next.size > 0
-        ? [...next]
-        : [family === "running" ? NONE_RUNNING : NONE_CYCLING],
+      sport_types: next.size > 0 ? [...next] : [NONE_SENTINELS[family]],
     });
   };
 
   return (
     <div className="sport-picker">
       <div className="sport-picker__family">
-        {(["running", "cycling"] as const).map((value) => (
+        {(["running", "cycling", "hiking", "swimming"] as const).map((value) => (
           <label
             key={value}
             className={`mode ${family === value ? "mode--active" : ""}`}
@@ -405,7 +435,7 @@ function SportPicker({
               checked={family === value}
               onChange={() => selectFamily(value)}
             />
-            <span className="mode__label">{value === "running" ? "Running" : "Cycling"}</span>
+            <span className="mode__label">{FAMILY_LABELS[value]}</span>
           </label>
         ))}
       </div>

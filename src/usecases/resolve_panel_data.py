@@ -14,7 +14,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from src.domain.dataset.binning import to_date
 from src.domain.dataset.resolved import ResolvedGroup, ResolvedPanelData
-from src.domain.dataset.sport import CYCLING_SPORT_TYPES, RUNNING, sport_family
+from src.domain.dataset.sport import (
+    CYCLING_SPORT_TYPES,
+    HIKING_SPORT_TYPES,
+    RUNNING,
+    SWIMMING_SPORT_TYPES,
+    sport_family,
+)
 from src.domain.ports.activity_data import ActivityDataSource, ActivitySummary
 from src.domain.spec.datasource import (
     DEFAULT_SELECTION_LABEL,
@@ -104,11 +110,13 @@ class ResolvePanelData(UseCase):
         """Keep one sport family only.
 
         GAP, the modelled power-per-kg, and PR/gradient-band numbers are not
-        comparable between running and cycling (see
-        :mod:`src.domain.dataset.sport`), so a panel must never plot both at
-        once. Which family wins:
+        comparable across running, cycling, hiking and swimming (see
+        :mod:`src.domain.dataset.sport`), so a panel must never plot more than
+        one family at once. Which family wins:
 
         * an explicit sport filter that is entirely cycling → cycling;
+        * an explicit sport filter that is entirely hiking → hiking;
+        * an explicit sport filter that is entirely swimming → swimming;
         * otherwise, in ACTIVITIES mode with no such filter, whichever family
           the athlete's *first* hand-picked activity belongs to;
         * otherwise (a window, or no filter and no picks yet) → running, which
@@ -127,6 +135,10 @@ class ResolvePanelData(UseCase):
         wanted_sports = set(params.source.filters.sport_types or [])
         if wanted_sports and wanted_sports <= CYCLING_SPORT_TYPES:
             family = "cycling"
+        elif wanted_sports and wanted_sports <= HIKING_SPORT_TYPES:
+            family = "hiking"
+        elif wanted_sports and wanted_sports <= SWIMMING_SPORT_TYPES:
+            family = "swimming"
         elif params.source.mode is SourceMode.ACTIVITIES:
             by_id = {s.activity_id: s for s in candidates}
             first_picked = next(

@@ -165,10 +165,11 @@ def compute_race(
     # module-level import here would run into that half-initialized module
     # whenever something imports src.domain.races.metrics before
     # src.domain.dataset has already been loaded.
-    from src.domain.dataset.sport import RUNNING, sport_family
+    from src.domain.dataset.sport import CYCLING, RUNNING, sport_family
 
     sport = str(getattr(stream.sport_type, "root", stream.sport_type))
-    is_running = sport_family(sport) == RUNNING
+    family = sport_family(sport)
+    is_running = family == RUNNING
 
     # --- Altitude (full grid) → gradient + elevation gain --------------------
     altitude_smoothed = apply_signal_filters(
@@ -195,10 +196,13 @@ def compute_race(
         speed = np.clip(speed, _MIN_SPEED_M_PER_S, _MAX_SPEED_M_PER_S)
         pace_where = moving_step
     else:
-        # Cycling has no comparable natural ceiling — a fast descent is easily
-        # 3x a running sprint — so speed is left unbounded. Only a genuine
-        # zero-movement sample (a dead stop) is excluded, as a gap rather than
-        # the infinite pace dividing by zero speed would otherwise produce.
+        # None of cycling, hiking or swimming has a comparable natural range —
+        # a fast descent is easily 3x a running sprint, a hike can dawdle well
+        # under 3 km/h at a viewpoint, and a pool swim's GPS-derived "distance"
+        # is its own kind of noisy — so speed is left unbounded. Only a
+        # genuine zero-movement sample (a dead stop) is excluded, as a gap
+        # rather than the infinite pace dividing by zero speed would
+        # otherwise produce.
         pace_where = moving_step & (speed > 0)
     pace = np.divide(
         1000.0, speed, out=np.full_like(speed, np.nan), where=pace_where
@@ -236,10 +240,16 @@ def compute_race(
             gradient_m_per_km=gradient_m_per_km,
             mass_kg=mass_kg,
         )
-    else:
+    elif family == CYCLING:
         power = compute_cycling_power_series(
             time=time, distance=distance, altitude=altitude_smoothed, mass_kg=mass_kg,
         )
+    else:
+        # Hiking and swimming get neither model: running's cost-of-transport
+        # curve and the cycling aero model are both calibrated to a
+        # gait/cadence neither has, so they keep only real power-meter data if
+        # any.
+        power = None
 
     power_to_hr = None
     power_per_kg = None
@@ -261,7 +271,7 @@ def compute_race(
     moving_distance = np.cumsum(np.where(moving_step, delta_dist, 0.0))
 
     # Running's pace is clamped to the same 3–20 km/h range as `speed` above;
-    # cycling's is left exactly as smoothed, unbounded.
+    # cycling's, hiking's and swimming's are left exactly as smoothed, unbounded.
     pace_series = (
         np.clip(pace_smoothed, _MIN_PACE_S_PER_KM, _MAX_PACE_S_PER_KM)
         if is_running else pace_smoothed
