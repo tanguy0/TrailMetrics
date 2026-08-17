@@ -52,6 +52,8 @@
   --tone-plum-rgb: 139, 62, 143;
   --sunrise-tint: #fdf4e3;
   --sunrise-rgb: 232, 163, 61;
+  --moss-tint: #eff3e8;
+  --moss-rgb: 94, 156, 78;
 }
 
 * {
@@ -1427,9 +1429,9 @@ input[type="radio"] {
   gap: 0.1rem;
   padding: 0.6rem 0.75rem;
   border-radius: 8px;
-  background: var(--sunrise-tint);
-  border-left: 4px solid var(--sunrise);
-  box-shadow: inset -8px -8px 11px -6px rgba(var(--sunrise-rgb), 0.28);
+  background: var(--moss-tint);
+  border-left: 4px solid var(--moss);
+  box-shadow: inset -8px -8px 11px -6px rgba(var(--moss-rgb), 0.28);
 }
 
 .record::before {
@@ -1440,8 +1442,8 @@ input[type="radio"] {
   pointer-events: none;
   background-image: repeating-linear-gradient(
     45deg,
-    rgba(var(--sunrise-rgb), 0.09) 0,
-    rgba(var(--sunrise-rgb), 0.09) 1px,
+    rgba(var(--moss-rgb), 0.09) 0,
+    rgba(var(--moss-rgb), 0.09) 1px,
     transparent 1px,
     transparent 6px
   );
