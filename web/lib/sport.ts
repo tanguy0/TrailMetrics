@@ -4,10 +4,11 @@
  * Mirrors `src/domain/dataset/sport.py` — kept manually in sync rather than
  * generated, since it's a short, rarely-changed list. Four families: running
  * (what the app was built for), cycling (added alongside it), hiking and
- * swimming. Home stays running-only; the Analysis section's panels can't mix
- * families (see that Python module's docstring for why: GAP and modelled
- * power are running biomechanics, not comparable to a ride, a hike or a
- * swim).
+ * swimming. Home's volume totals and PR ladder stay running-only, and the
+ * Analysis section's panels can't mix families (see that Python module's
+ * docstring for why: GAP and modelled power are running biomechanics, not
+ * comparable to a ride, a hike or a swim) — but Home's "latest activity" has
+ * no such comparability problem and shows any sport.
  */
 
 export const RUNNING_SPORT_TYPES = ["Run", "TrailRun", "VirtualRun"];
