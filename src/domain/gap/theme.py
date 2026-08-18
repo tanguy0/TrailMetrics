@@ -33,6 +33,7 @@ AXES_FACE = "#FFFDF9"        # slightly lighter than the page for contrast
 GRID = "#CFC3AE"             # muted sand grid lines (a touch darker)
 TEXT = "#241F19"             # deep warm near-black
 SPINE = "#B8AC97"
+DANGER = "#8E2C18"           # brick red — this palette's only true "red"
 
 # Distinct colors for overlaying several time scales on a single figure. Hues
 # are spread out (green / clay / amber / lake / plum) so up to five scales stay

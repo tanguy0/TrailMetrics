@@ -35,6 +35,7 @@ from src.domain.charts.ir import (
     empty_output,
 )
 from src.domain.dataset.resolved import DataLevel, ResolvedPanelData
+from src.domain.gap import theme
 from src.domain.plots.base import (
     SERIES_BY_ACTIVITY,
     PlotDefinition,
@@ -71,6 +72,16 @@ SIGNALS: Dict[str, Tuple[str, str, str, int, bool]] = {
 }
 
 _DEFAULT_SIGNALS = ["gap_pace"]
+
+# Heart rate reads as the athlete's *response* to an effort, never the effort
+# itself, so it keeps one fixed identity everywhere it appears: its own axis,
+# always on the right, always this red. The one signal paired against it on a
+# per-sport session view — pace, GAP or power — gets the brand green in that
+# exact pairing, so the two-line "effort vs response" chart reads the same way
+# for a run, a ride, a hike or a swim. A custom multi-signal panel that adds a
+# third signal alongside them falls back to the ordinary palette for it, since
+# there is no longer one single "other metric" to force a color onto.
+_EFFORT_SIGNALS = frozenset({"gap_pace", "pace", "power"})
 
 # x-axis key -> (attribute, label key, scale from SI, hover unit)
 _X_AXES = {
@@ -179,16 +190,31 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     if not resolved_signals:
         return empty_output(weight_note(lang))
 
+    multi_signal = len(resolved_signals) > 1
+    resolved_keys = [key for key, *_ in resolved_signals]
+    # Heart rate never shares an axis with anything else it's plotted alongside —
+    # forced to the right regardless of its (coincidentally shared) "number"
+    # value_kind — as long as there is another signal there to leave the left
+    # axis to. Selected on its own, it has nowhere else to go.
+    has_other_signal = any(key != "heartrate" for key in resolved_keys)
+    # Exactly one effort signal paired one-to-one against heart rate — the shape
+    # of every per-sport session chart — gets fixed colors instead of the
+    # general palette, so "effort vs response" reads the same everywhere.
+    paired_with_hr = len(resolved_signals) == 2 and "heartrate" in resolved_keys
+
     # Bucket onto (at most) two axes by unit, in the order the signals were picked —
     # see the module docstring for why a third distinct unit would still land on
-    # the second axis rather than being dropped.
+    # the second axis rather than being dropped. Heart rate's kind is skipped here
+    # whenever something else is selected too, so it can never claim the primary
+    # axis out from under the signal it is forced off of above.
     axis_kinds: List[str] = []
-    for _, _, _, value_kind, _ in resolved_signals:
+    for key, _, _, value_kind, _ in resolved_signals:
+        if key == "heartrate" and has_other_signal:
+            continue
         if value_kind not in axis_kinds:
             axis_kinds.append(value_kind)
-    primary_kind = axis_kinds[0]
+    primary_kind = axis_kinds[0] if axis_kinds else SIGNALS["heartrate"][2]
 
-    multi_signal = len(resolved_signals) > 1
     traces: List[Trace] = []
     primary_entries: List[_AxisEntry] = []
     secondary_entries: List[_AxisEntry] = []
@@ -199,9 +225,14 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     secondary_color: Optional[str] = None
 
     for index, (key, attribute, y_label_key, value_kind, decimals) in enumerate(resolved_signals):
-        on_primary = value_kind == primary_kind
+        on_primary = value_kind == primary_kind and not (key == "heartrate" and has_other_signal)
         signal_as_speed = as_speed and value_kind == "pace"
-        color = series_color(index) if multi_signal else None
+        if key == "heartrate" and has_other_signal:
+            color = theme.DANGER
+        elif paired_with_hr and key in _EFFORT_SIGNALS:
+            color = theme.PRIMARY
+        else:
+            color = series_color(index) if multi_signal else None
         label = translate(f"signal.{key}", lang)
 
         traces += _signal_traces(
