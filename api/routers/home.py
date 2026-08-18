@@ -58,10 +58,10 @@ _METRES_BY_LABEL = {label: metres for label, metres in PR_DISTANCES}
 def last_activity_route(athlete: Athlete = Depends(current_athlete)) -> dict:
     """The latest activity's route as coordinates, for the map.
 
-    Running only — see :func:`summary`'s docstring on why Home stays scoped to
-    the sport it was built for even now that cycling is imported too.
+    Any sport — the map just traces wherever the athlete last went, unlike the
+    running-only volume/PR stats in :func:`summary`.
     """
-    rows = _running_only(get_activity_repository().summaries(athlete.id))
+    rows = get_activity_repository().summaries(athlete.id)
     if not rows:
         return {"activity_id": None, "points": [], "source": "none"}
     return resolve_activity_route(athlete, int(rows[-1]["activity_id"]))
@@ -115,22 +115,25 @@ def resolve_activity_route(athlete: Athlete, activity_id: int) -> dict:
 def summary(athlete: Athlete = Depends(current_athlete)) -> dict:
     """Profile totals, body fields, current records and the latest activity.
 
-    Running only. Cycling is now imported too (see
-    ``sync_athlete_activities.DEFAULT_SPORT_TYPES``), but this screen — its
-    volume totals, its PR ladder, its "latest activity" — was built for running
-    and a ride's numbers aren't comparable to a run's; mixing them in here would
-    silently corrupt "furthest run" into "furthest anything" the moment the
-    athlete's next ride is longer than their longest run. Cycling gets its own
-    read of the same history through the Analysis section instead.
+    Volume totals, the PR ladder, and "latest activity" answer different
+    questions. Cycling is now imported too (see
+    ``sync_athlete_activities.DEFAULT_SPORT_TYPES``), but the totals and PR
+    ladder were built for running and a ride's numbers aren't comparable to a
+    run's; mixing them in here would silently corrupt "furthest run" into
+    "furthest anything" the moment the athlete's next ride is longer than their
+    longest run. Cycling gets its own read of the same history through the
+    Analysis section instead. "Latest activity" has no such comparability
+    problem — it is just whatever the athlete did most recently, in any sport.
     """
-    rows = _running_only(get_activity_repository().rows(athlete.id))
+    all_rows = get_activity_repository().rows(athlete.id)
+    rows = _running_only(all_rows)
     today = date.today()
 
     return {
         "profile": _profile(rows, athlete.weight_kg),
         "health": _health(athlete, rows, today),
         "records": _records(rows),
-        "last_activity": _last_activity(rows, athlete.weight_kg),
+        "last_activity": _last_activity(all_rows, athlete.weight_kg),
     }
 
 

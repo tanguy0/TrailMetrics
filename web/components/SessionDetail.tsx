@@ -49,7 +49,28 @@ function singleActivitySource(activityId: number): DataSourceSpec {
   };
 }
 
-function paceGapHrPanel(activityId: number, isCycling: boolean, dropGap: boolean): PanelSpec {
+// GAP is a running-biomechanics model, calibrated to a foot strike neither a
+// bike, a hike nor a swim has, so only running gets it — and only "Run": a
+// trail or virtual run's terrain/treadmill effort is exactly what GAP exists
+// to normalise for, so those keep GAP instead of raw pace. Cycling reads
+// power instead of pace entirely; hiking reads its pace signal as speed.
+function signalParams(sportType: string): { signals: string[]; as_speed?: boolean } {
+  if (CYCLING_SPORT_TYPES.includes(sportType)) {
+    return { signals: ["power", "heartrate"] };
+  }
+  if (HIKING_SPORT_TYPES.includes(sportType)) {
+    return { signals: ["pace", "heartrate"], as_speed: true };
+  }
+  if (SWIMMING_SPORT_TYPES.includes(sportType)) {
+    return { signals: ["pace", "heartrate"] };
+  }
+  if (sportType === "Run") {
+    return { signals: ["pace", "heartrate"] };
+  }
+  return { signals: ["gap_pace", "heartrate"] };
+}
+
+function paceGapHrPanel(activityId: number, sportType: string): PanelSpec {
   return {
     id: `panel_session_pace_${activityId}`,
     title: "",
@@ -61,14 +82,7 @@ function paceGapHrPanel(activityId: number, isCycling: boolean, dropGap: boolean
         id: `plot_session_pace_${activityId}`,
         plot_type: "stream_evolution",
         title: null,
-        // GAP is a running-biomechanics model and means nothing for a bike, a
-        // hike or a swim, so all three drop it; cycling additionally reads
-        // its pace signal as speed instead.
-        params: isCycling
-          ? { signals: ["pace", "heartrate"], as_speed: true }
-          : dropGap
-            ? { signals: ["pace", "heartrate"] }
-            : { signals: ["gap_pace", "pace", "heartrate"] },
+        params: signalParams(sportType),
       },
     ],
   };
@@ -101,13 +115,13 @@ export function SessionDetail({
   }, [activityId]);
 
   const isCycling = CYCLING_SPORT_TYPES.includes(activity.sport_type);
-  const dropGap = HIKING_SPORT_TYPES.includes(activity.sport_type)
-    || SWIMMING_SPORT_TYPES.includes(activity.sport_type);
+  const isHiking = HIKING_SPORT_TYPES.includes(activity.sport_type);
+  const showSpeed = isCycling || isHiking;
 
   useEffect(() => {
     let live = true;
     setCharts(null);
-    renderPanel(paceGapHrPanel(activityId, isCycling, dropGap))
+    renderPanel(paceGapHrPanel(activityId, activity.sport_type))
       .then((result) => {
         if (!live) return;
         setCharts(result.panel.plots.flatMap((plot) => plot.output?.charts ?? []));
@@ -118,7 +132,7 @@ export function SessionDetail({
     return () => {
       live = false;
     };
-  }, [activityId, isCycling, dropGap]);
+  }, [activityId, activity.sport_type]);
 
   const km = activity.distance_m != null ? activity.distance_m / 1000 : null;
   const pace = km && km > 0 && activity.moving_s != null ? activity.moving_s / km : null;
@@ -142,7 +156,7 @@ export function SessionDetail({
           value={km != null ? `${formatNumber(km, 2)} ${t("common.km")}` : "—"}
         />
         <Metric label={t("home.last.time")} value={formatHms(activity.moving_s)} />
-        {isCycling ? (
+        {showSpeed ? (
           <Metric label={t("home.last.speed")} value={formatSpeed(speedKmh)} />
         ) : (
           <Metric label={t("home.last.pace")} value={formatPace(pace)} />
