@@ -493,10 +493,12 @@ function WeekRow({
  *
  * A CSS grid, laid out explicitly by `gridColumn`/`gridRow` rather than
  * relying on source order: column 1 is the icons, columns 2–5 are up to four
- * sports, row 1 is the sport tags, rows 2–4 are distance/climb/time. Only the
- * columns for sports actually present get any cells — the grid's own column
- * tracks (fixed by `.week-summary`'s CSS) still reserve their width, which is
- * what keeps every week's card the same total size.
+ * sports, row 1 is the "Week summary" title (spanning every column, so it's
+ * centered over the card's full fixed width regardless of how many sports
+ * that week has), row 2 is the sport tags, rows 3–5 are distance/climb/time.
+ * Only the columns for sports actually present get any cells — the grid's
+ * own column tracks (fixed by `.week-summary`'s CSS) still reserve their
+ * width, which is what keeps every week's card the same total size.
  */
 function WeekSummary({
   days,
@@ -541,13 +543,17 @@ function WeekSummary({
   return (
     <div className="training-week__summary">
       <div className="week-summary">
-        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 2 }} aria-hidden="true">
+        <span className="week-summary__title" style={{ gridColumn: "1 / -1", gridRow: 1 }}>
+          {t("training.week.summary_title")}
+        </span>
+
+        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 3 }} aria-hidden="true">
           📏
         </span>
-        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 3 }} aria-hidden="true">
+        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 4 }} aria-hidden="true">
           ⛰️
         </span>
-        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 4 }} aria-hidden="true">
+        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 5 }} aria-hidden="true">
           ⏱️
         </span>
 
@@ -590,16 +596,16 @@ function SportColumn({
 }) {
   return (
     <div className={`week-summary__col week-summary__col--${tone}`} style={{ display: "contents" }}>
-      <span className="week-summary__tag" style={{ gridColumn, gridRow: 1 }}>
+      <span className="week-summary__tag" style={{ gridColumn, gridRow: 2 }}>
         {label}
       </span>
-      <span className="week-summary__value" style={{ gridColumn, gridRow: 2 }}>
+      <span className="week-summary__value" style={{ gridColumn, gridRow: 3 }}>
         {formatDistanceAdaptive(totals.distance_m / 1000)} km
       </span>
-      <span className="week-summary__value" style={{ gridColumn, gridRow: 3 }}>
+      <span className="week-summary__value" style={{ gridColumn, gridRow: 4 }}>
         {formatNumber(totals.elevation_gain_m, 0)} m
       </span>
-      <span className="week-summary__value" style={{ gridColumn, gridRow: 4 }}>
+      <span className="week-summary__value" style={{ gridColumn, gridRow: 5 }}>
         {formatHoursMinutes(totals.moving_s)}
       </span>
     </div>
@@ -611,13 +617,13 @@ function SportColumn({
 function EmptyWeekColumn() {
   return (
     <div className="week-summary__col week-summary__col--empty" style={{ display: "contents" }}>
-      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 2 }}>
+      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 3 }}>
         {formatDistanceAdaptive(0)} km
       </span>
-      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 3 }}>
+      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 4 }}>
         {formatNumber(0, 0)} m
       </span>
-      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 4 }}>
+      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 5 }}>
         {formatHoursMinutes(0)}
       </span>
     </div>

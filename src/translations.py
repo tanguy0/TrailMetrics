@@ -1109,6 +1109,7 @@ TRANSLATIONS = {
     "ui.training.week.cycling": {"en": "Ride", "fr": "Vélo"},
     "ui.training.week.hiking": {"en": "Hike", "fr": "Rando"},
     "ui.training.week.swimming": {"en": "Swim", "fr": "Nage"},
+    "ui.training.week.summary_title": {"en": "Week summary", "fr": "Résumé de la semaine"},
 
 }
 
