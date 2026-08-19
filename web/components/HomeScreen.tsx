@@ -921,8 +921,13 @@ function RecentEfficiencyBlock({
       <h3 className="data-block__title">
         <span aria-hidden="true">⚡</span> {t("home.efficiency.title")}
       </h3>
-      <TrendBadge
-        direction={trendDirection(charts?.[0]?.traces[0]?.y, 6, 0.02)}
+      {/* Weekly points already — 4 and 12 of them are 4 and 12 weeks. */}
+      <TrendBadgePair
+        values={charts?.[0]?.traces[0]?.y}
+        shortWindow={4}
+        longWindow={12}
+        shortThreshold={0.005}
+        longThreshold={0.02}
         t={t}
       />
       <p className="data-block__lede">{t("home.efficiency.subtitle")}</p>
@@ -971,23 +976,19 @@ function RecentFormBlock({
           "is training working?" — fatigue reacts to the last few days and would
           make either badge flicker on the day's session alone. Two windows
           because a short build and a long one answer different questions: is
-          this week's load landing, versus is the block as a whole working. */}
-      <div className="trend-badges">
-        <div className="trend-badge-item">
-          <span className="trend-badge-item__label">{t("home.trend.short_term")}</span>
-          <TrendBadge
-            direction={trendDirection(charts?.[0]?.traces[0]?.y, 4, 0.005)}
-            t={t}
-          />
-        </div>
-        <div className="trend-badge-item">
-          <span className="trend-badge-item__label">{t("home.trend.long_term")}</span>
-          <TrendBadge
-            direction={trendDirection(charts?.[0]?.traces[0]?.y, 12, 0.02)}
-            t={t}
-          />
-        </div>
-      </div>
+          this week's load landing, versus is the block as a whole working.
+          `fitness_fatigue_series` is one point per *calendar day*, not per
+          week (see training_load.py), so "4 weeks" and "12 weeks" here are
+          28 and 84 trailing daily points — unlike the weekly-binned charts,
+          where the window size and the point count are the same number. */}
+      <TrendBadgePair
+        values={charts?.[0]?.traces[0]?.y}
+        shortWindow={28}
+        longWindow={84}
+        shortThreshold={0.005}
+        longThreshold={0.02}
+        t={t}
+      />
       <p className="data-block__lede">{t("home.form.subtitle")}</p>
 
       {!hasData ? (
@@ -1011,9 +1012,8 @@ function RecentFormBlock({
 }
 
 /**
- * A large "Increasing" / "Stable" / "Decreasing" tag for the last six weeks of
- * a trend chart — sized and coloured to read at a glance, without opening the
- * chart itself.
+ * A large "Increasing" / "Stable" / "Decreasing" tag — sized and coloured to
+ * read at a glance, without opening the chart itself.
  */
 function TrendBadge({
   direction,
@@ -1031,22 +1031,65 @@ function TrendBadge({
 }
 
 /**
- * "Increasing" / "Stable" / "Decreasing" over the trailing `windowWeeks` points
- * of a (weekly) trend series — a least-squares slope over that window,
+ * A short-term and a long-term {@link TrendBadge}, side by side.
+ *
+ * `shortWindow`/`longWindow` are counts of *trailing data points*, not weeks —
+ * callers on a daily series (fitness/fatigue) and a weekly one (metric_trend)
+ * need different numbers to mean the same span of real time. See
+ * {@link trendDirection}.
+ */
+function TrendBadgePair({
+  values,
+  shortWindow,
+  longWindow,
+  shortThreshold,
+  longThreshold,
+  t,
+}: {
+  values: (number | null | undefined)[] | undefined;
+  shortWindow: number;
+  longWindow: number;
+  shortThreshold: number;
+  longThreshold: number;
+  t: T;
+}) {
+  return (
+    <div className="trend-badges">
+      <div className="trend-badge-item">
+        <span className="trend-badge-item__label">{t("home.trend.short_term")}</span>
+        <TrendBadge direction={trendDirection(values, shortWindow, shortThreshold)} t={t} />
+      </div>
+      <div className="trend-badge-item">
+        <span className="trend-badge-item__label">{t("home.trend.long_term")}</span>
+        <TrendBadge direction={trendDirection(values, longWindow, longThreshold)} t={t} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * "Increasing" / "Stable" / "Decreasing" over the trailing `windowPoints`
+ * points of a trend series — a least-squares slope over that window,
  * normalised by the window's own mean so the same `thresholdPct` applies
  * whether the series sits near 0 or near 1000.
+ *
+ * `windowPoints` counts *data points*, not weeks — the caller has to convert:
+ * a weekly-binned series (metric_trend) has one point per week, but the
+ * fitness/fatigue series is one point per calendar day (see
+ * `fitness_fatigue_series` in training_load.py), so "4 weeks" there is 28
+ * trailing points, not 4.
  *
  * `null` when there are fewer than four usable points: too little to call a
  * trend rather than noise, even for a short window.
  */
 function trendDirection(
   values: (number | null | undefined)[] | undefined,
-  windowWeeks: number,
+  windowPoints: number,
   thresholdPct: number,
 ): "increasing" | "stable" | "decreasing" | null {
   const points = (values ?? []).filter(
     (v): v is number => v != null && Number.isFinite(v),
-  ).slice(-windowWeeks);
+  ).slice(-windowPoints);
   const n = points.length;
   if (n < 4) return null;
 
