@@ -16,6 +16,7 @@ import { ParamForm } from "./ParamForm";
 import { DataSourceEditor } from "./DataSourceEditor";
 import { Modal } from "./Modal";
 import { ApiError, renderPanel } from "@/lib/api";
+import { scaleStepStyle } from "@/lib/colorScale";
 import type {
   ActivitySummary,
   PanelResult,
@@ -44,6 +45,13 @@ interface Props {
    * boolean that is already true would produce no change to react to.
    */
   refreshToken?: number;
+  /**
+   * This panel's position among the page's panels — its accent is this
+   * many steps along the app's gold-to-red scale (see `lib/colorScale.ts`),
+   * so a page's panels read top-to-bottom the same way Home's sections do.
+   */
+  accentIndex: number;
+  accentCount: number;
 }
 
 export function PanelEditor({
@@ -58,6 +66,8 @@ export function PanelEditor({
   editable,
   initialResult,
   refreshToken = 0,
+  accentIndex,
+  accentCount,
 }: Props) {
   const [result, setResult] = useState<PanelResult | undefined>(initialResult);
   const [loading, setLoading] = useState(!initialResult);
@@ -170,7 +180,7 @@ export function PanelEditor({
   const resultsByPlot = new Map((result?.plots ?? []).map((p) => [p.plot_id, p]));
 
   return (
-    <section className="panel">
+    <section className="panel" style={scaleStepStyle(accentIndex, accentCount)}>
       <header className="panel__header">
         {editable ? (
           <input
