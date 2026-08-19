@@ -921,7 +921,10 @@ function RecentEfficiencyBlock({
       <h3 className="data-block__title">
         <span aria-hidden="true">⚡</span> {t("home.efficiency.title")}
       </h3>
-      <TrendBadge direction={trendDirection(charts?.[0]?.traces[0]?.y)} t={t} />
+      <TrendBadge
+        direction={trendDirection(charts?.[0]?.traces[0]?.y, 6, 0.02)}
+        t={t}
+      />
       <p className="data-block__lede">{t("home.efficiency.subtitle")}</p>
 
       {!hasData ? (
@@ -965,9 +968,26 @@ function RecentFormBlock({
         <span aria-hidden="true">🔥</span> {t("home.form.title")}
       </h3>
       {/* Fitness (the model's first, slow-moving trace) is the one that answers
-          "is training working?" over six weeks — fatigue reacts to the last
-          few days and would make the badge flicker on the day's session alone. */}
-      <TrendBadge direction={trendDirection(charts?.[0]?.traces[0]?.y)} t={t} />
+          "is training working?" — fatigue reacts to the last few days and would
+          make either badge flicker on the day's session alone. Two windows
+          because a short build and a long one answer different questions: is
+          this week's load landing, versus is the block as a whole working. */}
+      <div className="trend-badges">
+        <div className="trend-badge-item">
+          <span className="trend-badge-item__label">{t("home.trend.short_term")}</span>
+          <TrendBadge
+            direction={trendDirection(charts?.[0]?.traces[0]?.y, 4, 0.005)}
+            t={t}
+          />
+        </div>
+        <div className="trend-badge-item">
+          <span className="trend-badge-item__label">{t("home.trend.long_term")}</span>
+          <TrendBadge
+            direction={trendDirection(charts?.[0]?.traces[0]?.y, 12, 0.02)}
+            t={t}
+          />
+        </div>
+      </div>
       <p className="data-block__lede">{t("home.form.subtitle")}</p>
 
       {!hasData ? (
@@ -1011,20 +1031,22 @@ function TrendBadge({
 }
 
 /**
- * "Increasing" / "Stable" / "Decreasing" over the trailing six points of a
- * (weekly) trend series — a least-squares slope over that window, normalised by
- * the window's own mean so the same 2%-over-six-weeks threshold applies
+ * "Increasing" / "Stable" / "Decreasing" over the trailing `windowWeeks` points
+ * of a (weekly) trend series — a least-squares slope over that window,
+ * normalised by the window's own mean so the same `thresholdPct` applies
  * whether the series sits near 0 or near 1000.
  *
  * `null` when there are fewer than four usable points: too little to call a
- * trend rather than noise.
+ * trend rather than noise, even for a short window.
  */
 function trendDirection(
   values: (number | null | undefined)[] | undefined,
+  windowWeeks: number,
+  thresholdPct: number,
 ): "increasing" | "stable" | "decreasing" | null {
   const points = (values ?? []).filter(
     (v): v is number => v != null && Number.isFinite(v),
-  ).slice(-6);
+  ).slice(-windowWeeks);
   const n = points.length;
   if (n < 4) return null;
 
@@ -1041,8 +1063,8 @@ function trendDirection(
   const scale = Math.abs(yMean) > 1e-9 ? Math.abs(yMean) : 1;
   const relativeChange = totalChange / scale;
 
-  if (relativeChange > 0.02) return "increasing";
-  if (relativeChange < -0.02) return "decreasing";
+  if (relativeChange > thresholdPct) return "increasing";
+  if (relativeChange < -thresholdPct) return "decreasing";
   return "stable";
 }
 

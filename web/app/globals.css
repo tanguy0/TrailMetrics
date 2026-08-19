@@ -1542,6 +1542,33 @@ input[type="radio"] {
   border: 1.5px solid var(--danger);
 }
 
+/* A short-term / long-term pair of trend badges, side by side. */
+.trend-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0 0 0.6rem;
+}
+
+.trend-badge-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.trend-badge-item__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.trend-badge-item .trend-badge {
+  margin: 0;
+}
+
 /* --- Route map ------------------------------------------------------------ */
 
 .route-map {
