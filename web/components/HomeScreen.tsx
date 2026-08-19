@@ -222,7 +222,6 @@ export function HomeScreen({ strings }: { strings: Strings }) {
           <h1 className="hero__name">{athlete.display_name}</h1>
           <div className="hero__email">
             <EditableTile
-              tone="slate"
               label={t("home.health.email")}
               value={athlete.email}
               input={{ type: "email", value: athlete.email ?? "" }}
@@ -278,7 +277,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
       <RecordsCard records={summary.records} t={t} />
 
       {/* Last Run: the import controls, then the most recent activity itself. */}
-      <section className="card-block card-block--sync">
+      <section className="card-block card-block--sync scale-5">
         <SectionTitle icon="🔄">{t("home.last.title")}</SectionTitle>
 
         <SyncControls
@@ -298,7 +297,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
       </section>
 
       {/* Recent Progress: volume, efficiency and form over the trailing window. */}
-      <section className="card-block card-block--progress">
+      <section className="card-block card-block--progress scale-6">
         <SectionTitle icon="📊">{t("home.progress.title")}</SectionTitle>
 
         <div className="data-stack">
@@ -479,45 +478,38 @@ function SectionTitle({ icon, children }: { icon: string; children: ReactNode })
 function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
   const { profile, records } = summary;
   return (
-    <section className="card-block card-block--profile">
+    <section className="card-block card-block--profile scale-1">
       <SectionTitle icon="🏃">{t("home.profile.title")}</SectionTitle>
 
       <div className="tile-grid tile-grid--four">
         <Tile
-          tone="forest"
           label={t("home.profile.activities")}
           value={String(profile.activity_count)}
         />
         <Tile
-          tone="forest"
           label={t("home.profile.total_distance")}
           value={formatNumber(profile.total_distance_m / 1000, 0)}
           unit={t("common.km")}
         />
         <Tile
-          tone="forest"
           label={t("home.profile.total_elevation")}
           value={formatNumber(profile.total_elevation_gain_m, 0)}
           unit={t("common.metres")}
         />
         <Tile
-          tone="forest"
           label={t("home.profile.total_time")}
           value={formatNumber(profile.total_moving_s / 3600, 0)}
           unit={t("common.hours")}
         />
         <Tile
-          tone="forest"
           label={t("home.profile.oldest")}
           value={formatDate(profile.oldest_activity)}
         />
         <Tile
-          tone="forest"
           label={t("home.profile.newest")}
           value={formatDate(profile.newest_activity)}
         />
         <Tile
-          tone="forest"
           label={t("home.profile.furthest")}
           value={
             profile.furthest_activity?.distance_m != null
@@ -528,7 +520,6 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
           footnote={formatDate(profile.furthest_activity?.date ?? null)}
         />
         <Tile
-          tone="forest"
           label={t("home.profile.longest")}
           value={formatHms(profile.longest_activity?.moving_s)}
           footnote={formatDate(profile.longest_activity?.date ?? null)}
@@ -548,7 +539,7 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
  */
 function RecordsCard({ records, t }: { records: HomeRecord[]; t: T }) {
   return (
-    <section className="card-block card-block--records">
+    <section className="card-block card-block--records scale-4">
       <SectionTitle icon="🏅">{t("home.profile.records")}</SectionTitle>
       {records.length ? (
         <div className="record-grid">
@@ -583,12 +574,11 @@ function HealthCard({
   const experience = summary.health.experience_years;
 
   return (
-    <section className="card-block card-block--health">
+    <section className="card-block card-block--health scale-2">
       <SectionTitle icon="❤️">{t("home.health.title")}</SectionTitle>
 
       <div className="tile-grid tile-grid--two tile-grid--square">
         <EditableTile
-          tone="plum"
           label={t("home.health.age")}
           value={athlete.age != null ? String(athlete.age) : null}
           unit={athlete.age != null ? t("common.years") : undefined}
@@ -606,14 +596,12 @@ function HealthCard({
         />
 
         <Tile
-          tone="plum"
           label={t("home.health.experience")}
           value={experience != null ? formatNumber(experience, 1) : "—"}
           unit={experience != null ? t("common.years") : undefined}
         />
 
         <EditableTile
-          tone="plum"
           label={t("home.health.weight")}
           value={athlete.weight_kg != null ? formatNumber(athlete.weight_kg, 1) : null}
           unit={athlete.weight_kg != null ? t("common.kg") : undefined}
@@ -626,7 +614,6 @@ function HealthCard({
         />
 
         <EditableTile
-          tone="plum"
           label={t("home.health.height")}
           value={athlete.height_cm != null ? formatNumber(athlete.height_cm, 0) : null}
           unit={athlete.height_cm != null ? t("common.cm") : undefined}
@@ -703,13 +690,12 @@ function ZonesCard({
   const hrMax = athlete.hr_max;
 
   return (
-    <section className="card-block card-block--zones">
+    <section className="card-block card-block--zones scale-3">
       <SectionTitle icon="🎯">{t("home.zones.title")}</SectionTitle>
       <p className="data-block__lede">{t("home.zones.subtitle")}</p>
 
       <div className="tile-grid">
         <EditableTile
-          tone="terracotta"
           label={t("home.zones.vma")}
           value={vma != null ? formatPaceInput(vma) : null}
           unit={vma != null ? "/km" : undefined}
@@ -729,7 +715,6 @@ function ZonesCard({
         {VMA_PACE_ZONES.map((zone) => (
           <Tile
             key={zone.key}
-            tone="terracotta"
             label={t(`home.zones.pace_${zone.key}`)}
             value={vma != null ? vmaPaceRange(vma, zone.lowPct, zone.highPct) : "—"}
             unit={vma != null ? "/km" : undefined}
@@ -742,7 +727,6 @@ function ZonesCard({
         {HR_ZONE_MAX_PCT.map((zone) => (
           <Tile
             key={zone.key}
-            tone="terracotta"
             mixedCase
             label={t(`home.zones.${zone.key}`)}
             value={hrMax != null ? String(bpmAtPct(hrMax, zone.pct)) : "—"}
@@ -751,7 +735,6 @@ function ZonesCard({
           />
         ))}
         <EditableTile
-          tone="terracotta"
           mixedCase
           label={t("home.zones.hr_max")}
           value={hrMax != null ? String(hrMax) : null}
@@ -1167,7 +1150,7 @@ function SyncControls({
         <div className="sync__actions">
           <button
             type="button"
-            className="button button--blue"
+            className="button"
             onClick={() => onImport(false)}
             disabled={busy}
           >
@@ -1178,7 +1161,7 @@ function SyncControls({
           {athlete.activity_count > 0 && (
             <button
               type="button"
-              className="button button--ghost button--blue"
+              className="button button--ghost"
               onClick={() => onImport(true)}
               disabled={busy}
               title={t("home.import.again_help")}
@@ -1212,11 +1195,7 @@ function SyncControls({
 
 // --- Small presentational pieces -------------------------------------------
 
-/** One per Race-Print section — a card only ever uses its own section's tone. */
-type Tone = "forest" | "terracotta" | "plum" | "slate";
-
 function Tile({
-  tone,
   label,
   value,
   unit,
@@ -1225,7 +1204,6 @@ function Tile({
   // label's default uppercasing would flatten that to "Z1MAX"/"HRMAX".
   mixedCase,
 }: {
-  tone: Tone;
   label: string;
   value: string;
   unit?: string;
@@ -1233,8 +1211,10 @@ function Tile({
   mixedCase?: boolean;
 }) {
   return (
-    // Every Home tile uses the same dot-stipple print texture — see `.tile--dot`.
-    <div className={`tile tile--${tone} tile--dot`}>
+    // Every Home tile uses the same dot-stipple print texture — see
+    // `.tile--dot`. Its accent color comes from `--section-accent`, set by
+    // whichever `.scale-N` class is on the enclosing section (see globals.css).
+    <div className="tile tile--dot">
       <span className={`tile__label${mixedCase ? " tile__label--mixed-case" : ""}`}>
         {label}
       </span>
@@ -1256,7 +1236,6 @@ function Tile({
  * is what keeps this to one request per edit; an unchanged value sends nothing.
  */
 function EditableTile({
-  tone,
   label,
   value,
   unit,
@@ -1266,7 +1245,6 @@ function EditableTile({
   t,
   mixedCase,
 }: {
-  tone: Tone;
   label: string;
   value: string | null;
   unit?: string;
@@ -1309,7 +1287,7 @@ function EditableTile({
   };
 
   return (
-    <div className={`tile tile--${tone} tile--dot tile--editable`}>
+    <div className="tile tile--dot tile--editable">
       <span className={`tile__label${mixedCase ? " tile__label--mixed-case" : ""}`}>
         {label}
         {saving && <span className="tile__saving"> · {t("common.saving")}</span>}

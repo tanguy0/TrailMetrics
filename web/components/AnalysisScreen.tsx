@@ -73,9 +73,9 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
   }
 
   const steps = [
-    { key: "step1", tone: "forest", icon: "🎯" },
-    { key: "step2", tone: "terracotta", icon: "📈" },
-    { key: "step3", tone: "sunrise", icon: "💾" },
+    { key: "step1", scale: "scale-1", icon: "🎯" },
+    { key: "step2", scale: "scale-4", icon: "📈" },
+    { key: "step3", scale: "scale-6", icon: "💾" },
   ] as const;
 
   return (
@@ -87,7 +87,7 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
         <p className="explainer__lede">{t("pages.how.body")}</p>
         <div className="step-grid">
           {steps.map((step) => (
-            <div className={`step step--${step.tone}`} key={step.key}>
+            <div className={`step ${step.scale}`} key={step.key}>
               <span className="step__icon" aria-hidden="true">{step.icon}</span>
               <h3 className="step__title">{t(`pages.how.${step.key}.title`)}</h3>
               <p className="step__body">{t(`pages.how.${step.key}.body`)}</p>

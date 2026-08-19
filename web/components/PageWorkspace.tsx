@@ -277,6 +277,8 @@ export function PageWorkspace({
           newest={athlete.newest_activity}
           editable
           refreshToken={refreshToken}
+          accentIndex={index}
+          accentCount={spec.panels.length}
         />
       ))}
 

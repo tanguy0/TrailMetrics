@@ -54,21 +54,51 @@
   --sunrise-rgb: 232, 163, 61;
   --moss-tint: #eff3e8;
   --moss-rgb: 94, 156, 78;
-  --danger-tint: #f7e6e1;
+  --danger-tint: #f4e8e2;
   --danger-rgb: 142, 44, 24;
 
   /*
-   * Home's section headers, in the page's top-to-bottom order, as one
-   * progressive scale from `--danger` to `--tone-forest` rather than six
-   * unrelated hues — a reading order, not six separate brand colours.
+   * The app's one progressive scale, gold (`--sunrise`) to red (`--danger`),
+   * six evenly-spaced steps. Used wherever a page has an ordered sequence of
+   * sections — Home's cards top to bottom, an Analysis page's panels — so
+   * position in the sequence reads as position on the scale, rather than
+   * each section carrying an unrelated brand hue. A panel count that isn't
+   * one of these six steps is interpolated the same way in JS, see
+   * `web/lib/colorScale.ts` — same two endpoints, same formula.
    */
-  --home-scale-1: var(--danger);   /* #8e2c18 */
-  --home-scale-2: #7b3920;
-  --home-scale-3: #684728;
-  --home-scale-4: #545430;
-  --home-scale-5: #416238;
-  --home-scale-6: var(--tone-forest); /* #2e6f40 */
+  --scale-1: var(--sunrise);          /* #e8a33d */
+  --scale-1-rgb: var(--sunrise-rgb);
+  --scale-1-tint: var(--sunrise-tint);
+  --scale-2: #d68b36;
+  --scale-2-rgb: 214, 139, 54;
+  --scale-2-tint: #fbf2e6;
+  --scale-3: #c4732e;
+  --scale-3-rgb: 196, 115, 46;
+  --scale-3-tint: #f9efe5;
+  --scale-4: #b25c27;
+  --scale-4-rgb: 178, 92, 39;
+  --scale-4-tint: #f7ede4;
+  --scale-5: #a0441f;
+  --scale-5-rgb: 160, 68, 31;
+  --scale-5-tint: #f6ebe3;
+  --scale-6: var(--danger);           /* #8e2c18 */
+  --scale-6-rgb: var(--danger-rgb);
+  --scale-6-tint: var(--danger-tint);
 }
+
+/*
+ * The automatic link: apply one `.scale-N` class to a section's wrapper
+ * element, and every descendant that reads `--section-accent`/`-rgb`/`-tint`
+ * (`.card-block__title`, `.tile`, `.record`, `.hr-map__*`, `.step`,
+ * `.panel__title`, `.plot-card`, ...) picks it up through ordinary CSS
+ * inheritance — no per-element, per-section modifier class to keep in sync.
+ */
+.scale-1 { --section-accent: var(--scale-1); --section-accent-rgb: var(--scale-1-rgb); --section-accent-tint: var(--scale-1-tint); }
+.scale-2 { --section-accent: var(--scale-2); --section-accent-rgb: var(--scale-2-rgb); --section-accent-tint: var(--scale-2-tint); }
+.scale-3 { --section-accent: var(--scale-3); --section-accent-rgb: var(--scale-3-rgb); --section-accent-tint: var(--scale-3-tint); }
+.scale-4 { --section-accent: var(--scale-4); --section-accent-rgb: var(--scale-4-rgb); --section-accent-tint: var(--scale-4-tint); }
+.scale-5 { --section-accent: var(--scale-5); --section-accent-rgb: var(--scale-5-rgb); --section-accent-tint: var(--scale-5-tint); }
+.scale-6 { --section-accent: var(--scale-6); --section-accent-rgb: var(--scale-6-rgb); --section-accent-tint: var(--scale-6-tint); }
 
 * {
   box-sizing: border-box;
@@ -303,9 +333,9 @@ h4 {
 }
 
 /*
- * Golden is the app's one "this is an action" color (see `.card-block--records`'s
- * comment for the other half of that rule) — these four are the most-pressed
- * buttons in the product, so they get it as a solid fill, not just an accent.
+ * Green is the app's one button color (see "--- Buttons ---" below) — these
+ * four are the most-pressed buttons in the product, so they get it as a
+ * solid fill, not just an accent.
  */
 .sidebar__link {
   display: flex;
@@ -317,16 +347,18 @@ h4 {
   color: #fff;
   font-weight: 700;
   font-size: 0.95rem;
-  background: var(--sunrise);
-  border: 1px solid var(--sunrise);
+  background: var(--primary);
+  border: 1px solid var(--primary);
 }
 
 .sidebar__link:not(.sidebar__link--disabled):hover {
   filter: brightness(1.06);
 }
 
+/* Gold, not another shade of the link's own green, so "you are here" reads
+   as a distinct signal rather than disappearing into the fill. */
 .sidebar__link--active {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--sunrise);
   outline-offset: -2px;
 }
 
@@ -490,19 +522,6 @@ h4 {
   font-size: 1.05rem;
 }
 
-/* The import controls, in the same blue as the "Your data" section's header
-   bar — a filled button by default, or ghost's transparent-with-colored-text
-   when combined with `.button--ghost`. */
-.button--blue {
-  background: var(--tone-blue);
-  border-color: var(--tone-blue);
-}
-
-.button--blue.button--ghost {
-  background: transparent;
-  color: var(--tone-blue);
-}
-
 /* --- Forms ---------------------------------------------------------------- */
 
 input,
@@ -624,16 +643,20 @@ input[type="radio"] {
   padding-bottom: 0.6rem;
 }
 
+/* `--section-accent` here comes from the inline `scaleStepStyle(...)` on the
+   panel's own root element (`PanelEditor.tsx`, since a page's panel count is
+   dynamic — see `lib/colorScale.ts`), not from a `.scale-N` class, but the
+   same inherited-variable contract as `.tile`/`.step` either way. */
 .panel__title {
   font-size: 1.1rem;
-  color: var(--primary);
+  color: var(--section-accent, var(--primary));
   margin: 0;
 }
 
 .panel__title-input {
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--section-accent, var(--primary));
   border: none;
   background: transparent;
   padding: 0;
@@ -687,14 +710,13 @@ input[type="radio"] {
 
 .plot-card {
   border: 1px solid var(--surface-alt);
-  border-left: 3px solid var(--primary);
+  border-left: 3px solid var(--section-accent, var(--primary));
   border-radius: var(--radius);
   padding: 0.75rem;
   min-width: 0;
   /* let charts shrink inside the grid instead of overflowing */
-  /* Same soft bottom-right inset as a stat tile, in plain ink rather than a
-     section accent — a plot card isn't one of Home's four named sections. */
-  box-shadow: inset -8px -8px 11px -6px rgba(36, 31, 25, 0.1);
+  /* Same soft bottom-right inset as a stat tile, in the panel's own accent. */
+  box-shadow: inset -8px -8px 11px -6px rgba(var(--section-accent-rgb, 36, 31, 25), 0.1);
 }
 
 .plot-card__header {
@@ -1053,6 +1075,11 @@ input[type="radio"] {
 
 .card-block--welcome {
   margin: 1.5rem 0;
+  /* A one-off onboarding banner, not one of the page's ordered sections —
+     no `.scale-N` class, so it sets its own accent rather than inheriting one. */
+  --section-accent: var(--tone-forest);
+  --section-accent-rgb: var(--tone-forest-rgb);
+  --section-accent-tint: var(--tone-forest-tint);
 }
 
 .card-block__title {
@@ -1092,19 +1119,15 @@ input[type="radio"] {
 .card-block--welcome > .card-block__title {
   margin: -1rem -1.1rem 1rem;
   padding: 0.6rem 1rem;
+  /* Set by whichever `.scale-N` class is on the section wrapper (or, for
+     `--welcome`, its own explicit override above) — the link is automatic,
+     not a rule per section variant. */
+  background: var(--section-accent, var(--primary));
   color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 0.95rem;
 }
-
-.card-block--profile > .card-block__title { background: var(--home-scale-1); }
-.card-block--health > .card-block__title { background: var(--home-scale-2); }
-.card-block--zones > .card-block__title { background: var(--home-scale-3); }
-.card-block--records > .card-block__title { background: var(--home-scale-4); }
-.card-block--sync > .card-block__title { background: var(--home-scale-5); }
-.card-block--progress > .card-block__title { background: var(--home-scale-6); }
-.card-block--welcome > .card-block__title { background: var(--tone-forest); }
 
 .card-block__title-text {
   flex: 1 1 auto;
@@ -1199,16 +1222,19 @@ input[type="radio"] {
   gap: 0.1rem;
   padding: 0.6rem 0.7rem;
   border-radius: 8px;
-  /* Accent on the left edge; the tint carries the hue without touching the text. */
-  border-left: 4px solid var(--spine);
-  background: var(--surface-alt);
+  /* Accent on the left edge, from whichever `.scale-N` class is on an
+     ancestor section — the tint carries the hue without touching the text.
+     A tile with no scaled ancestor (there isn't one currently) falls back
+     to neutral chrome rather than an arbitrary colour. */
+  border-left: 4px solid var(--section-accent, var(--spine));
+  background: var(--section-accent-tint, var(--surface-alt));
   min-width: 0;
   /* A soft colour inset along the bottom-right inner edge, in the tile's own
      accent — negative offsets put an inset shadow's dark band on the far
      side from the offset, which is what puts it bottom-right here. Sits
      behind the print texture and the tile's own content (see `.tile::before`
      and `z-index: 0` above). */
-  box-shadow: inset -8px -8px 11px -6px rgba(var(--tile-accent-rgb, 36, 31, 25), 0.28);
+  box-shadow: inset -8px -8px 11px -6px rgba(var(--section-accent-rgb, 36, 31, 25), 0.28);
 }
 
 /* The print texture layer: a pseudo-element rather than a background image, so
@@ -1226,7 +1252,7 @@ input[type="radio"] {
    section or tone, for a uniform look across the page. */
 .tile--dot::before {
   background-image: radial-gradient(
-    rgba(var(--tile-accent-rgb, 36, 31, 25), 0.18) 1px,
+    rgba(var(--section-accent-rgb, 36, 31, 25), 0.18) 1px,
     transparent 1.4px
   );
   background-size: 7px 7px;
@@ -1280,34 +1306,6 @@ input[type="radio"] {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--muted);
-}
-
-/* One tone per Race-Print section — a card only ever uses its own section's
-   tone, so these double as "which section is this tile in" and "what colour
-   is its texture/inset shadow" (via `--tile-accent-rgb`). */
-.tile--forest {
-  --tile-accent-rgb: var(--tone-forest-rgb);
-  border-left-color: var(--tone-forest);
-  background: var(--tone-forest-tint);
-}
-
-.tile--terracotta {
-  --tile-accent-rgb: var(--tone-terracotta-rgb);
-  border-left-color: var(--tone-terracotta);
-  background: var(--tone-terracotta-tint);
-}
-
-.tile--plum {
-  --tile-accent-rgb: var(--tone-plum-rgb);
-  border-left-color: var(--tone-plum);
-  background: var(--tone-plum-tint);
-}
-
-/* Neutral — the hero's email tile only, which strips this down to plain text
-   anyway (see `.hero__email .tile`). */
-.tile--slate {
-  border-left-color: var(--tone-blue);
-  background: var(--tone-blue-tint);
 }
 
 .tile--editable {
@@ -1372,7 +1370,7 @@ input[type="radio"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(var(--tone-terracotta-rgb), var(--hr-map-zone-alpha));
+  background: rgba(var(--section-accent-rgb), var(--hr-map-zone-alpha));
   border-right: 1px solid var(--surface);
 }
 
@@ -1406,8 +1404,8 @@ input[type="radio"] {
   gap: 0.1rem;
   padding: 0.2rem 0.15rem;
   border-radius: 6px;
-  background: var(--tone-terracotta-tint);
-  border: 1px solid var(--tone-terracotta);
+  background: var(--section-accent-tint);
+  border: 1px solid var(--section-accent);
   overflow: hidden;
 }
 
@@ -1416,7 +1414,7 @@ input[type="radio"] {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  color: var(--tone-terracotta);
+  color: var(--section-accent);
   text-align: center;
   line-height: 1.1;
 }
@@ -1437,7 +1435,9 @@ input[type="radio"] {
   gap: 0.6rem;
 }
 
-/* Same dot-stipple texture as every other Home tile — see `.tile--dot`. */
+/* Same dot-stipple texture as every other Home tile — see `.tile--dot` — and
+   the same inherited `--section-accent` as `.tile`, from `.card-block--records`'s
+   own `.scale-N` class. */
 .record {
   position: relative;
   z-index: 0;
@@ -1447,9 +1447,9 @@ input[type="radio"] {
   gap: 0.1rem;
   padding: 0.6rem 0.75rem;
   border-radius: 8px;
-  background: var(--moss-tint);
-  border-left: 4px solid var(--moss);
-  box-shadow: inset -8px -8px 11px -6px rgba(var(--moss-rgb), 0.28);
+  background: var(--section-accent-tint);
+  border-left: 4px solid var(--section-accent);
+  box-shadow: inset -8px -8px 11px -6px rgba(var(--section-accent-rgb), 0.28);
 }
 
 .record::before {
@@ -1460,8 +1460,8 @@ input[type="radio"] {
   pointer-events: none;
   background-image: repeating-linear-gradient(
     45deg,
-    rgba(var(--moss-rgb), 0.09) 0,
-    rgba(var(--moss-rgb), 0.09) 1px,
+    rgba(var(--section-accent-rgb), 0.09) 0,
+    rgba(var(--section-accent-rgb), 0.09) 1px,
     transparent 1px,
     transparent 6px
   );
@@ -2224,16 +2224,19 @@ input[type="radio"] {
   gap: 0.7rem;
 }
 
+/* Same `--section-accent` contract as `.tile` (see globals.css's `.scale-N`
+   utilities) — each step carries its own `scale-N` class rather than a named
+   hue, so it reads as a position in the app's one gold-to-red scale. */
 .step {
   position: relative;
   z-index: 0;
   overflow: hidden;
   padding: 0.75rem 0.85rem;
   border-radius: 8px;
-  border-left: 4px solid var(--spine);
-  background: var(--surface-alt);
-  /* Same texture + inset-shadow recipe as `.tile`, in this tile's own accent. */
-  box-shadow: inset -8px -8px 11px -6px rgba(var(--step-accent-rgb, 36, 31, 25), 0.28);
+  border-left: 4px solid var(--section-accent, var(--spine));
+  background: var(--section-accent-tint, var(--surface-alt));
+  /* Same texture + inset-shadow recipe as `.tile`, in this step's own accent. */
+  box-shadow: inset -8px -8px 11px -6px rgba(var(--section-accent-rgb, 36, 31, 25), 0.28);
 }
 
 .step::before {
@@ -2244,29 +2247,11 @@ input[type="radio"] {
   pointer-events: none;
   background-image: repeating-linear-gradient(
     90deg,
-    rgba(var(--step-accent-rgb, 36, 31, 25), 0.05) 0,
-    rgba(var(--step-accent-rgb, 36, 31, 25), 0.05) 1px,
+    rgba(var(--section-accent-rgb, 36, 31, 25), 0.05) 0,
+    rgba(var(--section-accent-rgb, 36, 31, 25), 0.05) 1px,
     transparent 1px,
     transparent 5px
   );
-}
-
-.step--forest {
-  --step-accent-rgb: var(--tone-forest-rgb);
-  border-left-color: var(--tone-forest);
-  background: var(--tone-forest-tint);
-}
-
-.step--terracotta {
-  --step-accent-rgb: var(--tone-terracotta-rgb);
-  border-left-color: var(--tone-terracotta);
-  background: var(--tone-terracotta-tint);
-}
-
-.step--sunrise {
-  --step-accent-rgb: var(--sunrise-rgb);
-  border-left-color: var(--sunrise);
-  background: var(--sunrise-tint);
 }
 
 .step__icon {
@@ -2302,7 +2287,7 @@ input[type="radio"] {
   background: linear-gradient(100deg,
       var(--tone-forest-tint) 0%,
       var(--surface) 55%,
-      var(--tone-terracotta-tint) 100%);
+      var(--tone-forest-tint) 100%);
   border: 2px dashed var(--primary);
   border-radius: var(--radius);
 }
