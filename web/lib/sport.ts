@@ -19,14 +19,15 @@ export const HIKING_SPORT_TYPES = ["Hike", "Walk"];
 export const SWIMMING_SPORT_TYPES = ["Swim"];
 
 /** Colour a sport type reads as, wherever one is shown: the calendar's
- * completed-session chip and the session detail's sport tag share this so a
- * trail run — or a ride, a hike, or a swim — looks the same everywhere it
- * appears. */
-export type SportTone = "trail" | "run" | "cycling" | "hiking" | "swimming" | "neutral";
+ * completed-session chip, the session detail's sport tag, and a training
+ * week's totals share this so a run — trail, road, or virtual — looks the
+ * same everywhere it appears. One tone per family, not per exact sport
+ * type: the four families are the unit a rider or a hiker thinks in, not
+ * the distinction between a trail and a road run. */
+export type SportTone = "running" | "hiking" | "cycling" | "swimming" | "neutral";
 
 export function sportTone(sportType: string): SportTone {
-  if (sportType === "TrailRun") return "trail";
-  if (sportType === "Run") return "run";
+  if (RUNNING_SPORT_TYPES.includes(sportType)) return "running";
   if (CYCLING_SPORT_TYPES.includes(sportType)) return "cycling";
   if (HIKING_SPORT_TYPES.includes(sportType)) return "hiking";
   if (SWIMMING_SPORT_TYPES.includes(sportType)) return "swimming";

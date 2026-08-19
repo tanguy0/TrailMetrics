@@ -47,6 +47,7 @@
   --tone-terracotta-rgb: 198, 93, 59;
   --tone-blue: #3a6ea5;
   --tone-blue-tint: #ebeff1;
+  --tone-blue-rgb: 58, 110, 165;
   --tone-plum: #8b3e8f;
   --tone-plum-tint: #f3eaee;
   --tone-plum-rgb: 139, 62, 143;
@@ -84,6 +85,27 @@
   --scale-6: var(--danger);           /* #8e2c18 */
   --scale-6-rgb: var(--danger-rgb);
   --scale-6-tint: var(--danger-tint);
+
+  /*
+   * The same gold-to-red scale, spaced across the four sport families
+   * instead of six sections — running, hiking, cycling, swimming, in that
+   * fixed order, wherever a sport reads as a colour (`.training-session--*`,
+   * `.last-activity__sport--*`, `.week-summary--*`). Its own four evenly-
+   * spaced steps, not a subset of `--scale-1..6` above — four points split
+   * the same 0–1 range differently than six do.
+   */
+  --sport-scale-1: var(--sunrise);        /* running · #e8a33d */
+  --sport-scale-1-rgb: var(--sunrise-rgb);
+  --sport-scale-1-tint: var(--sunrise-tint);
+  --sport-scale-2: #ca7b31;               /* hiking */
+  --sport-scale-2-rgb: 202, 123, 49;
+  --sport-scale-2-tint: #faf0e5;
+  --sport-scale-3: #ac5424;               /* cycling */
+  --sport-scale-3-rgb: 172, 84, 36;
+  --sport-scale-3-tint: #f7ece4;
+  --sport-scale-4: var(--danger);         /* swimming · #8e2c18 */
+  --sport-scale-4-rgb: var(--danger-rgb);
+  --sport-scale-4-tint: var(--danger-tint);
 }
 
 /*
@@ -1623,35 +1645,31 @@ input[type="radio"] {
   font-size: 0.85rem;
 }
 
-/* One colour per sport type, shared with the calendar's session chips. */
-.last-activity__sport--trail {
-  background: var(--tone-forest-tint);
-  color: var(--tone-forest);
-}
-
-.last-activity__sport--run {
-  background: var(--tone-blue-tint);
-  color: var(--tone-blue);
-}
-
-.last-activity__sport--cycling {
-  background: var(--tone-plum-tint);
-  color: var(--tone-plum);
+/* One colour per sport family, shared with the calendar's session chips —
+   see `--sport-scale-N` and `.training-session--*`. */
+.last-activity__sport--running {
+  background: var(--sport-scale-1-tint);
+  color: var(--sport-scale-1);
 }
 
 .last-activity__sport--hiking {
-  background: var(--tone-terracotta-tint);
-  color: var(--tone-terracotta);
+  background: var(--sport-scale-2-tint);
+  color: var(--sport-scale-2);
+}
+
+.last-activity__sport--cycling {
+  background: var(--sport-scale-3-tint);
+  color: var(--sport-scale-3);
 }
 
 .last-activity__sport--swimming {
-  background: var(--moss-tint);
-  color: var(--moss);
+  background: var(--sport-scale-4-tint);
+  color: var(--sport-scale-4);
 }
 
 .last-activity__sport--neutral {
-  background: var(--tone-terracotta-tint);
-  color: var(--text);
+  background: var(--surface-alt);
+  color: var(--muted);
 }
 
 .last-activity__date {
@@ -2431,11 +2449,11 @@ input[type="radio"] {
   grid-template-columns: repeat(7, 1fr);
 }
 
-/* Week totals, to the right of the days: cycling on the left, running on the
-   right, both always shown (even at zero) and each a fixed width, so the
-   columns don't shift week to week regardless of how many digits that week's
-   numbers run to. Grey rather than tone-colored — the tag above each says
-   which sport it is, so color isn't carrying that meaning too. */
+/* Week totals, to the right of the days: one column per sport that actually
+   happened that week (running, hiking, cycling, swimming, in that order),
+   each a fixed width so a week's columns don't shift as its numbers gain or
+   lose digits — but the number of columns itself varies with what the week
+   held, down to one grey placeholder for a week with nothing at all. */
 .training-week__summary {
   flex-shrink: 0;
   display: flex;
@@ -2455,11 +2473,44 @@ input[type="radio"] {
   font-variant-numeric: tabular-nums;
   background: var(--surface-alt);
   color: var(--text);
-  /* The same soft inner shadow as a stat tile, in plain ink: this box is
-     deliberately hue-free (see the comment on `.training-week__summary`), so
-     no section accent to draw it from, and it is too small and dense with
-     numbers for the print texture to stay legible. */
+  /* The same soft inner shadow as a stat tile, in plain ink by default —
+     overridden per sport below, in the same hue as that sport's session
+     chip (`.training-session--*`). */
   box-shadow: inset -6px -6px 8px -5px rgba(36, 31, 25, 0.14);
+}
+
+/* One colour per sport family, matching `.training-session--*` and
+   `--sport-scale-N` — "running" here covers every running sport type as
+   one merged total (see `RUNNING_SPORT_TYPES`), same as the calendar's
+   session chip. */
+.week-summary--running {
+  background: var(--sport-scale-1-tint);
+  color: var(--sport-scale-1);
+  box-shadow: inset -6px -6px 8px -5px rgba(var(--sport-scale-1-rgb), 0.22);
+}
+
+.week-summary--hiking {
+  background: var(--sport-scale-2-tint);
+  color: var(--sport-scale-2);
+  box-shadow: inset -6px -6px 8px -5px rgba(var(--sport-scale-2-rgb), 0.22);
+}
+
+.week-summary--cycling {
+  background: var(--sport-scale-3-tint);
+  color: var(--sport-scale-3);
+  box-shadow: inset -6px -6px 8px -5px rgba(var(--sport-scale-3-rgb), 0.22);
+}
+
+.week-summary--swimming {
+  background: var(--sport-scale-4-tint);
+  color: var(--sport-scale-4);
+  box-shadow: inset -6px -6px 8px -5px rgba(var(--sport-scale-4-rgb), 0.22);
+}
+
+/* A week with no activity: the plain-ink default above, explicit here so it
+   reads as a deliberate "nothing this week" rather than an unstyled sport. */
+.week-summary--empty {
+  color: var(--muted);
 }
 
 .week-summary__tag {
@@ -2545,15 +2596,20 @@ input[type="radio"] {
   border: 1px solid transparent;
 }
 
+/* Blue, now that gold belongs to the sport-colour scale instead — a tint
+   rather than a solid fill, keeping the same lighter weight a workout has
+   always had next to a goal's solid one. */
 .training-pill--workout {
-  background: var(--surface-alt);
-  border-color: var(--spine);
-  color: var(--text);
+  background: var(--tone-blue-tint);
+  border-color: var(--tone-blue);
+  color: var(--tone-blue);
 }
 
+/* Green — the app's one button/brand colour — rather than gold, which is
+   now `--sport-scale-1` (running) instead of a free-standing "action" hue. */
 .training-pill--goal {
-  background: var(--sunrise);
-  border-color: var(--sunrise);
+  background: var(--primary);
+  border-color: var(--primary);
   color: #fff;
   font-weight: 700;
 }
@@ -2567,11 +2623,13 @@ input[type="radio"] {
   font-weight: 600;
 }
 
-/* Secondary keeps the goal's hue but shaded — a lighter fill of the same colour
-   rather than the solid, brighter fill a primary goal gets. */
+/* Secondary keeps the goal's hue but shaded — a lighter fill of the same
+   colour rather than the solid, brighter fill a primary goal gets.
+   `--tone-forest-rgb` rather than a `--primary-rgb`: the two are the same
+   hex, and the app doesn't carry both names for one triplet. */
 .training-pill--goal.training-pill--secondary {
-  background: rgba(232, 163, 61, 0.18);
-  border-color: var(--sunrise);
+  background: rgba(var(--tone-forest-rgb), 0.18);
+  border-color: var(--primary);
   color: var(--text);
   font-weight: 600;
 }
@@ -2589,34 +2647,28 @@ input[type="radio"] {
   cursor: pointer;
 }
 
-/* One colour per sport type, shared with the session-detail sport tag. */
-.training-session--trail {
-  background: var(--tone-forest-tint);
-  border-color: var(--tone-forest);
-}
-
-.training-session--run {
-  background: var(--tone-blue-tint);
-  border-color: var(--tone-blue);
-}
-
-.training-session--cycling {
-  background: var(--tone-plum-tint);
-  border-color: var(--tone-plum);
+/* One colour per sport family, from the gold-to-red `--sport-scale-N`
+   (running, hiking, cycling, swimming, in that order) — shared with the
+   session-detail sport tag and a training week's totals, so a sport reads
+   the same colour everywhere it appears. */
+.training-session--running {
+  background: var(--sport-scale-1-tint);
+  border-color: var(--sport-scale-1);
 }
 
 .training-session--hiking {
-  background: var(--tone-terracotta-tint);
-  border-color: var(--tone-terracotta);
+  background: var(--sport-scale-2-tint);
+  border-color: var(--sport-scale-2);
 }
 
-/* The four `--tone-*` widget accents are already spoken for (trail, run,
-   cycling, hiking), so swimming reuses `--moss` — the other green already in
-   the palette for the Current Records section — rather than adding a fifth
-   hue to the system. */
+.training-session--cycling {
+  background: var(--sport-scale-3-tint);
+  border-color: var(--sport-scale-3);
+}
+
 .training-session--swimming {
-  background: var(--moss-tint);
-  border-color: var(--moss);
+  background: var(--sport-scale-4-tint);
+  border-color: var(--sport-scale-4);
 }
 
 .training-session--neutral {
@@ -2629,24 +2681,20 @@ input[type="radio"] {
   font-weight: 700;
 }
 
-.training-session--trail .training-session__sport {
-  color: var(--tone-forest);
-}
-
-.training-session--run .training-session__sport {
-  color: var(--tone-blue);
-}
-
-.training-session--cycling .training-session__sport {
-  color: var(--tone-plum);
+.training-session--running .training-session__sport {
+  color: var(--sport-scale-1);
 }
 
 .training-session--hiking .training-session__sport {
-  color: var(--tone-terracotta);
+  color: var(--sport-scale-2);
+}
+
+.training-session--cycling .training-session__sport {
+  color: var(--sport-scale-3);
 }
 
 .training-session--swimming .training-session__sport {
-  color: var(--moss);
+  color: var(--sport-scale-4);
 }
 
 .training-session--neutral .training-session__sport {

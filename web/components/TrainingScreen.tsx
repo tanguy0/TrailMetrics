@@ -482,8 +482,13 @@ function WeekRow({
   );
 }
 
-/** Totals for the week: cycling, running, hiking, swimming — all shown every
- * week, zero or not, so the columns stay in the same place. */
+/**
+ * Totals for the week: one column per sport that actually happened, in a
+ * fixed order (running, hiking, cycling, swimming) — not four fixed columns
+ * most of which would read zero every week. A week with no activity at all
+ * gets one neutral placeholder instead of picking a sport's (empty) column
+ * to show.
+ */
 function WeekSummary({
   days,
   activitiesByDate,
@@ -494,16 +499,16 @@ function WeekSummary({
   t: T;
 }) {
   const totals = {
-    run: _emptyTotals(), ride: _emptyTotals(), hike: _emptyTotals(), swim: _emptyTotals(),
+    run: _emptyTotals(), hike: _emptyTotals(), ride: _emptyTotals(), swim: _emptyTotals(),
   };
   for (const date of days) {
     for (const activity of activitiesByDate[date] ?? []) {
       const bucket = RUNNING_SPORT_TYPES.includes(activity.sport_type)
         ? totals.run
-        : CYCLING_SPORT_TYPES.includes(activity.sport_type)
-          ? totals.ride
-          : HIKING_SPORT_TYPES.includes(activity.sport_type)
-            ? totals.hike
+        : HIKING_SPORT_TYPES.includes(activity.sport_type)
+          ? totals.hike
+          : CYCLING_SPORT_TYPES.includes(activity.sport_type)
+            ? totals.ride
             : SWIMMING_SPORT_TYPES.includes(activity.sport_type)
               ? totals.swim
               : null;
@@ -515,12 +520,29 @@ function WeekSummary({
     }
   }
 
+  const columns = (
+    [
+      { tone: "running", totals: totals.run, label: t("training.week.running") },
+      { tone: "hiking", totals: totals.hike, label: t("training.week.hiking") },
+      { tone: "cycling", totals: totals.ride, label: t("training.week.cycling") },
+      { tone: "swimming", totals: totals.swim, label: t("training.week.swimming") },
+    ] as const
+  ).filter((column) => column.totals.count > 0);
+
   return (
     <div className="training-week__summary">
-      <SportTotals tone="cycling" totals={totals.ride} label={t("training.week.cycling")} />
-      <SportTotals tone="running" totals={totals.run} label={t("training.week.running")} />
-      <SportTotals tone="hiking" totals={totals.hike} label={t("training.week.hiking")} />
-      <SportTotals tone="swimming" totals={totals.swim} label={t("training.week.swimming")} />
+      {columns.length === 0 ? (
+        <EmptyWeekTotals />
+      ) : (
+        columns.map((column) => (
+          <SportTotals
+            key={column.tone}
+            tone={column.tone}
+            totals={column.totals}
+            label={column.label}
+          />
+        ))
+      )}
     </div>
   );
 }
@@ -552,6 +574,27 @@ function SportTotals({
       <div className="week-summary__row">
         <span className="week-summary__icon" aria-hidden="true">⏱️</span>
         {formatHms(totals.moving_s)}
+      </div>
+    </div>
+  );
+}
+
+/** No activity at all this week — one grey placeholder, not a guess at which
+ * sport's empty column to leave up. No tag: there's no sport to name. */
+function EmptyWeekTotals() {
+  return (
+    <div className="week-summary week-summary--empty">
+      <div className="week-summary__row">
+        <span className="week-summary__icon" aria-hidden="true">📏</span>
+        {formatDistanceAdaptive(0)} km
+      </div>
+      <div className="week-summary__row">
+        <span className="week-summary__icon" aria-hidden="true">⛰️</span>
+        {formatNumber(0, 0)} m
+      </div>
+      <div className="week-summary__row">
+        <span className="week-summary__icon" aria-hidden="true">⏱️</span>
+        {formatHms(0)}
       </div>
     </div>
   );
