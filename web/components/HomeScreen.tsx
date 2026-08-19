@@ -965,7 +965,7 @@ function RecentFormBlock({
         <span aria-hidden="true">🔥</span> {t("home.form.title")}
       </h3>
       {/* Fitness (the model's first, slow-moving trace) is the one that answers
-          "is training working?" over eight weeks — fatigue reacts to the last
+          "is training working?" over six weeks — fatigue reacts to the last
           few days and would make the badge flicker on the day's session alone. */}
       <TrendBadge direction={trendDirection(charts?.[0]?.traces[0]?.y)} t={t} />
       <p className="data-block__lede">{t("home.form.subtitle")}</p>
@@ -991,7 +991,7 @@ function RecentFormBlock({
 }
 
 /**
- * A large "Increasing" / "Stable" / "Decreasing" tag for the last eight weeks of
+ * A large "Increasing" / "Stable" / "Decreasing" tag for the last six weeks of
  * a trend chart — sized and coloured to read at a glance, without opening the
  * chart itself.
  */
@@ -1011,9 +1011,9 @@ function TrendBadge({
 }
 
 /**
- * "Increasing" / "Stable" / "Decreasing" over the trailing eight points of a
+ * "Increasing" / "Stable" / "Decreasing" over the trailing six points of a
  * (weekly) trend series — a least-squares slope over that window, normalised by
- * the window's own mean so the same 5%-over-eight-weeks threshold applies
+ * the window's own mean so the same 2%-over-six-weeks threshold applies
  * whether the series sits near 0 or near 1000.
  *
  * `null` when there are fewer than four usable points: too little to call a
@@ -1024,7 +1024,7 @@ function trendDirection(
 ): "increasing" | "stable" | "decreasing" | null {
   const points = (values ?? []).filter(
     (v): v is number => v != null && Number.isFinite(v),
-  ).slice(-8);
+  ).slice(-6);
   const n = points.length;
   if (n < 4) return null;
 
@@ -1041,8 +1041,8 @@ function trendDirection(
   const scale = Math.abs(yMean) > 1e-9 ? Math.abs(yMean) : 1;
   const relativeChange = totalChange / scale;
 
-  if (relativeChange > 0.05) return "increasing";
-  if (relativeChange < -0.05) return "decreasing";
+  if (relativeChange > 0.02) return "increasing";
+  if (relativeChange < -0.02) return "decreasing";
   return "stable";
 }
 
