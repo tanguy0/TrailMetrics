@@ -82,7 +82,7 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
     <main className="container">
       <h1>{t("pages.title")}</h1>
 
-      <section className="explainer">
+      <section className="explainer scale-1">
         <h2 className="explainer__title">{t("pages.how.title")}</h2>
         <p className="explainer__lede">{t("pages.how.body")}</p>
         <div className="step-grid">

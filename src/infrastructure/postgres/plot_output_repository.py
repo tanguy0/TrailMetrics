@@ -11,8 +11,11 @@ So outputs are also written here, keyed by the render signature. Two properties
 make that safe:
 
 * **The key contains the resolved activity ids.** A new import changes the key, so
-  a stale entry is never read rather than needing to be invalidated. That is why
-  this table can be a plain key/value store with no versioning.
+  a stale entry is never read rather than needing to be invalidated for *that*
+  reason. It doesn't cover a change to how a plot is drawn from the same
+  activities, though — a recolored trace, a new default line width — which is
+  what ``render_page.RENDER_VERSION`` is for: bump it and every cached row
+  misses once, everywhere, on the next render after deploy.
 * **The payload is the IR**, not a figure, so it is rebuilt with
   :meth:`~src.domain.charts.ir.PlotOutput.from_dict` and rendered by the same code
   as a fresh computation. A cached page and a computed page cannot diverge.

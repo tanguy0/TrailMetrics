@@ -2193,13 +2193,16 @@ input[type="radio"] {
 }
 
 /* Same solid accent-bar treatment as a `card-block__title` (see the Home
-   screen), under this section's own class names. */
+   screen), under this section's own class names — and the same
+   `--section-accent` contract, from the `.scale-1` class on `.explainer`
+   itself: it's the only section on this page, so it sits at the scale's
+   first step (gold), the same rule Home's sections follow. */
 .explainer__title {
   display: flex;
   align-items: center;
   margin: -1rem -1.1rem 1rem;
   padding: 0.6rem 1rem;
-  background: var(--tone-blue);
+  background: var(--section-accent, var(--primary));
   color: #fff;
   text-transform: uppercase;
   letter-spacing: 0.06em;

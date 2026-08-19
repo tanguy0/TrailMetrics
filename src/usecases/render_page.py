@@ -200,6 +200,17 @@ class RenderPage(UseCase):
         return result
 
 
+# Bump when a change to any `compute()` function changes a plot's *output* for
+# inputs that would otherwise hash the same — a new default line width, a
+# recolored trace, a smoothing tweak — so the persisted cache (`plot_outputs`,
+# keyed on `plot_signature`) can't go on serving a pre-change render forever
+# just because nothing in `payload` below happens to have changed. Bumping
+# this invalidates every athlete's cached output once, on the next render
+# after deploy; leave it alone for changes that don't touch a plot's output
+# (an unrelated bug fix, a docstring, a new plot type).
+RENDER_VERSION = 2
+
+
 def plot_signature(
     panel: PanelSpec,
     plot: PlotSpec,
@@ -211,9 +222,11 @@ def plot_signature(
 
     Includes the resolved activity ids rather than the source spec alone, so a
     freshly loaded history invalidates naturally while re-rendering the same page
-    twice does not recompute anything.
+    twice does not recompute anything. `RENDER_VERSION` covers the rest: a
+    change to how a plot is drawn, not to what it's drawn from.
     """
     payload = {
+        "render_version": RENDER_VERSION,
         "plot_type": plot.plot_type,
         "params": params,
         "source": panel.source.to_dict(),
