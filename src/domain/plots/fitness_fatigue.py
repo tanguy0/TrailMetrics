@@ -115,5 +115,13 @@ register(PlotDefinition(
     compute=compute,
     params=[],
     requires_streams=False,
+    # This plot reads `resolved.all_summaries()` — the athlete's whole
+    # cross-sport history — not the panel's own window/filter-matched
+    # activities, so `resolved.is_empty` (which only reflects that match) is
+    # the wrong gate: a narrow window with nothing in it would otherwise
+    # short-circuit this to "no activity" before `compute()` ever runs, even
+    # with years of history to draw the curve from. `compute()` already has
+    # its own empty-history guard (`if not daily: return empty_output(...)`).
+    requires_data=False,
     category_key="plotcat.trends",
 ))
