@@ -80,7 +80,7 @@ class Trace:
     axis: str = "y"
     # matplotlib-style code ("-", "--", "-.", ":"); mapped to a Plotly dash.
     dash: str = "-"
-    width: float = 2.4
+    width: float = 9.6
     markers: bool = False
     marker_size: float = 5.0
     opacity: float = 1.0

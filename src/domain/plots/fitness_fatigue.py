@@ -75,12 +75,12 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
             Trace(
                 name=translate("plot.fitness_fatigue.fitness", lang),
                 x=x, y=fitness_y, kind=TraceKind.LINE,
-                color=_FITNESS_COLOR, width=2.6,
+                color=_FITNESS_COLOR, width=10.4,
             ),
             Trace(
                 name=translate("plot.fitness_fatigue.fatigue", lang),
                 x=x, y=fatigue_y, kind=TraceKind.LINE,
-                color=_FATIGUE_COLOR, width=2.0,
+                color=_FATIGUE_COLOR, width=8.0,
             ),
         ],
         height=420,

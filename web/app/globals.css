@@ -54,6 +54,8 @@
   --sunrise-rgb: 232, 163, 61;
   --moss-tint: #eff3e8;
   --moss-rgb: 94, 156, 78;
+  --danger-tint: #f7e6e1;
+  --danger-rgb: 142, 44, 24;
 }
 
 * {
@@ -1033,6 +1035,10 @@ input[type="radio"] {
   margin-bottom: var(--gap);
 }
 
+.card-block--progress {
+  margin-bottom: var(--gap);
+}
+
 .card-block--welcome {
   margin: 1.5rem 0;
 }
@@ -1060,6 +1066,7 @@ input[type="radio"] {
 .card-block--zones,
 .card-block--records,
 .card-block--sync,
+.card-block--progress,
 .card-block--welcome {
   overflow: hidden;
 }
@@ -1069,6 +1076,7 @@ input[type="radio"] {
 .card-block--zones > .card-block__title,
 .card-block--records > .card-block__title,
 .card-block--sync > .card-block__title,
+.card-block--progress > .card-block__title,
 .card-block--welcome > .card-block__title {
   margin: -1rem -1.1rem 1rem;
   padding: 0.6rem 1rem;
@@ -1086,6 +1094,7 @@ input[type="radio"] {
    header is none of those, so records gets the palette's other green instead. */
 .card-block--records > .card-block__title { background: var(--moss); }
 .card-block--sync > .card-block__title { background: var(--tone-blue); }
+.card-block--progress > .card-block__title { background: var(--moss); }
 .card-block--welcome > .card-block__title { background: var(--tone-forest); }
 
 .card-block__title-text {
@@ -1499,6 +1508,38 @@ input[type="radio"] {
   font-size: 0.85rem;
   margin: -0.35rem 0 0.75rem;
   max-width: 80ch;
+}
+
+/* The "Increasing" / "Stable" / "Decreasing" tag between a chart's title and
+   its lede — large and colored on purpose, so the eight-week call is legible
+   without reading the chart itself. */
+.trend-badge {
+  display: inline-block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  margin: 0 0 0.6rem;
+}
+
+.trend-badge--increasing {
+  background: var(--moss-tint);
+  color: var(--moss);
+  border: 1.5px solid var(--moss);
+}
+
+.trend-badge--stable {
+  background: var(--sunrise-tint);
+  color: var(--sunrise);
+  border: 1.5px solid var(--sunrise);
+}
+
+.trend-badge--decreasing {
+  background: var(--danger-tint);
+  color: var(--danger);
+  border: 1.5px solid var(--danger);
 }
 
 /* --- Route map ------------------------------------------------------------ */

@@ -73,6 +73,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [summary, setSummary] = useState<HomeSummary | null>(null);
   const [volumeCharts, setVolumeCharts] = useState<ChartData[] | null>(null);
+  const [efficiencyCharts, setEfficiencyCharts] = useState<ChartData[] | null>(null);
   const [formCharts, setFormCharts] = useState<ChartData[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -108,6 +109,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
   useEffect(() => {
     if (!activityCount) {
       setVolumeCharts(null);
+      setEfficiencyCharts(null);
       setFormCharts(null);
       return;
     }
@@ -123,6 +125,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
         .catch(() => live && set([]));
 
     load(recentHistoryPanel(t), setVolumeCharts);
+    load(recentEfficiencyPanel(t), setEfficiencyCharts);
     load(recentFormPanel(t), setFormCharts);
     return () => {
       live = false;
@@ -274,9 +277,9 @@ export function HomeScreen({ strings }: { strings: Strings }) {
 
       <RecordsCard records={summary.records} t={t} />
 
-      {/* Your data: the import controls, then what the data most recently says. */}
+      {/* Last Run: the import controls, then the most recent activity itself. */}
       <section className="card-block card-block--sync">
-        <SectionTitle icon="🔄">{t("home.import.title")}</SectionTitle>
+        <SectionTitle icon="🔄">{t("home.last.title")}</SectionTitle>
 
         <SyncControls
           athlete={athlete}
@@ -291,15 +294,28 @@ export function HomeScreen({ strings }: { strings: Strings }) {
             activity={summary.last_activity}
             t={t}
           />
+        </div>
+      </section>
+
+      {/* Recent Progress: volume, efficiency and form over the trailing window. */}
+      <section className="card-block card-block--progress">
+        <SectionTitle icon="📊">{t("home.progress.title")}</SectionTitle>
+
+        <div className="data-stack">
           <RecentHistoryBlock
             charts={volumeCharts}
             hasData={activityCount > 0}
             t={t}
           />
+          <RecentEfficiencyBlock
+            charts={efficiencyCharts}
+            hasData={activityCount > 0}
+            hasWeight={athlete.weight_kg != null}
+            t={t}
+          />
           <RecentFormBlock
             charts={formCharts}
             hasData={activityCount > 0}
-            hasWeight={athlete.weight_kg != null}
             t={t}
           />
         </div>
@@ -348,28 +364,29 @@ function recentHistoryPanel(t: T): PanelSpec {
 }
 
 /**
- * The Recent Form panel: power-to-heart-rate per week.
+ * The Recent Efficiency panel: power-to-heart-rate per week.
  *
  * The one number on this screen that is about *fitness* rather than volume. Power is
  * modelled from speed and gradient, so the ratio says how much mechanical output the
  * athlete produced per heartbeat — it rises when the same effort buys more pace, and
  * it is insensitive to whether the week was hilly or flat, which raw pace is not.
  *
- * Aggregated as a mean over each week and smoothed over four of them. Week to week
- * the ratio is noisy for reasons that have nothing to do with form — a hot day, a
- * hard session, a watch that lost heart rate for ten minutes — so the unsmoothed
- * series invites reading a bad Tuesday as lost fitness. The trend is the signal.
+ * Aggregated as a mean over each week, then smoothed with a five-week rolling
+ * average followed by a five-point Savitzky–Golay filter. Week to week the ratio is
+ * noisy for reasons that have nothing to do with form — a hot day, a hard session, a
+ * watch that lost heart rate for ten minutes — so the unsmoothed series invites
+ * reading a bad Tuesday as lost fitness. The trend is the signal.
  */
-function recentFormPanel(t: T): PanelSpec {
+function recentEfficiencyPanel(t: T): PanelSpec {
   return {
-    id: "panel_home_form",
-    title: t("home.form.title"),
+    id: "panel_home_efficiency",
+    title: t("home.efficiency.title"),
     description: "",
     columns: 1,
-    source: recentWindow(t("home.form.title")),
+    source: recentWindow(t("home.efficiency.title")),
     plots: [
       {
-        id: "plot_home_form",
+        id: "plot_home_efficiency",
         plot_type: "metric_trend",
         title: null,
         params: {
@@ -382,9 +399,36 @@ function recentFormPanel(t: T): PanelSpec {
           cumulative: false,
           markers: true,
           split_by: "none",
-          smooth_rolling: 4,
+          smooth_rolling: 5,
+          smooth_savgol: 5,
           show_totals: false,
         },
+      },
+    ],
+  };
+}
+
+/**
+ * The Recent Form panel: the Banister fitness/fatigue model over the same window.
+ *
+ * Reuses the standalone `fitness_fatigue` plot type as-is (it takes no params and
+ * draws both curves together) rather than re-deriving the same two series through
+ * `metric_trend`, so this screen and the page builder can never disagree on what
+ * "fitness" and "fatigue" mean.
+ */
+function recentFormPanel(t: T): PanelSpec {
+  return {
+    id: "panel_home_form",
+    title: t("home.form.title"),
+    description: "",
+    columns: 1,
+    source: recentWindow(t("home.form.title")),
+    plots: [
+      {
+        id: "plot_home_form",
+        plot_type: "fitness_fatigue",
+        title: null,
+        params: {},
       },
     ],
   };
@@ -814,9 +858,6 @@ function LastActivityBlock({
 }) {
   return (
     <div className="data-block">
-      <h3 className="data-block__title">
-        <span aria-hidden="true">📍</span> {t("home.last.title")}
-      </h3>
       {activity ? (
         <SessionDetail activity={activity} t={t} />
       ) : (
@@ -863,8 +904,8 @@ function RecentHistoryBlock({
   );
 }
 
-/** The last 30 weeks of power-to-heart-rate: recent form at a glance. */
-function RecentFormBlock({
+/** The last 30 weeks of power-to-heart-rate: recent efficiency at a glance. */
+function RecentEfficiencyBlock({
   charts,
   hasData,
   hasWeight,
@@ -878,9 +919,10 @@ function RecentFormBlock({
   return (
     <div className="data-block">
       <h3 className="data-block__title">
-        <span aria-hidden="true">⚡</span> {t("home.form.title")}
+        <span aria-hidden="true">⚡</span> {t("home.efficiency.title")}
       </h3>
-      <p className="data-block__lede">{t("home.form.subtitle")}</p>
+      <TrendBadge direction={trendDirection(charts?.[0]?.traces[0]?.y)} t={t} />
+      <p className="data-block__lede">{t("home.efficiency.subtitle")}</p>
 
       {!hasData ? (
         <p className="muted">{t("home.last.empty")}</p>
@@ -888,7 +930,7 @@ function RecentFormBlock({
         // Power is stored per kilogram, so this chart is empty without a weight.
         // Said here rather than drawn blank — and the field to fix it is on the
         // Health card a few centimetres up.
-        <p className="note">{t("home.form.needs_weight")}</p>
+        <p className="note">{t("home.efficiency.needs_weight")}</p>
       ) : charts === null ? (
         <div className="pending">
           <span className="spinner" />
@@ -905,6 +947,103 @@ function RecentFormBlock({
       )}
     </div>
   );
+}
+
+/** The last 30 weeks of fitness and fatigue (Banister model): recent form at a glance. */
+function RecentFormBlock({
+  charts,
+  hasData,
+  t,
+}: {
+  charts: ChartData[] | null;
+  hasData: boolean;
+  t: T;
+}) {
+  return (
+    <div className="data-block">
+      <h3 className="data-block__title">
+        <span aria-hidden="true">🔥</span> {t("home.form.title")}
+      </h3>
+      {/* Fitness (the model's first, slow-moving trace) is the one that answers
+          "is training working?" over eight weeks — fatigue reacts to the last
+          few days and would make the badge flicker on the day's session alone. */}
+      <TrendBadge direction={trendDirection(charts?.[0]?.traces[0]?.y)} t={t} />
+      <p className="data-block__lede">{t("home.form.subtitle")}</p>
+
+      {!hasData ? (
+        <p className="muted">{t("home.last.empty")}</p>
+      ) : charts === null ? (
+        <div className="pending">
+          <span className="spinner" />
+          <p className="muted">{t("common.loading")}</p>
+        </div>
+      ) : charts.length === 0 ? (
+        <p className="muted">{t("home.last.empty")}</p>
+      ) : (
+        charts.map((chart, index) => (
+          <div className="chart-frame" key={index}>
+            <ChartView chart={chart} />
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/**
+ * A large "Increasing" / "Stable" / "Decreasing" tag for the last eight weeks of
+ * a trend chart — sized and coloured to read at a glance, without opening the
+ * chart itself.
+ */
+function TrendBadge({
+  direction,
+  t,
+}: {
+  direction: "increasing" | "stable" | "decreasing" | null;
+  t: T;
+}) {
+  if (!direction) return null;
+  return (
+    <span className={`trend-badge trend-badge--${direction}`}>
+      {t(`home.trend.${direction}`)}
+    </span>
+  );
+}
+
+/**
+ * "Increasing" / "Stable" / "Decreasing" over the trailing eight points of a
+ * (weekly) trend series — a least-squares slope over that window, normalised by
+ * the window's own mean so the same 5%-over-eight-weeks threshold applies
+ * whether the series sits near 0 or near 1000.
+ *
+ * `null` when there are fewer than four usable points: too little to call a
+ * trend rather than noise.
+ */
+function trendDirection(
+  values: (number | null | undefined)[] | undefined,
+): "increasing" | "stable" | "decreasing" | null {
+  const points = (values ?? []).filter(
+    (v): v is number => v != null && Number.isFinite(v),
+  ).slice(-8);
+  const n = points.length;
+  if (n < 4) return null;
+
+  const xMean = (n - 1) / 2;
+  const yMean = points.reduce((sum, y) => sum + y, 0) / n;
+  let num = 0;
+  let den = 0;
+  points.forEach((y, i) => {
+    num += (i - xMean) * (y - yMean);
+    den += (i - xMean) ** 2;
+  });
+  const slope = den === 0 ? 0 : num / den;
+  const totalChange = slope * (n - 1);
+  const scale = Math.abs(yMean) > 1e-9 ? Math.abs(yMean) : 1;
+  const relativeChange = totalChange / scale;
+
+  if (relativeChange > 0.05) return "increasing";
+  if (relativeChange < -0.05) return "decreasing";
+  return "stable";
 }
 
 function SyncControls({

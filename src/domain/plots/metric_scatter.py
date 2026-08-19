@@ -121,7 +121,7 @@ def _trendline(x, y, label: str, color: str, lang: str):
         kind=TraceKind.LINE,
         color=color,
         dash="--",
-        width=1.6,
+        width=6.4,
         show_legend=False,
         legend_group=label,
         hover_template="<extra></extra>",

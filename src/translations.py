@@ -865,7 +865,7 @@ TRANSLATIONS = {
     },
 
     # Home — last activity and the weekly volume chart
-    "ui.home.last.title": {"en": "Last activity", "fr": "Dernière activité"},
+    "ui.home.last.title": {"en": "Last Run", "fr": "Dernière sortie"},
     "ui.home.last.empty": {
         "en": "Nothing imported yet.", "fr": "Rien d'importé pour l'instant.",
     },
@@ -898,17 +898,32 @@ TRANSLATIONS = {
     "ui.session.comments.cancel": {"en": "Cancel", "fr": "Annuler"},
     "ui.session.comments.edit": {"en": "Edit", "fr": "Modifier"},
     "ui.session.comments.delete": {"en": "Delete", "fr": "Supprimer"},
-    "ui.home.form.title": {"en": "Recent form", "fr": "Forme récente"},
+    "ui.home.progress.title": {"en": "Recent Progress", "fr": "Progrès récents"},
+    "ui.home.form.title": {"en": "Recent Form", "fr": "Forme récente"},
     "ui.home.form.subtitle": {
-        "en": "Power per heartbeat, weekly, smoothed over four weeks. It rises when "
-              "the same effort buys you more pace — and unlike raw pace it does not "
-              "care whether the week was hilly or flat.",
-        "fr": "Puissance par battement, par semaine, lissée sur quatre semaines. "
-              "Elle monte quand le même effort vous rapporte plus d'allure — et "
+        "en": "Fitness and fatigue over the last 30 weeks, from the Banister "
+              "training-load model. Fitness builds and fades slowly; fatigue reacts "
+              "to the last few days — the gap between them is what a hard week "
+              "costs before it turns into fitness.",
+        "fr": "Forme et fatigue sur les 30 dernières semaines, d'après le modèle de "
+              "charge d'entraînement de Banister. La forme se construit et s'efface "
+              "lentement ; la fatigue réagit aux derniers jours — l'écart entre les "
+              "deux, c'est ce qu'une semaine dure coûte avant de se transformer en "
+              "forme.",
+    },
+    "ui.home.efficiency.title": {"en": "Recent Efficiency", "fr": "Efficacité récente"},
+    "ui.home.efficiency.subtitle": {
+        "en": "Power per heartbeat, weekly, smoothed with a five-week rolling "
+              "average and a Savitzky–Golay filter. It rises when the same effort "
+              "buys you more pace — and unlike raw pace it does not care whether "
+              "the week was hilly or flat.",
+        "fr": "Puissance par battement, par semaine, lissée par une moyenne "
+              "glissante de cinq semaines et un filtre de Savitzky–Golay. Elle "
+              "monte quand le même effort vous rapporte plus d'allure — et "
               "contrairement à l'allure brute, elle ne dépend pas du relief de la "
               "semaine.",
     },
-    "ui.home.form.needs_weight": {
+    "ui.home.efficiency.needs_weight": {
         "en": "Power is modelled from your body mass, so this chart needs your "
               "weight — set it on the Health card above.",
         "fr": "La puissance est modélisée à partir de votre masse corporelle : ce "
@@ -924,9 +939,11 @@ TRANSLATIONS = {
               "Chacun a son axe — distance à gauche, dénivelé à droite — comparez "
               "donc les formes plutôt que les points de rencontre.",
     },
+    "ui.home.trend.increasing": {"en": "Increasing", "fr": "En hausse"},
+    "ui.home.trend.stable": {"en": "Stable", "fr": "Stable"},
+    "ui.home.trend.decreasing": {"en": "Decreasing", "fr": "En baisse"},
 
     # Home — importing from Strava
-    "ui.home.import.title": {"en": "Your data", "fr": "Vos données"},
     "ui.home.import.first": {"en": "Import my activities", "fr": "Importer mes activités"},
     "ui.home.import.more": {
         "en": "Import new activities", "fr": "Importer les nouvelles activités",

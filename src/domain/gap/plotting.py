@@ -57,7 +57,7 @@ def plot_gap_curves(
                 name=name,
                 legendgroup=name,
                 mode="lines",
-                line=dict(color=color, width=2.8, dash=dash),
+                line=dict(color=color, width=11.2, dash=dash),
                 hovertemplate="%{x:.0f} m/km<br>%{y:.3f}<extra>%{fullData.name}</extra>",
             )
         )
