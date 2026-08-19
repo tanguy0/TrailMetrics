@@ -37,6 +37,7 @@ import {
   createPlannedItem,
   deletePlannedItem,
   getTrainingCalendar,
+  renderPanel,
   updatePlannedItem,
 } from "@/lib/api";
 import {
@@ -52,12 +53,14 @@ import {
 import { translator, type Strings, type Translate } from "@/lib/strings";
 import type {
   ActivityCard,
+  PanelSpec,
   PlannedItem,
   PlannedItemImportance,
   PlannedItemKind,
 } from "@/lib/types";
 
 type T = Translate;
+type FitnessTrend = "increasing" | "stable" | "decreasing";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_LABELS = [
@@ -138,6 +141,10 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
   const [activities, setActivities] = useState<Record<number, ActivityCard>>({});
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalState | null>(null);
+  // Fitness on each day that's actually happened, from the earliest loaded
+  // week through today — see the effect below. Keyed by ISO date, same
+  // format as every other date string in this file.
+  const [fitnessByDate, setFitnessByDate] = useState<Record<string, number>>({});
 
   const containerRef = useRef<HTMLDivElement>(null);
   const weekRefs = useRef(new Map<string, HTMLDivElement>());
@@ -178,6 +185,63 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
     fetchRange(start, end);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const earliestWeekStart = weekStarts[0];
+
+  /**
+   * The Fitness trace from the same Banister model Home uses, covering every
+   * day from the earliest loaded week through today — every past and
+   * current week's badge (see `WeekSummary` below) is a before/after delta
+   * read off this one map, not Home's 4/12-week trend line and not a
+   * separate fetch per week. A future week has no data yet and gets no
+   * badge; re-runs whenever scrolling back loads earlier weeks, since that
+   * moves the range this needs to cover.
+   *
+   * `fitness_fatigue` ignores the source's sport filter and warms the model
+   * up from the athlete's whole history regardless of the window (see that
+   * plot's own docstring) — the window here only controls what's sliced
+   * back. A day with no session already contributes zero load to the model,
+   * so a quiet day before any run this week is included at its true value,
+   * not skipped.
+   */
+  useEffect(() => {
+    if (earliestWeekStart > todayIso) return;
+    let live = true;
+    const panel: PanelSpec = {
+      id: "panel_training_fitness_trend",
+      title: "",
+      description: "",
+      columns: 1,
+      source: {
+        mode: "window",
+        activity_ids: [],
+        selection_label: "",
+        windows: [{ name: "", start: earliestWeekStart, end: todayIso }],
+        filters: { sport_types: [], min_distance_km: null, max_distance_km: null },
+      },
+      plots: [
+        { id: "plot_training_fitness_trend", plot_type: "fitness_fatigue", title: null, params: {} },
+      ],
+    };
+    renderPanel(panel)
+      .then((result) => {
+        if (!live) return;
+        const trace = result.panel.plots[0]?.output?.charts[0]?.traces[0];
+        const byDate: Record<string, number> = {};
+        (trace?.x ?? []).forEach((date, index) => {
+          const value = trace?.y[index];
+          if (typeof date === "string" && value != null) byDate[date] = value;
+        });
+        setFitnessByDate(byDate);
+      })
+      // Left as whatever it was rather than surfaced as an error: the
+      // calendar's own data is the part that matters, and a missing badge
+      // is not actionable here.
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [earliestWeekStart, todayIso]);
 
   // Scroll so today's week starts at the top, once it is on the page. Guarded so
   // a later week being added (top or bottom) never re-triggers it.
@@ -370,6 +434,7 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
             todayIso={todayIso}
             itemsByDate={itemsByDate}
             activitiesByDate={activitiesByDate}
+            fitnessByDate={fitnessByDate}
             onRef={(element) => {
               if (element) weekRefs.current.set(weekStart, element);
               else weekRefs.current.delete(weekStart);
@@ -437,6 +502,7 @@ function WeekRow({
   todayIso,
   itemsByDate,
   activitiesByDate,
+  fitnessByDate,
   onRef,
   onOpenItem,
   onOpenSession,
@@ -448,6 +514,7 @@ function WeekRow({
   todayIso: string;
   itemsByDate: Record<string, PlannedItem[]>;
   activitiesByDate: Record<string, ActivityCard[]>;
+  fitnessByDate: Record<string, number>;
   onRef: (element: HTMLDivElement | null) => void;
   onOpenItem: (item: PlannedItem) => void;
   onOpenSession: (activity: ActivityCard) => void;
@@ -479,7 +546,13 @@ function WeekRow({
           />
         ))}
       </div>
-      <WeekSummary days={days} activitiesByDate={activitiesByDate} t={t} />
+      <WeekSummary
+        days={days}
+        todayIso={todayIso}
+        activitiesByDate={activitiesByDate}
+        fitnessByDate={fitnessByDate}
+        t={t}
+      />
     </div>
   );
 }
@@ -502,13 +575,18 @@ function WeekRow({
  */
 function WeekSummary({
   days,
+  todayIso,
   activitiesByDate,
+  fitnessByDate,
   t,
 }: {
   days: string[];
+  todayIso: string;
   activitiesByDate: Record<string, ActivityCard[]>;
+  fitnessByDate: Record<string, number>;
   t: T;
 }) {
+  const fitnessTrend = weekFitnessTrend(days, todayIso, fitnessByDate);
   const totals = {
     run: _emptyTotals(), hike: _emptyTotals(), ride: _emptyTotals(), swim: _emptyTotals(),
   };
@@ -543,9 +621,14 @@ function WeekSummary({
   return (
     <div className="training-week__summary">
       <div className="week-summary">
-        <span className="week-summary__title" style={{ gridColumn: "1 / -1", gridRow: 1 }}>
-          {t("training.week.summary_title")}
-        </span>
+        <div className="week-summary__title" style={{ gridColumn: "1 / -1", gridRow: 1 }}>
+          <span className="week-summary__title-text">{t("training.week.summary_title")}</span>
+          {fitnessTrend && (
+            <span className={`trend-badge trend-badge--${fitnessTrend} trend-badge--compact`}>
+              {t(`training.week.fitness_${fitnessTrend}`)}
+            </span>
+          )}
+        </div>
 
         <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 3 }} aria-hidden="true">
           📏
@@ -577,6 +660,31 @@ function WeekSummary({
 
 function _emptyTotals() {
   return { distance_m: 0, elevation_gain_m: 0, moving_s: 0, count: 0 };
+}
+
+/**
+ * A week's fitness delta: `fitnessByDate` at the week's last day that's
+ * actually happened (today, for the current week; the week's own Sunday,
+ * for a past one) minus `fitnessByDate` at its first day — `null` for a
+ * week that hasn't started yet, or one `fitnessByDate` doesn't cover (it
+ * only reaches back to the earliest loaded week; see the effect in
+ * `TrainingScreen`). ISO date strings compare correctly with `<=` — no need
+ * to parse them into `Date`s just to order them.
+ */
+function weekFitnessTrend(
+  days: string[],
+  todayIso: string,
+  fitnessByDate: Record<string, number>,
+): FitnessTrend | null {
+  const weekStart = days[0];
+  if (weekStart > todayIso) return null;
+  const weekEnd = days[days.length - 1];
+  const effectiveEnd = weekEnd <= todayIso ? weekEnd : todayIso;
+  const startValue = fitnessByDate[weekStart];
+  const endValue = fitnessByDate[effectiveEnd];
+  if (startValue == null || endValue == null) return null;
+  const delta = endValue - startValue;
+  return delta > 1 ? "increasing" : delta < -1 ? "decreasing" : "stable";
 }
 
 /** One sport's tag and three values, placed into the shared grid's `gridColumn`.

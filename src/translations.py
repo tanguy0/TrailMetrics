@@ -361,18 +361,18 @@ TRANSLATIONS = {
         "puissance, altitude, pente), en temps ou en distance.",
     },
     "plot.fitness_fatigue.label": {
-        "en": "Fitness & Fatigue", "fr": "Forme & Fatigue",
+        "en": "Fitness & Fatigue", "fr": "Fitness & Fatigue",
     },
     "plot.fitness_fatigue.description": {
         "en": "Daily training load (Strava's Relative Effort, every sport "
         "combined), split into a slow-building Fitness curve and a "
         "fast-reacting Fatigue curve — the classic Banister model.",
         "fr": "Charge d'entraînement quotidienne (Effort relatif Strava, tous "
-        "sports confondus), décomposée en une courbe de Forme à évolution "
+        "sports confondus), décomposée en une courbe de Fitness à évolution "
         "lente et une courbe de Fatigue à réaction rapide — le modèle de "
         "Banister.",
     },
-    "plot.fitness_fatigue.fitness": {"en": "Fitness", "fr": "Forme"},
+    "plot.fitness_fatigue.fitness": {"en": "Fitness", "fr": "Fitness"},
     "plot.fitness_fatigue.fatigue": {"en": "Fatigue", "fr": "Fatigue"},
     "plot.fitness_fatigue.y": {
         "en": "Training load (Relative Effort)",
@@ -905,11 +905,11 @@ TRANSLATIONS = {
               "training-load model. Fitness builds and fades slowly; fatigue reacts "
               "to the last few days — the gap between them is what a hard week "
               "costs before it turns into fitness.",
-        "fr": "Forme et fatigue sur les 30 dernières semaines, d'après le modèle de "
-              "charge d'entraînement de Banister. La forme se construit et s'efface "
+        "fr": "Fitness et fatigue sur les 30 dernières semaines, d'après le modèle de "
+              "charge d'entraînement de Banister. Le Fitness se construit et s'efface "
               "lentement ; la fatigue réagit aux derniers jours — l'écart entre les "
               "deux, c'est ce qu'une semaine dure coûte avant de se transformer en "
-              "forme.",
+              "Fitness.",
     },
     "ui.home.efficiency.title": {"en": "Recent Efficiency", "fr": "Efficacité récente"},
     "ui.home.efficiency.subtitle": {
@@ -1110,6 +1110,15 @@ TRANSLATIONS = {
     "ui.training.week.hiking": {"en": "Hike", "fr": "Rando"},
     "ui.training.week.swimming": {"en": "Swim", "fr": "Nage"},
     "ui.training.week.summary_title": {"en": "Week summary", "fr": "Résumé de la semaine"},
+    "ui.training.week.fitness_increasing": {
+        "en": "Increasing Fitness", "fr": "Fitness en hausse",
+    },
+    "ui.training.week.fitness_stable": {
+        "en": "Stable Fitness", "fr": "Fitness stable",
+    },
+    "ui.training.week.fitness_decreasing": {
+        "en": "Decreasing Fitness", "fr": "Fitness en baisse",
+    },
 
 }
 

@@ -2553,8 +2553,18 @@ input[type="radio"] {
   box-shadow: inset -6px -6px 8px -5px rgba(36, 31, 25, 0.14);
 }
 
+/* The title and, on the current week only, its fitness-trend badge — a flex
+   row so the two sit side by side and centre as a pair; the title (not the
+   badge) is what gives way if the card is ever too narrow for both. */
 .week-summary__title {
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.week-summary__title-text {
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -2563,6 +2573,20 @@ input[type="radio"] {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* `.trend-badge`/`.trend-badge--increasing/stable/decreasing` are Home's —
+   same colours, same meaning (a metric trending up/flat/down) — just too
+   large for this card's own scale, hence this size-only override. */
+.trend-badge--compact {
+  flex-shrink: 0;
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.05rem 0.35rem;
+  border-width: 1px;
+  margin: 0;
 }
 
 .week-summary__icon {
