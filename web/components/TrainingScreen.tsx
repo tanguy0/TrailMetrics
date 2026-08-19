@@ -483,11 +483,18 @@ function WeekRow({
 }
 
 /**
- * Totals for the week: one column per sport that actually happened, in a
- * fixed order (running, hiking, cycling, swimming) — not four fixed columns
- * most of which would read zero every week. A week with no activity at all
- * gets one neutral placeholder instead of picking a sport's (empty) column
- * to show.
+ * Totals for the week: one card, one set of icons shared by every sport that
+ * actually happened (running, hiking, cycling, swimming, in that order) —
+ * not a separate icon-and-box per sport repeating the same three icons up to
+ * four times. A week with no activity at all gets the same card with one
+ * grey, unlabeled column instead of picking a sport's (empty) column to show.
+ *
+ * A CSS grid, laid out explicitly by `gridColumn`/`gridRow` rather than
+ * relying on source order: column 1 is the icons, columns 2–5 are up to four
+ * sports, row 1 is the sport tags, rows 2–4 are distance/climb/time. Only the
+ * columns for sports actually present get any cells — the grid's own column
+ * tracks (fixed by `.week-summary`'s CSS) still reserve their width, which is
+ * what keeps every week's card the same total size.
  */
 function WeekSummary({
   days,
@@ -531,18 +538,31 @@ function WeekSummary({
 
   return (
     <div className="training-week__summary">
-      {columns.length === 0 ? (
-        <EmptyWeekTotals />
-      ) : (
-        columns.map((column) => (
-          <SportTotals
-            key={column.tone}
-            tone={column.tone}
-            totals={column.totals}
-            label={column.label}
-          />
-        ))
-      )}
+      <div className="week-summary">
+        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 2 }} aria-hidden="true">
+          📏
+        </span>
+        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 3 }} aria-hidden="true">
+          ⛰️
+        </span>
+        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 4 }} aria-hidden="true">
+          ⏱️
+        </span>
+
+        {columns.length === 0 ? (
+          <EmptyWeekColumn />
+        ) : (
+          columns.map((column, index) => (
+            <SportColumn
+              key={column.tone}
+              tone={column.tone}
+              totals={column.totals}
+              label={column.label}
+              gridColumn={index + 2}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -551,51 +571,53 @@ function _emptyTotals() {
   return { distance_m: 0, elevation_gain_m: 0, moving_s: 0, count: 0 };
 }
 
-function SportTotals({
+/** One sport's tag and three values, placed into the shared grid's `gridColumn`.
+ * `display: contents` on the wrapper so the tag/value spans become the actual
+ * grid items (each still needs its own `gridRow`) while still letting one
+ * `week-summary__col--{tone}` class color all four through inheritance. */
+function SportColumn({
   tone,
   totals,
   label,
+  gridColumn,
 }: {
   tone: "running" | "cycling" | "hiking" | "swimming";
   totals: { distance_m: number; elevation_gain_m: number; moving_s: number };
   label: string;
+  gridColumn: number;
 }) {
   return (
-    <div className={`week-summary week-summary--${tone}`}>
-      <span className="week-summary__tag">{label}</span>
-      <div className="week-summary__row">
-        <span className="week-summary__icon" aria-hidden="true">📏</span>
+    <div className={`week-summary__col week-summary__col--${tone}`} style={{ display: "contents" }}>
+      <span className="week-summary__tag" style={{ gridColumn, gridRow: 1 }}>
+        {label}
+      </span>
+      <span className="week-summary__value" style={{ gridColumn, gridRow: 2 }}>
         {formatDistanceAdaptive(totals.distance_m / 1000)} km
-      </div>
-      <div className="week-summary__row">
-        <span className="week-summary__icon" aria-hidden="true">⛰️</span>
+      </span>
+      <span className="week-summary__value" style={{ gridColumn, gridRow: 3 }}>
         {formatNumber(totals.elevation_gain_m, 0)} m
-      </div>
-      <div className="week-summary__row">
-        <span className="week-summary__icon" aria-hidden="true">⏱️</span>
+      </span>
+      <span className="week-summary__value" style={{ gridColumn, gridRow: 4 }}>
         {formatHms(totals.moving_s)}
-      </div>
+      </span>
     </div>
   );
 }
 
-/** No activity at all this week — one grey placeholder, not a guess at which
- * sport's empty column to leave up. No tag: there's no sport to name. */
-function EmptyWeekTotals() {
+/** No activity at all this week — the first sport slot, grey, no tag: there's
+ * no sport to name. */
+function EmptyWeekColumn() {
   return (
-    <div className="week-summary week-summary--empty">
-      <div className="week-summary__row">
-        <span className="week-summary__icon" aria-hidden="true">📏</span>
+    <div className="week-summary__col week-summary__col--empty" style={{ display: "contents" }}>
+      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 2 }}>
         {formatDistanceAdaptive(0)} km
-      </div>
-      <div className="week-summary__row">
-        <span className="week-summary__icon" aria-hidden="true">⛰️</span>
+      </span>
+      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 3 }}>
         {formatNumber(0, 0)} m
-      </div>
-      <div className="week-summary__row">
-        <span className="week-summary__icon" aria-hidden="true">⏱️</span>
+      </span>
+      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 4 }}>
         {formatHms(0)}
-      </div>
+      </span>
     </div>
   );
 }

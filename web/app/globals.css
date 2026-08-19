@@ -90,7 +90,7 @@
    * The same gold-to-red scale, spaced across the four sport families
    * instead of six sections — running, hiking, cycling, swimming, in that
    * fixed order, wherever a sport reads as a colour (`.training-session--*`,
-   * `.last-activity__sport--*`, `.week-summary--*`). Its own four evenly-
+   * `.last-activity__sport--*`, `.week-summary__col--*`). Its own four evenly-
    * spaced steps, not a subset of `--scale-1..6` above — four points split
    * the same 0–1 range differently than six do.
    */
@@ -2449,92 +2449,104 @@ input[type="radio"] {
   grid-template-columns: repeat(7, 1fr);
 }
 
-/* Week totals, to the right of the days: one column per sport that actually
-   happened that week (running, hiking, cycling, swimming, in that order),
-   each a fixed width so a week's columns don't shift as its numbers gain or
-   lose digits — but the number of columns itself varies with what the week
-   held, down to one grey placeholder for a week with nothing at all. */
+/* Week totals, to the right of the days: one card, one set of icons shared
+   by every sport that actually happened that week (running, hiking,
+   cycling, swimming, in that order) — not a separate box repeating the same
+   three icons per sport. Fixed-width columns so a week's numbers don't
+   shift the layout as they gain or lose digits, and the container's own
+   width doesn't vary with sport count either: it always reserves the icon
+   column plus all four sport columns (`--week-summary-col-width` × 4), so a
+   light week's row is the same total width as a busy one. */
 .training-week__summary {
+  --week-summary-icon-width: 1.1rem;
+  --week-summary-col-width: 4.5rem;
+  --week-summary-pad-x: 0.4rem;
+  --week-summary-gap-x: 0.3rem;
   flex-shrink: 0;
-  display: flex;
+  /* Icon column + 4 sport columns + the 4 gaps between those 5 tracks +
+     the card's own horizontal padding — every term `.week-summary` below
+     also uses, so the two stay in lockstep instead of one silently
+     overflowing the other. */
+  width: calc(
+    2 * var(--week-summary-pad-x) + var(--week-summary-icon-width) +
+    4 * var(--week-summary-col-width) + 4 * var(--week-summary-gap-x)
+  );
   border-left: 1px solid var(--surface-alt);
 }
 
 .week-summary {
-  width: 5.5rem;
-  flex-shrink: 0;
-  padding: 0.4rem 0.55rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.2rem;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: var(--week-summary-icon-width) repeat(4, var(--week-summary-col-width));
+  grid-template-rows: repeat(4, auto);
+  align-items: center;
+  column-gap: var(--week-summary-gap-x);
+  row-gap: 0.15rem;
+  padding: 0.3rem var(--week-summary-pad-x);
+  border-radius: 6px;
   font-size: 0.72rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   background: var(--surface-alt);
   color: var(--text);
-  /* The same soft inner shadow as a stat tile, in plain ink by default —
-     overridden per sport below, in the same hue as that sport's session
-     chip (`.training-session--*`). */
+  /* The same soft inner shadow as a stat tile, in plain ink — this card
+     holds every sport at once, so no single sport's hue belongs on its
+     background the way a lone tile's does. */
   box-shadow: inset -6px -6px 8px -5px rgba(36, 31, 25, 0.14);
 }
 
-/* One colour per sport family, matching `.training-session--*` and
-   `--sport-scale-N` — "running" here covers every running sport type as
-   one merged total (see `RUNNING_SPORT_TYPES`), same as the calendar's
-   session chip. */
-.week-summary--running {
-  background: var(--sport-scale-1-tint);
-  color: var(--sport-scale-1);
-  box-shadow: inset -6px -6px 8px -5px rgba(var(--sport-scale-1-rgb), 0.22);
-}
-
-.week-summary--hiking {
-  background: var(--sport-scale-2-tint);
-  color: var(--sport-scale-2);
-  box-shadow: inset -6px -6px 8px -5px rgba(var(--sport-scale-2-rgb), 0.22);
-}
-
-.week-summary--cycling {
-  background: var(--sport-scale-3-tint);
-  color: var(--sport-scale-3);
-  box-shadow: inset -6px -6px 8px -5px rgba(var(--sport-scale-3-rgb), 0.22);
-}
-
-.week-summary--swimming {
-  background: var(--sport-scale-4-tint);
-  color: var(--sport-scale-4);
-  box-shadow: inset -6px -6px 8px -5px rgba(var(--sport-scale-4-rgb), 0.22);
-}
-
-/* A week with no activity: the plain-ink default above, explicit here so it
-   reads as a deliberate "nothing this week" rather than an unstyled sport. */
-.week-summary--empty {
+.week-summary__icon {
+  grid-column: 1;
+  font-size: 0.72rem;
   color: var(--muted);
 }
 
 .week-summary__tag {
+  grid-row: 1;
   font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  margin-bottom: 0.1rem;
-}
-
-.week-summary__row {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
+  letter-spacing: 0.03em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.week-summary__icon {
-  flex-shrink: 0;
-  width: 0.9rem;
-  font-size: 0.75rem;
+.week-summary__value {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* One colour per sport family, matching `.training-session--*` and
+   `--sport-scale-N` — "running" here covers every running sport type as one
+   merged total (see `RUNNING_SPORT_TYPES`), same as the calendar's session
+   chip. Set once on the column's wrapper (`display: contents`, so its tag
+   and value spans are the actual grid items) and inherited by both, rather
+   than repeated per element. */
+.week-summary__col--running {
+  color: var(--sport-scale-1);
+}
+
+.week-summary__col--hiking {
+  color: var(--sport-scale-2);
+}
+
+.week-summary__col--cycling {
+  color: var(--sport-scale-3);
+}
+
+.week-summary__col--swimming {
+  color: var(--sport-scale-4);
+}
+
+/* A week with no activity: the same neutral ink as the card's own default —
+   explicit here so it reads as a deliberate "nothing this week" rather than
+   an unstyled sport. */
+.week-summary__col--empty {
+  color: var(--muted);
 }
 
 .training-day {

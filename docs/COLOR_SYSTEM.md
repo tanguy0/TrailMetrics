@@ -68,11 +68,12 @@ every Strava sport type onto one of five tones — `"running" | "hiking" | "cycl
 virtual. Don't re-derive this elsewhere; import it.
 
 **Consumers:** `.training-session--*` (the calendar's completed-session chip),
-`.last-activity__sport--*` (Home's last-activity tag), `.week-summary--*` (a training
-week's per-sport totals). All three read the tone the same way
-(`` `week-summary--${tone}` ``, `` `.training-session--${sportTone(type)}` ``) so a
-sport looks identical everywhere it appears. `neutral` (an unrecognized sport type)
-always falls back to plain `--surface-alt`/`--spine`/`--muted`, not a scale step.
+`.last-activity__sport--*` (Home's last-activity tag), `.week-summary__col--*` (a
+training week's per-sport totals — one shared card, not one box per sport; see its own
+comment in `globals.css` for why it's `display: contents` rather than a normal box).
+All three read the tone the same way so a sport looks identical everywhere it appears.
+`neutral` (an unrecognized sport type) always falls back to plain
+`--surface-alt`/`--spine`/`--muted`, not a scale step.
 
 ## 3. Green is the app's one button color
 
