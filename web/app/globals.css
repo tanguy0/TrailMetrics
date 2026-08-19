@@ -2511,11 +2511,18 @@ input[type="radio"] {
      overflowing the other. */
   width: calc(2 * var(--week-summary-pad-x) + var(--week-summary-icon-width) + 4 * var(--week-summary-col-width) + 4 * var(--week-summary-gap-x));
   border-left: 1px solid var(--surface-alt);
+  /* This wrapper still stretches to the row's full height (inherited from
+     `.training-week`'s `align-items: stretch`), which is what keeps the
+     border-left divider running the full height of a busy week. The card
+     itself must not stretch with it — a week where one day has several
+     sessions must not turn the summary into a tall, mostly-empty box — so
+     this becomes a flex container that only pins its child to the top. */
+  display: flex;
+  align-items: flex-start;
 }
 
 .week-summary {
   width: 100%;
-  height: 100%;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: var(--week-summary-icon-width) repeat(4, var(--week-summary-col-width));
