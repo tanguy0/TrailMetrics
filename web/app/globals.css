@@ -2458,10 +2458,11 @@ input[type="radio"] {
    column plus all four sport columns (`--week-summary-col-width` × 4), so a
    light week's row is the same total width as a busy one. */
 .training-week__summary {
-  --week-summary-icon-width: 1.1rem;
-  --week-summary-col-width: 4.5rem;
-  --week-summary-pad-x: 0.4rem;
-  --week-summary-gap-x: 0.3rem;
+  /* 3/4 of the size these were before — same proportions, smaller card. */
+  --week-summary-icon-width: 0.825rem;
+  --week-summary-col-width: 3.375rem;
+  --week-summary-pad-x: 0.3rem;
+  --week-summary-gap-x: 0.225rem;
   flex-shrink: 0;
   /* Icon column + 4 sport columns + the 4 gaps between those 5 tracks +
      the card's own horizontal padding — every term `.week-summary` below
@@ -2483,9 +2484,9 @@ input[type="radio"] {
   grid-template-rows: repeat(4, auto);
   align-items: center;
   column-gap: var(--week-summary-gap-x);
-  row-gap: 0.15rem;
-  padding: 0.3rem var(--week-summary-pad-x);
-  border-radius: 6px;
+  row-gap: 0.1125rem;
+  padding: 0.225rem var(--week-summary-pad-x);
+  border-radius: 4.5px;
   font-size: 0.72rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
