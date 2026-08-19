@@ -19,6 +19,20 @@ export function formatHms(seconds: number | null | undefined): string {
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(secs)}` : `${minutes}:${pad(secs)}`;
 }
 
+/**
+ * A duration as `5h24` (hours present) or `27min` (no hours) — no seconds.
+ * For a total where second-level precision is noise, not signal (a week's
+ * summed moving time); a single activity's duration or a PR still wants
+ * `formatHms`'s seconds.
+ */
+export function formatHoursMinutes(seconds: number | null | undefined): string {
+  if (seconds == null || !Number.isFinite(seconds)) return "—";
+  const totalMinutes = Math.round(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours}h${String(minutes).padStart(2, "0")}` : `${minutes}min`;
+}
+
 export function formatPace(secondsPerKm: number | null | undefined): string {
   if (secondsPerKm == null || !Number.isFinite(secondsPerKm)) return "—";
   const total = Math.round(secondsPerKm);

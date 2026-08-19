@@ -39,7 +39,9 @@ import {
   getTrainingCalendar,
   updatePlannedItem,
 } from "@/lib/api";
-import { formatDistanceAdaptive, formatHms, formatNumber, formatPace, formatSpeed } from "@/lib/format";
+import {
+  formatDistanceAdaptive, formatHms, formatHoursMinutes, formatNumber, formatPace, formatSpeed,
+} from "@/lib/format";
 import {
   CYCLING_SPORT_TYPES,
   HIKING_SPORT_TYPES,
@@ -598,7 +600,7 @@ function SportColumn({
         {formatNumber(totals.elevation_gain_m, 0)} m
       </span>
       <span className="week-summary__value" style={{ gridColumn, gridRow: 4 }}>
-        {formatHms(totals.moving_s)}
+        {formatHoursMinutes(totals.moving_s)}
       </span>
     </div>
   );
@@ -616,7 +618,7 @@ function EmptyWeekColumn() {
         {formatNumber(0, 0)} m
       </span>
       <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 4 }}>
-        {formatHms(0)}
+        {formatHoursMinutes(0)}
       </span>
     </div>
   );

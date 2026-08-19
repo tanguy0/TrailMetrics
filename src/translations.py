@@ -1105,10 +1105,10 @@ TRANSLATIONS = {
     "ui.training.badge.planned": {"en": "Planned", "fr": "Prévu"},
     "ui.training.badge.note": {"en": "Note", "fr": "Note"},
     "ui.training.badge.completed": {"en": "Completed", "fr": "Terminé"},
-    "ui.training.week.running": {"en": "Running", "fr": "Course"},
-    "ui.training.week.cycling": {"en": "Cycling", "fr": "Vélo"},
-    "ui.training.week.hiking": {"en": "Hiking", "fr": "Randonnée"},
-    "ui.training.week.swimming": {"en": "Swimming", "fr": "Natation"},
+    "ui.training.week.running": {"en": "Run", "fr": "Course"},
+    "ui.training.week.cycling": {"en": "Ride", "fr": "Vélo"},
+    "ui.training.week.hiking": {"en": "Hike", "fr": "Rando"},
+    "ui.training.week.swimming": {"en": "Swim", "fr": "Nage"},
 
 }
 
