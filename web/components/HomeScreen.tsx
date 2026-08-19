@@ -918,18 +918,20 @@ function RecentEfficiencyBlock({
 }) {
   return (
     <div className="data-block">
-      <h3 className="data-block__title">
-        <span aria-hidden="true">⚡</span> {t("home.efficiency.title")}
-      </h3>
-      {/* Weekly points already — 4 and 12 of them are 4 and 12 weeks. */}
-      <TrendBadgePair
-        values={charts?.[0]?.traces[0]?.y}
-        shortWindow={4}
-        longWindow={12}
-        shortThreshold={0.005}
-        longThreshold={0.02}
-        t={t}
-      />
+      <div className="data-block__heading">
+        <h3 className="data-block__title">
+          <span aria-hidden="true">⚡</span> {t("home.efficiency.title")}
+        </h3>
+        {/* Weekly points already — 4 and 12 of them are 4 and 12 weeks. */}
+        <TrendBadgePair
+          values={charts?.[0]?.traces[0]?.y}
+          shortWindow={4}
+          longWindow={12}
+          shortThreshold={0.005}
+          longThreshold={0.02}
+          t={t}
+        />
+      </div>
       <p className="data-block__lede">{t("home.efficiency.subtitle")}</p>
 
       {!hasData ? (
@@ -969,26 +971,29 @@ function RecentFormBlock({
 }) {
   return (
     <div className="data-block">
-      <h3 className="data-block__title">
-        <span aria-hidden="true">🔥</span> {t("home.form.title")}
-      </h3>
-      {/* Fitness (the model's first, slow-moving trace) is the one that answers
-          "is training working?" — fatigue reacts to the last few days and would
-          make either badge flicker on the day's session alone. Two windows
-          because a short build and a long one answer different questions: is
-          this week's load landing, versus is the block as a whole working.
-          `fitness_fatigue_series` is one point per *calendar day*, not per
-          week (see training_load.py), so "4 weeks" and "12 weeks" here are
-          28 and 84 trailing daily points — unlike the weekly-binned charts,
-          where the window size and the point count are the same number. */}
-      <TrendBadgePair
-        values={charts?.[0]?.traces[0]?.y}
-        shortWindow={28}
-        longWindow={84}
-        shortThreshold={0.005}
-        longThreshold={0.02}
-        t={t}
-      />
+      <div className="data-block__heading">
+        <h3 className="data-block__title">
+          <span aria-hidden="true">🔥</span> {t("home.form.title")}
+        </h3>
+        {/* Fitness (the model's first, slow-moving trace) is the one that
+            answers "is training working?" — fatigue reacts to the last few
+            days and would make either badge flicker on the day's session
+            alone. Two windows because a short build and a long one answer
+            different questions: is this week's load landing, versus is the
+            block as a whole working. `fitness_fatigue_series` is one point
+            per *calendar day*, not per week (see training_load.py), so "4
+            weeks" and "12 weeks" here are 28 and 84 trailing daily points —
+            unlike the weekly-binned charts, where the window size and the
+            point count are the same number. */}
+        <TrendBadgePair
+          values={charts?.[0]?.traces[0]?.y}
+          shortWindow={28}
+          longWindow={84}
+          shortThreshold={0.005}
+          longThreshold={0.02}
+          t={t}
+        />
+      </div>
       <p className="data-block__lede">{t("home.form.subtitle")}</p>
 
       {!hasData ? (
@@ -1012,26 +1017,30 @@ function RecentFormBlock({
 }
 
 /**
- * A large "Increasing" / "Stable" / "Decreasing" tag — sized and coloured to
- * read at a glance, without opening the chart itself.
+ * A large "Recent · Increasing" style tag — sized and coloured to read at a
+ * glance, without opening the chart itself. `label` names the window
+ * ("Recent", "Sustained") without saying how many weeks it covers — that's an
+ * implementation detail of the trend call, not something to expose in the UI.
  */
 function TrendBadge({
+  label,
   direction,
   t,
 }: {
+  label: string;
   direction: "increasing" | "stable" | "decreasing" | null;
   t: T;
 }) {
   if (!direction) return null;
   return (
     <span className={`trend-badge trend-badge--${direction}`}>
-      {t(`home.trend.${direction}`)}
+      {label} · {t(`home.trend.${direction}`)}
     </span>
   );
 }
 
 /**
- * A short-term and a long-term {@link TrendBadge}, side by side.
+ * A "Recent" and a "Sustained" {@link TrendBadge}, side by side.
  *
  * `shortWindow`/`longWindow` are counts of *trailing data points*, not weeks —
  * callers on a daily series (fitness/fatigue) and a weekly one (metric_trend)
@@ -1055,14 +1064,16 @@ function TrendBadgePair({
 }) {
   return (
     <div className="trend-badges">
-      <div className="trend-badge-item">
-        <span className="trend-badge-item__label">{t("home.trend.short_term")}</span>
-        <TrendBadge direction={trendDirection(values, shortWindow, shortThreshold)} t={t} />
-      </div>
-      <div className="trend-badge-item">
-        <span className="trend-badge-item__label">{t("home.trend.long_term")}</span>
-        <TrendBadge direction={trendDirection(values, longWindow, longThreshold)} t={t} />
-      </div>
+      <TrendBadge
+        label={t("home.trend.short_term")}
+        direction={trendDirection(values, shortWindow, shortThreshold)}
+        t={t}
+      />
+      <TrendBadge
+        label={t("home.trend.long_term")}
+        direction={trendDirection(values, longWindow, longThreshold)}
+        t={t}
+      />
     </div>
   );
 }

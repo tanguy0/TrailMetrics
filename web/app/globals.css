@@ -56,6 +56,18 @@
   --moss-rgb: 94, 156, 78;
   --danger-tint: #f7e6e1;
   --danger-rgb: 142, 44, 24;
+
+  /*
+   * Home's section headers, in the page's top-to-bottom order, as one
+   * progressive scale from `--danger` to `--tone-forest` rather than six
+   * unrelated hues — a reading order, not six separate brand colours.
+   */
+  --home-scale-1: var(--danger);   /* #8e2c18 */
+  --home-scale-2: #7b3920;
+  --home-scale-3: #684728;
+  --home-scale-4: #545430;
+  --home-scale-5: #416238;
+  --home-scale-6: var(--tone-forest); /* #2e6f40 */
 }
 
 * {
@@ -1086,15 +1098,12 @@ input[type="radio"] {
   font-size: 0.95rem;
 }
 
-.card-block--profile > .card-block__title { background: var(--tone-forest); }
-.card-block--health > .card-block__title { background: var(--tone-plum); }
-.card-block--zones > .card-block__title { background: var(--tone-terracotta); }
-/* Not `--sunrise`: that gold is reserved for buttons, highlights and the like
-   (the sidebar's nav buttons, `.cell--best`, `.note`'s accent) — a section
-   header is none of those, so records gets the palette's other green instead. */
-.card-block--records > .card-block__title { background: var(--moss); }
-.card-block--sync > .card-block__title { background: var(--tone-blue); }
-.card-block--progress > .card-block__title { background: var(--moss); }
+.card-block--profile > .card-block__title { background: var(--home-scale-1); }
+.card-block--health > .card-block__title { background: var(--home-scale-2); }
+.card-block--zones > .card-block__title { background: var(--home-scale-3); }
+.card-block--records > .card-block__title { background: var(--home-scale-4); }
+.card-block--sync > .card-block__title { background: var(--home-scale-5); }
+.card-block--progress > .card-block__title { background: var(--home-scale-6); }
 .card-block--welcome > .card-block__title { background: var(--tone-forest); }
 
 .card-block__title-text {
@@ -1503,6 +1512,20 @@ input[type="radio"] {
   margin: 0 0 0.6rem;
 }
 
+/* A title with its trend badges alongside it rather than on their own line. */
+.data-block__heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0 0 0.6rem;
+}
+
+.data-block__heading .data-block__title,
+.data-block__heading .trend-badges {
+  margin: 0;
+}
+
 .data-block__lede {
   color: var(--muted);
   font-size: 0.85rem;
@@ -1542,30 +1565,15 @@ input[type="radio"] {
   border: 1.5px solid var(--danger);
 }
 
-/* A short-term / long-term pair of trend badges, side by side. */
+/* A "Recent" / "Sustained" pair of trend badges, side by side. */
 .trend-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.6rem;
   margin: 0 0 0.6rem;
 }
 
-.trend-badge-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
-}
-
-.trend-badge-item__label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
-
-.trend-badge-item .trend-badge {
+.trend-badges .trend-badge {
   margin: 0;
 }
 

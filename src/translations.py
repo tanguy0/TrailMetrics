@@ -942,12 +942,8 @@ TRANSLATIONS = {
     "ui.home.trend.increasing": {"en": "Increasing", "fr": "En hausse"},
     "ui.home.trend.stable": {"en": "Stable", "fr": "Stable"},
     "ui.home.trend.decreasing": {"en": "Decreasing", "fr": "En baisse"},
-    "ui.home.trend.short_term": {
-        "en": "Short-term (4 weeks)", "fr": "Court terme (4 semaines)",
-    },
-    "ui.home.trend.long_term": {
-        "en": "Long-term (12 weeks)", "fr": "Long terme (12 semaines)",
-    },
+    "ui.home.trend.short_term": {"en": "Recent", "fr": "Récent"},
+    "ui.home.trend.long_term": {"en": "Sustained", "fr": "Durable"},
 
     # Home — importing from Strava
     "ui.home.import.first": {"en": "Import my activities", "fr": "Importer mes activités"},
