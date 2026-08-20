@@ -634,6 +634,16 @@ function ratingColor(value: number, max: number): string {
   return `hsl(${hue}, 70%, 42%)`;
 }
 
+/** Feeling gets 3 fixed brand colours rather than RPE's continuous ramp — only
+ * 3 values exist, so there's no "between" shade to interpolate. "Fort" is the
+ * good outcome (green), "faible" the one to flag (red) — the reverse of RPE,
+ * where a high number is the demanding one. */
+const FEELING_COLOR: Record<"faible" | "ok" | "fort", string> = {
+  fort: "var(--primary)",
+  ok: "var(--sunrise)",
+  faible: "var(--danger)",
+};
+
 /**
  * Totals for the week: one card, one set of icons shared by every sport
  * (running, cycling, "other" — hiking and swimming merged, in that order) —
@@ -737,7 +747,6 @@ function WeekSummary({
           fitnessTrend={fitnessTrend}
           avgRpe={avgRpe}
           avgFeeling={avgFeeling}
-          avgFeelingScore={avgFeelingScore}
           t={t}
         />
       </div>
@@ -811,22 +820,21 @@ function SportColumn({
  * it isn't a sport total, so it doesn't compete for the same slots. Reuses the
  * same three rows (3-5) a sport column's stat block occupies, so the card's
  * total size never changes: the fitness trend (an arrow now, not a word — the
- * word is still there as a tooltip), the week's average RPE, and its average
- * feeling (see FEELING_SCORE/FEELING_BY_SCORE — averaged as a number, rounded,
- * then mapped back to a tag), each shown as "—" when the week has nothing yet. */
+ * word is still there as a tooltip), the week's average RPE (coloured via
+ * `ratingColor`), and its average feeling (see FEELING_SCORE/FEELING_BY_SCORE
+ * — averaged as a number, rounded, then mapped back to a tag, coloured via
+ * `FEELING_COLOR`), each shown as "—" when the week has nothing yet. */
 function WeekDetailColumn({
   gridColumn,
   fitnessTrend,
   avgRpe,
   avgFeeling,
-  avgFeelingScore,
   t,
 }: {
   gridColumn: number;
   fitnessTrend: FitnessTrend | null;
   avgRpe: number | null;
   avgFeeling: "faible" | "ok" | "fort" | null;
-  avgFeelingScore: number | null;
   t: T;
 }) {
   const arrow = fitnessTrend === "increasing" ? "↑" : fitnessTrend === "decreasing" ? "↓" : fitnessTrend === "stable" ? "→" : null;
@@ -850,7 +858,7 @@ function WeekDetailColumn({
       </span>
       <span
         className="week-summary__value"
-        style={{ gridColumn, gridRow: 5, ...(avgFeelingScore != null ? { color: ratingColor(avgFeelingScore, 3) } : {}) }}
+        style={{ gridColumn, gridRow: 5, ...(avgFeeling != null ? { color: FEELING_COLOR[avgFeeling] } : {}) }}
       >
         {avgFeeling != null ? t(`training.session.feeling_${avgFeeling}`) : "—"}
       </span>
@@ -983,8 +991,8 @@ function DayCell({
                   className={`session-tag session-tag--feeling${activity.feeling != null ? " session-tag--set" : ""}`}
                   style={activity.feeling != null
                     ? {
-                      background: ratingColor(FEELING_SCORE[activity.feeling], 3),
-                      borderColor: ratingColor(FEELING_SCORE[activity.feeling], 3),
+                      background: FEELING_COLOR[activity.feeling],
+                      borderColor: FEELING_COLOR[activity.feeling],
                     }
                     : undefined}
                   onClick={(event) => {
