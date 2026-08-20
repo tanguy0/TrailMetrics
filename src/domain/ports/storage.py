@@ -212,6 +212,17 @@ class ActivityRepository(ABC):
         """The activity's encoded route, or ``None`` if it has none stored."""
 
     @abstractmethod
+    def set_rpe_feeling(
+        self, athlete_id: int, activity_id: int, *,
+        rpe: Optional[int] = None, feeling: Optional[str] = None,
+    ) -> None:
+        """Athlete-entered RPE (1-10) and/or feeling ('faible'/'ok'/'fort').
+
+        A field left as ``None`` is left untouched — each is set independently by
+        its own tag in the UI, and neither is ever synced from Strava.
+        """
+
+    @abstractmethod
     def set_route_polyline(
         self, athlete_id: int, activity_id: int, polyline: Optional[str]
     ) -> None:

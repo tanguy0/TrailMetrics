@@ -1109,6 +1109,7 @@ TRANSLATIONS = {
     "ui.training.week.cycling": {"en": "Ride", "fr": "Vélo"},
     "ui.training.week.hiking": {"en": "Hike", "fr": "Rando"},
     "ui.training.week.swimming": {"en": "Swim", "fr": "Nage"},
+    "ui.training.week.other": {"en": "Other", "fr": "Autres"},
     "ui.training.week.summary_title": {"en": "Week summary", "fr": "Résumé de la semaine"},
     "ui.training.week.fitness_increasing": {
         "en": "Increasing Fitness", "fr": "Fitness en hausse",
@@ -1119,6 +1120,17 @@ TRANSLATIONS = {
     "ui.training.week.fitness_decreasing": {
         "en": "Decreasing Fitness", "fr": "Fitness en baisse",
     },
+    "ui.training.session.rpe_short": {"en": "RPE", "fr": "RPE"},
+    "ui.training.session.rpe_title": {
+        "en": "Rate perceived exertion", "fr": "Effort ressenti (RPE)",
+    },
+    "ui.training.session.feeling_short": {"en": "Feel", "fr": "Ressenti"},
+    "ui.training.session.feeling_title": {
+        "en": "How did it feel?", "fr": "Comment s'est passée la séance ?",
+    },
+    "ui.training.session.feeling_faible": {"en": "Weak", "fr": "Faible"},
+    "ui.training.session.feeling_ok": {"en": "OK", "fr": "Ok"},
+    "ui.training.session.feeling_fort": {"en": "Strong", "fr": "Fort"},
 
 }
 

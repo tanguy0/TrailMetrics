@@ -2634,10 +2634,24 @@ input[type="radio"] {
   color: var(--sport-scale-4);
 }
 
+/* Hiking and swimming merged into one grey "Other" column — neither is common
+   enough on its own to keep a dedicated slot, and merging the two is what frees
+   column 5 for the fitness/RPE/feeling block below. Same neutral ink as
+   `--empty`: it's not one sport's hue, so it doesn't get one. */
+.week-summary__col--other {
+  color: var(--muted);
+}
+
 /* A week with no activity: the same neutral ink as the card's own default —
    explicit here so it reads as a deliberate "nothing this week" rather than
    an unstyled sport. */
 .week-summary__col--empty {
+  color: var(--muted);
+}
+
+/* Column 5 — fitness trend / week-avg RPE / week-avg feeling. Not a sport, so
+   it gets no sport-scale hue either. */
+.week-summary__col--detail {
   color: var(--muted);
 }
 
@@ -2808,6 +2822,92 @@ input[type="radio"] {
 .training-session__stats {
   font-size: 0.7rem;
   color: var(--muted);
+}
+
+/* RPE/feeling tags, bottom-right — unlike `.card-badge` these sit inside the
+   card's own flow rather than overlapping its corner, since there are two of
+   them and both need to stay individually clickable. */
+.training-session__tags {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  margin-top: 0.15rem;
+}
+
+.session-tag {
+  font: inherit;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--spine);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.session-tag:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* A value has been entered — filled rather than the empty outline, so a
+   glance at the card tells whether it still needs one. */
+.session-tag--set {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* RPE's 1-10 grid and feeling's 3-option row, both inside the shared Modal —
+   click-to-set-and-close, no separate Save button, since either picker's
+   options are already single unambiguous choices. */
+.rpe-picker {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+
+.rpe-picker__value {
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.5rem 0;
+  border-radius: 6px;
+  background: var(--surface-alt);
+  border: 1px solid var(--spine);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.rpe-picker__value:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.feeling-picker {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.feeling-picker__value {
+  flex: 1;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.6rem 0;
+  border-radius: 6px;
+  background: var(--surface-alt);
+  border: 1px solid var(--spine);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.feeling-picker__value:hover {
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 /* A tiny "PLANNED" / "COMPLETED" sticker, overlapping the card's top-right corner. */

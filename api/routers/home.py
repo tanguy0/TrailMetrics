@@ -244,6 +244,8 @@ def _activity_card(row: Dict[str, Any], weight_kg: Optional[float] = None) -> Di
         "avg_hr": _num(row.get("avg_hr")),
         "avg_power_w": _avg_power_w(row, weight_kg),
         "power_source": row.get("power_source"),
+        "rpe": row.get("rpe"),
+        "feeling": row.get("feeling"),
     }
 
 

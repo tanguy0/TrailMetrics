@@ -388,6 +388,9 @@ export interface ActivityCard {
   avg_hr: number | null;
   avg_power_w: number | null;
   power_source: "measured" | "estimated" | null;
+  /** Athlete-entered, not from Strava — null until set from the Training calendar. */
+  rpe: number | null;
+  feeling: "faible" | "ok" | "fort" | null;
 }
 
 export interface ActivityComment {

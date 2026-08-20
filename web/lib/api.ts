@@ -177,6 +177,17 @@ export const updateComment = (activityId: number, commentId: string, body: strin
 export const deleteComment = (activityId: number, commentId: string) =>
   request<void>(`/activities/${activityId}/comments/${commentId}`, { method: "DELETE" });
 
+/** Set the athlete's own RPE and/or feeling for a session. Either field may be
+ * omitted — each tag is set independently — and an omitted field is left as-is. */
+export const setActivityRpeFeeling = (
+  activityId: number,
+  changes: Partial<{ rpe: number; feeling: "faible" | "ok" | "fort" }>,
+) =>
+  request<{ activity_id: number; rpe: number | null; feeling: string | null }>(
+    `/activities/${activityId}`,
+    { method: "PATCH", body: JSON.stringify(changes) },
+  );
+
 // --- Background computation ------------------------------------------------
 
 export const getPrecomputeStatus = () => request<PrecomputeStatus>("/precompute");

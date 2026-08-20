@@ -9,7 +9,7 @@ container restart — on Railway that happens on every deploy.
 """
 
 import logging
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -48,6 +48,11 @@ class SyncRequest(BaseModel):
 
 class CommentRequest(BaseModel):
     body: str = Field(..., min_length=1, max_length=4000)
+
+
+class RpeFeelingRequest(BaseModel):
+    rpe: Optional[int] = Field(None, ge=1, le=10)
+    feeling: Optional[Literal["faible", "ok", "fort"]] = None
 
 
 @router.get("")
@@ -92,6 +97,23 @@ def activity_route(
     from api.routers.home import resolve_activity_route
 
     return resolve_activity_route(athlete, activity_id)
+
+
+@router.patch("/{activity_id}")
+def update_rpe_feeling(
+    activity_id: int,
+    payload: RpeFeelingRequest,
+    athlete: Athlete = Depends(current_athlete),
+) -> dict:
+    """Set the athlete's own RPE and/or feeling for this session.
+
+    Either field may be omitted — each is set independently by its own tag in the
+    UI — and an omitted field leaves the stored value untouched.
+    """
+    get_activity_repository().set_rpe_feeling(
+        athlete.id, activity_id, rpe=payload.rpe, feeling=payload.feeling,
+    )
+    return {"activity_id": activity_id, "rpe": payload.rpe, "feeling": payload.feeling}
 
 
 @router.get("/{activity_id}/comments")

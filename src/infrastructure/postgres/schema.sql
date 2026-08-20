@@ -155,6 +155,12 @@ alter table activities add column if not exists power_source text;
 -- so it needs no weight to use, unlike the running-modelled figure.
 alter table activities add column if not exists power_to_hr_measured double precision;
 
+-- Athlete-entered, not synced from Strava — never touched by upsert_rows/_to_params,
+-- so a resync can never overwrite what the athlete typed. rpe is 1-10; feeling is
+-- one of 'faible' / 'ok' / 'fort'.
+alter table activities add column if not exists rpe smallint;
+alter table activities add column if not exists feeling text;
+
 -- Selection queries are always "this athlete, ordered by date".
 create index if not exists activities_athlete_date_idx
     on activities (athlete_id, start_date);

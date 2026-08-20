@@ -38,6 +38,7 @@ import {
   deletePlannedItem,
   getTrainingCalendar,
   renderPanel,
+  setActivityRpeFeeling,
   updatePlannedItem,
 } from "@/lib/api";
 import {
@@ -122,7 +123,8 @@ function datesBetween(start: string, end: string): string[] {
 type ModalState =
   | { type: "session"; activity: ActivityCard }
   | { type: "edit"; item: PlannedItem }
-  | { type: "new"; date: string };
+  | { type: "new"; date: string }
+  | { type: "rating"; activity: ActivityCard; kind: "rpe" | "feeling" };
 
 export function TrainingScreen({ strings }: { strings: Strings }) {
   const t = translator(strings);
@@ -389,6 +391,29 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
     }
   };
 
+  const saveRating = async (
+    activityId: number, changes: Partial<{ rpe: number; feeling: "faible" | "ok" | "fort" }>,
+  ) => {
+    try {
+      const updated = await setActivityRpeFeeling(activityId, changes);
+      setActivities((current) => {
+        const previous = current[activityId];
+        if (!previous) return current;
+        return {
+          ...current,
+          [activityId]: {
+            ...previous,
+            rpe: updated.rpe ?? previous.rpe,
+            feeling: (updated.feeling as "faible" | "ok" | "fort" | null) ?? previous.feeling,
+          },
+        };
+      });
+      setModal(null);
+    } catch (caught) {
+      setError((caught as Error).message);
+    }
+  };
+
   const moveItem = async (id: string, date: string) => {
     const previous = plannedItems[id];
     if (!previous || previous.date === date) return;
@@ -441,6 +466,7 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
             }}
             onOpenItem={(item) => setModal({ type: "edit", item })}
             onOpenSession={(activity) => setModal({ type: "session", activity })}
+            onOpenRating={(activity, kind) => setModal({ type: "rating", activity, kind })}
             onAddItem={(date) => setModal({ type: "new", date })}
             onDropItem={moveItem}
             t={t}
@@ -491,6 +517,41 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
           <SessionDetail activity={modal.activity} t={t} />
         </Modal>
       )}
+
+      {modal?.type === "rating" && (
+        <Modal
+          title={t(modal.kind === "rpe" ? "training.session.rpe_title" : "training.session.feeling_title")}
+          onClose={() => setModal(null)}
+        >
+          {modal.kind === "rpe" ? (
+            <div className="rpe-picker">
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className="rpe-picker__value"
+                  onClick={() => saveRating(modal.activity.activity_id, { rpe: value })}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="feeling-picker">
+              {(["faible", "ok", "fort"] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className="feeling-picker__value"
+                  onClick={() => saveRating(modal.activity.activity_id, { feeling: value })}
+                >
+                  {t(`training.session.feeling_${value}`)}
+                </button>
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
     </main>
   );
 }
@@ -506,6 +567,7 @@ function WeekRow({
   onRef,
   onOpenItem,
   onOpenSession,
+  onOpenRating,
   onAddItem,
   onDropItem,
   t,
@@ -518,6 +580,7 @@ function WeekRow({
   onRef: (element: HTMLDivElement | null) => void;
   onOpenItem: (item: PlannedItem) => void;
   onOpenSession: (activity: ActivityCard) => void;
+  onOpenRating: (activity: ActivityCard, kind: "rpe" | "feeling") => void;
   onAddItem: (date: string) => void;
   onDropItem: (id: string, date: string) => void;
   t: T;
@@ -540,6 +603,7 @@ function WeekRow({
             sessions={activitiesByDate[date] ?? []}
             onOpenItem={onOpenItem}
             onOpenSession={onOpenSession}
+            onOpenRating={onOpenRating}
             onAddItem={() => onAddItem(date)}
             onDrop={(id) => onDropItem(id, date)}
             t={t}
@@ -557,21 +621,25 @@ function WeekRow({
   );
 }
 
+const FEELING_SCORE = { faible: 1, ok: 2, fort: 3 } as const;
+const FEELING_BY_SCORE = ["faible", "ok", "fort"] as const;
+
 /**
  * Totals for the week: one card, one set of icons shared by every sport that
- * actually happened (running, hiking, cycling, swimming, in that order) —
- * not a separate icon-and-box per sport repeating the same three icons up to
- * four times. A week with no activity at all gets the same card with one
+ * actually happened (running, cycling, "other" — hiking and swimming merged,
+ * in that order) — not a separate icon-and-box per sport repeating the same
+ * three icons. A week with no activity at all gets the same card with one
  * grey, unlabeled column instead of picking a sport's (empty) column to show.
  *
  * A CSS grid, laid out explicitly by `gridColumn`/`gridRow` rather than
- * relying on source order: column 1 is the icons, columns 2–5 are up to four
- * sports, row 1 is the "Week summary" title (spanning every column, so it's
- * centered over the card's full fixed width regardless of how many sports
- * that week has), row 2 is the sport tags, rows 3–5 are distance/climb/time.
- * Only the columns for sports actually present get any cells — the grid's
- * own column tracks (fixed by `.week-summary`'s CSS) still reserve their
- * width, which is what keeps every week's card the same total size.
+ * relying on source order: column 1 is the icons, columns 2–4 are up to
+ * three sports (only the ones actually present that week get cells), column
+ * 5 is fixed — always the fitness trend / week-average RPE / week-average
+ * feeling, regardless of how many sport columns are shown, since it isn't a
+ * sport total. Row 1 is the "Week summary" title (spanning every column), row
+ * 2 is the sport tags, rows 3–5 are distance/climb/time for a sport column
+ * and fitness/RPE/feeling for column 5 — the same three rows either way, so
+ * the card's total size never changes.
  */
 function WeekSummary({
   days,
@@ -588,33 +656,43 @@ function WeekSummary({
 }) {
   const fitnessTrend = weekFitnessTrend(days, todayIso, fitnessByDate);
   const totals = {
-    run: _emptyTotals(), hike: _emptyTotals(), ride: _emptyTotals(), swim: _emptyTotals(),
+    run: _emptyTotals(), ride: _emptyTotals(), other: _emptyTotals(),
   };
+  const rpeValues: number[] = [];
+  const feelingScores: number[] = [];
   for (const date of days) {
     for (const activity of activitiesByDate[date] ?? []) {
       const bucket = RUNNING_SPORT_TYPES.includes(activity.sport_type)
         ? totals.run
-        : HIKING_SPORT_TYPES.includes(activity.sport_type)
-          ? totals.hike
-          : CYCLING_SPORT_TYPES.includes(activity.sport_type)
-            ? totals.ride
-            : SWIMMING_SPORT_TYPES.includes(activity.sport_type)
-              ? totals.swim
-              : null;
-      if (!bucket) continue;
-      bucket.distance_m += activity.distance_m ?? 0;
-      bucket.elevation_gain_m += activity.elevation_gain_m ?? 0;
-      bucket.moving_s += activity.moving_s ?? 0;
-      bucket.count += 1;
+        : CYCLING_SPORT_TYPES.includes(activity.sport_type)
+          ? totals.ride
+          : HIKING_SPORT_TYPES.includes(activity.sport_type)
+              || SWIMMING_SPORT_TYPES.includes(activity.sport_type)
+            ? totals.other
+            : null;
+      if (bucket) {
+        bucket.distance_m += activity.distance_m ?? 0;
+        bucket.elevation_gain_m += activity.elevation_gain_m ?? 0;
+        bucket.moving_s += activity.moving_s ?? 0;
+        bucket.count += 1;
+      }
+      if (activity.rpe != null) rpeValues.push(activity.rpe);
+      if (activity.feeling != null) feelingScores.push(FEELING_SCORE[activity.feeling]);
     }
   }
+  const avgRpe = rpeValues.length
+    ? rpeValues.reduce((a, b) => a + b, 0) / rpeValues.length
+    : null;
+  const avgFeelingScore = feelingScores.length
+    ? Math.round(feelingScores.reduce((a, b) => a + b, 0) / feelingScores.length)
+    : null;
+  const avgFeeling = avgFeelingScore != null ? FEELING_BY_SCORE[avgFeelingScore - 1] : null;
 
   const columns = (
     [
       { tone: "running", totals: totals.run, label: t("training.week.running") },
-      { tone: "hiking", totals: totals.hike, label: t("training.week.hiking") },
       { tone: "cycling", totals: totals.ride, label: t("training.week.cycling") },
-      { tone: "swimming", totals: totals.swim, label: t("training.week.swimming") },
+      { tone: "other", totals: totals.other, label: t("training.week.other") },
     ] as const
   ).filter((column) => column.totals.count > 0);
 
@@ -623,11 +701,6 @@ function WeekSummary({
       <div className="week-summary">
         <div className="week-summary__title" style={{ gridColumn: "1 / -1", gridRow: 1 }}>
           <span className="week-summary__title-text">{t("training.week.summary_title")}</span>
-          {fitnessTrend && (
-            <span className={`trend-badge trend-badge--${fitnessTrend} trend-badge--compact`}>
-              {t(`training.week.fitness_${fitnessTrend}`)}
-            </span>
-          )}
         </div>
 
         <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 3 }} aria-hidden="true">
@@ -653,6 +726,14 @@ function WeekSummary({
             />
           ))
         )}
+
+        <WeekDetailColumn
+          gridColumn={5}
+          fitnessTrend={fitnessTrend}
+          avgRpe={avgRpe}
+          avgFeeling={avgFeeling}
+          t={t}
+        />
       </div>
     </div>
   );
@@ -697,7 +778,7 @@ function SportColumn({
   label,
   gridColumn,
 }: {
-  tone: "running" | "cycling" | "hiking" | "swimming";
+  tone: "running" | "cycling" | "other";
   totals: { distance_m: number; elevation_gain_m: number; moving_s: number };
   label: string;
   gridColumn: number;
@@ -738,6 +819,49 @@ function EmptyWeekColumn() {
   );
 }
 
+/** Column 5, always present regardless of how many sport columns this week has —
+ * it isn't a sport total, so it doesn't compete for the same slots. Reuses the
+ * same three rows (3-5) a sport column's stat block occupies, so the card's
+ * total size never changes: the fitness trend (an arrow now, not a word — the
+ * word is still there as a tooltip), the week's average RPE, and its average
+ * feeling (see FEELING_SCORE/FEELING_BY_SCORE — averaged as a number, rounded,
+ * then mapped back to a tag), each shown as "—" when the week has nothing yet. */
+function WeekDetailColumn({
+  gridColumn,
+  fitnessTrend,
+  avgRpe,
+  avgFeeling,
+  t,
+}: {
+  gridColumn: number;
+  fitnessTrend: FitnessTrend | null;
+  avgRpe: number | null;
+  avgFeeling: "faible" | "ok" | "fort" | null;
+  t: T;
+}) {
+  const arrow = fitnessTrend === "increasing" ? "↑" : fitnessTrend === "decreasing" ? "↓" : fitnessTrend === "stable" ? "→" : null;
+  return (
+    <div className="week-summary__col week-summary__col--detail" style={{ display: "contents" }}>
+      <span className="week-summary__value" style={{ gridColumn, gridRow: 3 }}>
+        {arrow ? (
+          <span
+            className={`trend-badge trend-badge--${fitnessTrend} trend-badge--compact`}
+            title={t(`training.week.fitness_${fitnessTrend}`)}
+          >
+            {arrow}
+          </span>
+        ) : "—"}
+      </span>
+      <span className="week-summary__value" style={{ gridColumn, gridRow: 4 }}>
+        {avgRpe != null ? avgRpe.toFixed(1) : "—"}
+      </span>
+      <span className="week-summary__value" style={{ gridColumn, gridRow: 5 }}>
+        {avgFeeling != null ? t(`training.session.feeling_${avgFeeling}`) : "—"}
+      </span>
+    </div>
+  );
+}
+
 function DayCell({
   date,
   isToday,
@@ -745,6 +869,7 @@ function DayCell({
   sessions,
   onOpenItem,
   onOpenSession,
+  onOpenRating,
   onAddItem,
   onDrop,
   t,
@@ -755,6 +880,7 @@ function DayCell({
   sessions: ActivityCard[];
   onOpenItem: (item: PlannedItem) => void;
   onOpenSession: (activity: ActivityCard) => void;
+  onOpenRating: (activity: ActivityCard, kind: "rpe" | "feeling") => void;
   onAddItem: () => void;
   onDrop: (id: string) => void;
   t: T;
@@ -825,11 +951,15 @@ function DayCell({
           const speedKmh = activity.moving_s && activity.moving_s > 0 && activity.distance_m != null
             ? (activity.distance_m / activity.moving_s) * 3.6 : null;
           return (
-            <button
+            <div
               key={activity.activity_id}
-              type="button"
+              role="button"
+              tabIndex={0}
               className={`training-session training-session--${sportTone(activity.sport_type)}`}
               onClick={() => onOpenSession(activity)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") onOpenSession(activity);
+              }}
             >
               <span className="card-badge">{t("training.badge.completed")}</span>
               <span className="training-session__sport">{activity.sport_type}</span>
@@ -838,7 +968,31 @@ function DayCell({
                 {km != null ? `${formatNumber(km, 1)} km` : "—"} ·{" "}
                 {isCycling ? formatSpeed(speedKmh) : formatPace(pace)}
               </span>
-            </button>
+              <span className="training-session__tags">
+                <button
+                  type="button"
+                  className={`session-tag session-tag--rpe${activity.rpe != null ? " session-tag--set" : ""}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpenRating(activity, "rpe");
+                  }}
+                >
+                  {activity.rpe ?? t("training.session.rpe_short")}
+                </button>
+                <button
+                  type="button"
+                  className={`session-tag session-tag--feeling${activity.feeling != null ? " session-tag--set" : ""}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpenRating(activity, "feeling");
+                  }}
+                >
+                  {activity.feeling != null
+                    ? t(`training.session.feeling_${activity.feeling}`)
+                    : t("training.session.feeling_short")}
+                </button>
+              </span>
+            </div>
           );
         })}
       </div>

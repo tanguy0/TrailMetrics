@@ -45,6 +45,11 @@ _SCALAR_COLUMNS = [
 # instead, both below.
 _TEXT_COLUMNS = ["power_source"]
 
+# Athlete-entered, not part of any Strava sync — deliberately kept out of
+# _SCALAR_COLUMNS/_TEXT_COLUMNS so upsert_rows (the sync path) never inserts or
+# updates them; see set_rpe_feeling for the only way these are written.
+_MANUAL_COLUMNS = ["rpe", "feeling"]
+
 _SUMMARY_COLUMNS = [
     "activity_id", "start_date", "sport_type", "has_streams",
     "distance_m", "moving_s", "relative_effort",
@@ -126,6 +131,27 @@ class PostgresActivityRepository(ActivityRepository):
             (polyline, athlete_id, activity_id),
         )
 
+    def set_rpe_feeling(
+        self, athlete_id: int, activity_id: int, *,
+        rpe: Optional[int] = None, feeling: Optional[str] = None,
+    ) -> None:
+        fields: List[str] = []
+        params: List[Any] = []
+        if rpe is not None:
+            fields.append("rpe = %s")
+            params.append(rpe)
+        if feeling is not None:
+            fields.append("feeling = %s")
+            params.append(feeling)
+        if not fields:
+            return
+        fields.append("updated_at = now()")
+        self.db.execute(
+            f"update activities set {', '.join(fields)} "
+            f"where athlete_id = %s and activity_id = %s",
+            (*params, athlete_id, activity_id),
+        )
+
     def set_relative_efforts(
         self, athlete_id: int, values: Sequence[Tuple[int, Optional[float]]]
     ) -> int:
@@ -173,7 +199,7 @@ class PostgresActivityRepository(ActivityRepository):
     ) -> List[Dict[str, Any]]:
         selected = ", ".join([
             "activity_id", "start_date", "sport_type", "has_streams",
-            *_SCALAR_COLUMNS, *_TEXT_COLUMNS, "features",
+            *_SCALAR_COLUMNS, *_TEXT_COLUMNS, *_MANUAL_COLUMNS, "features",
         ])
         if activity_ids is None:
             raw = self.db.fetch_all(
@@ -232,7 +258,7 @@ def _to_feature_row(row: Dict[str, Any]) -> Dict[str, Any]:
         "sport_type": row["sport_type"],
         "has_streams": bool(row["has_streams"]),
     }
-    for name in (*_SCALAR_COLUMNS, *_TEXT_COLUMNS):
+    for name in (*_SCALAR_COLUMNS, *_TEXT_COLUMNS, *_MANUAL_COLUMNS):
         out[name] = row.get(name)
     for key, _, _ in GRADIENT_BANDS:
         column = band_column(key)
