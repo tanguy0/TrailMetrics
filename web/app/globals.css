@@ -2502,14 +2502,18 @@ input[type="radio"] {
   /* 3/4 of the size these were before — same proportions, smaller card. */
   --week-summary-icon-width: 0.825rem;
   --week-summary-col-width: 3.375rem;
+  /* Column 5 — fitness/RPE/feeling — is 50% wider than a sport column: its
+     content (the "Fitness ↑" badge especially) was clipping at the plain
+     column width. */
+  --week-summary-detail-col-width: calc(var(--week-summary-col-width) * 1.5);
   --week-summary-pad-x: 0.3rem;
   --week-summary-gap-x: 0.225rem;
   flex-shrink: 0;
-  /* Icon column + 4 sport columns + the 4 gaps between those 5 tracks +
-     the card's own horizontal padding — every term `.week-summary` below
-     also uses, so the two stay in lockstep instead of one silently
-     overflowing the other. */
-  width: calc(2 * var(--week-summary-pad-x) + var(--week-summary-icon-width) + 4 * var(--week-summary-col-width) + 4 * var(--week-summary-gap-x));
+  /* Icon column + 3 sport columns + the wider detail column + the 4 gaps
+     between those 5 tracks + the card's own horizontal padding — every term
+     `.week-summary` below also uses, so the two stay in lockstep instead of
+     one silently overflowing the other. */
+  width: calc(2 * var(--week-summary-pad-x) + var(--week-summary-icon-width) + 3 * var(--week-summary-col-width) + var(--week-summary-detail-col-width) + 4 * var(--week-summary-gap-x));
   border-left: 1px solid var(--surface-alt);
   /* This wrapper stretches to the row's full height (inherited from
      `.training-week`'s `align-items: stretch`) — a busy week, where one day
@@ -2522,7 +2526,9 @@ input[type="radio"] {
   height: 100%;
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: var(--week-summary-icon-width) repeat(4, var(--week-summary-col-width));
+  grid-template-columns:
+    var(--week-summary-icon-width) repeat(3, var(--week-summary-col-width))
+    var(--week-summary-detail-col-width);
   /* Title, tags, then the three value rows. */
   grid-template-rows: repeat(5, auto);
   align-items: center;
@@ -2622,30 +2628,15 @@ input[type="radio"] {
   color: var(--sport-scale-1);
 }
 
-.week-summary__col--hiking {
-  color: var(--sport-scale-2);
-}
-
 .week-summary__col--cycling {
   color: var(--sport-scale-3);
 }
 
-.week-summary__col--swimming {
-  color: var(--sport-scale-4);
-}
-
 /* Hiking and swimming merged into one grey "Other" column — neither is common
    enough on its own to keep a dedicated slot, and merging the two is what frees
-   column 5 for the fitness/RPE/feeling block below. Same neutral ink as
-   `--empty`: it's not one sport's hue, so it doesn't get one. */
+   column 5 for the fitness/RPE/feeling block below. Not one sport's hue, so it
+   doesn't get one — same neutral ink column 5 (`--detail`) uses either. */
 .week-summary__col--other {
-  color: var(--muted);
-}
-
-/* A week with no activity: the same neutral ink as the card's own default —
-   explicit here so it reads as a deliberate "nothing this week" rather than
-   an unstyled sport. */
-.week-summary__col--empty {
   color: var(--muted);
 }
 

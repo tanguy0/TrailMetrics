@@ -624,22 +624,31 @@ function WeekRow({
 const FEELING_SCORE = { faible: 1, ok: 2, fort: 3 } as const;
 const FEELING_BY_SCORE = ["faible", "ok", "fort"] as const;
 
+/** Green at 1 up to red at `max` (RPE: 1-10; feeling: 1-3, via FEELING_SCORE) —
+ * same hue ramp for both, just a different ceiling, so a 6/10 RPE and an "ok"
+ * feeling (2/3) don't have to agree on what "medium" looks like in isolation,
+ * only on the same green-to-red direction. */
+function ratingColor(value: number, max: number): string {
+  const clamped = Math.max(1, Math.min(max, value));
+  const hue = 120 * (1 - (clamped - 1) / (max - 1));
+  return `hsl(${hue}, 70%, 42%)`;
+}
+
 /**
- * Totals for the week: one card, one set of icons shared by every sport that
- * actually happened (running, cycling, "other" — hiking and swimming merged,
- * in that order) — not a separate icon-and-box per sport repeating the same
- * three icons. A week with no activity at all gets the same card with one
- * grey, unlabeled column instead of picking a sport's (empty) column to show.
+ * Totals for the week: one card, one set of icons shared by every sport
+ * (running, cycling, "other" — hiking and swimming merged, in that order) —
+ * not a separate icon-and-box per sport repeating the same three icons. All
+ * three always render, zeroed out on a quiet week, so the card's shape never
+ * shifts week to week.
  *
  * A CSS grid, laid out explicitly by `gridColumn`/`gridRow` rather than
- * relying on source order: column 1 is the icons, columns 2–4 are up to
- * three sports (only the ones actually present that week get cells), column
- * 5 is fixed — always the fitness trend / week-average RPE / week-average
- * feeling, regardless of how many sport columns are shown, since it isn't a
+ * relying on source order: column 1 is the icons, columns 2–4 are the three
+ * sports, column 5 (wider — see `--week-summary-detail-col-width`) is the
+ * fitness trend / week-average RPE / week-average feeling, since it isn't a
  * sport total. Row 1 is the "Week summary" title (spanning every column), row
  * 2 is the sport tags, rows 3–5 are distance/climb/time for a sport column
  * and fitness/RPE/feeling for column 5 — the same three rows either way, so
- * the card's total size never changes.
+ * the card's total height never changes.
  */
 function WeekSummary({
   days,
@@ -688,13 +697,13 @@ function WeekSummary({
     : null;
   const avgFeeling = avgFeelingScore != null ? FEELING_BY_SCORE[avgFeelingScore - 1] : null;
 
-  const columns = (
-    [
-      { tone: "running", totals: totals.run, label: t("training.week.running") },
-      { tone: "cycling", totals: totals.ride, label: t("training.week.cycling") },
-      { tone: "other", totals: totals.other, label: t("training.week.other") },
-    ] as const
-  ).filter((column) => column.totals.count > 0);
+  // Always all 3 — a quiet week reads as zeros in its sport's own colour, not as
+  // a column disappearing, so the card's shape never shifts week to week.
+  const columns = [
+    { tone: "running", totals: totals.run, label: t("training.week.running") },
+    { tone: "cycling", totals: totals.ride, label: t("training.week.cycling") },
+    { tone: "other", totals: totals.other, label: t("training.week.other") },
+  ] as const;
 
   return (
     <div className="training-week__summary">
@@ -713,25 +722,22 @@ function WeekSummary({
           ⏱️
         </span>
 
-        {columns.length === 0 ? (
-          <EmptyWeekColumn />
-        ) : (
-          columns.map((column, index) => (
-            <SportColumn
-              key={column.tone}
-              tone={column.tone}
-              totals={column.totals}
-              label={column.label}
-              gridColumn={index + 2}
-            />
-          ))
-        )}
+        {columns.map((column, index) => (
+          <SportColumn
+            key={column.tone}
+            tone={column.tone}
+            totals={column.totals}
+            label={column.label}
+            gridColumn={index + 2}
+          />
+        ))}
 
         <WeekDetailColumn
           gridColumn={5}
           fitnessTrend={fitnessTrend}
           avgRpe={avgRpe}
           avgFeeling={avgFeeling}
+          avgFeelingScore={avgFeelingScore}
           t={t}
         />
       </div>
@@ -801,24 +807,6 @@ function SportColumn({
   );
 }
 
-/** No activity at all this week — the first sport slot, grey, no tag: there's
- * no sport to name. */
-function EmptyWeekColumn() {
-  return (
-    <div className="week-summary__col week-summary__col--empty" style={{ display: "contents" }}>
-      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 3 }}>
-        {formatDistanceAdaptive(0)} km
-      </span>
-      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 4 }}>
-        {formatNumber(0, 0)} m
-      </span>
-      <span className="week-summary__value" style={{ gridColumn: 2, gridRow: 5 }}>
-        {formatHoursMinutes(0)}
-      </span>
-    </div>
-  );
-}
-
 /** Column 5, always present regardless of how many sport columns this week has —
  * it isn't a sport total, so it doesn't compete for the same slots. Reuses the
  * same three rows (3-5) a sport column's stat block occupies, so the card's
@@ -831,12 +819,14 @@ function WeekDetailColumn({
   fitnessTrend,
   avgRpe,
   avgFeeling,
+  avgFeelingScore,
   t,
 }: {
   gridColumn: number;
   fitnessTrend: FitnessTrend | null;
   avgRpe: number | null;
   avgFeeling: "faible" | "ok" | "fort" | null;
+  avgFeelingScore: number | null;
   t: T;
 }) {
   const arrow = fitnessTrend === "increasing" ? "↑" : fitnessTrend === "decreasing" ? "↓" : fitnessTrend === "stable" ? "→" : null;
@@ -852,10 +842,16 @@ function WeekDetailColumn({
           </span>
         ) : "—"}
       </span>
-      <span className="week-summary__value" style={{ gridColumn, gridRow: 4 }}>
+      <span
+        className="week-summary__value"
+        style={{ gridColumn, gridRow: 4, ...(avgRpe != null ? { color: ratingColor(avgRpe, 10) } : {}) }}
+      >
         {avgRpe != null ? avgRpe.toFixed(1) : "—"}
       </span>
-      <span className="week-summary__value" style={{ gridColumn, gridRow: 5 }}>
+      <span
+        className="week-summary__value"
+        style={{ gridColumn, gridRow: 5, ...(avgFeelingScore != null ? { color: ratingColor(avgFeelingScore, 3) } : {}) }}
+      >
         {avgFeeling != null ? t(`training.session.feeling_${avgFeeling}`) : "—"}
       </span>
     </div>
@@ -972,6 +968,9 @@ function DayCell({
                 <button
                   type="button"
                   className={`session-tag session-tag--rpe${activity.rpe != null ? " session-tag--set" : ""}`}
+                  style={activity.rpe != null
+                    ? { background: ratingColor(activity.rpe, 10), borderColor: ratingColor(activity.rpe, 10) }
+                    : undefined}
                   onClick={(event) => {
                     event.stopPropagation();
                     onOpenRating(activity, "rpe");
@@ -982,6 +981,12 @@ function DayCell({
                 <button
                   type="button"
                   className={`session-tag session-tag--feeling${activity.feeling != null ? " session-tag--set" : ""}`}
+                  style={activity.feeling != null
+                    ? {
+                      background: ratingColor(FEELING_SCORE[activity.feeling], 3),
+                      borderColor: ratingColor(FEELING_SCORE[activity.feeling], 3),
+                    }
+                    : undefined}
                   onClick={(event) => {
                     event.stopPropagation();
                     onOpenRating(activity, "feeling");
