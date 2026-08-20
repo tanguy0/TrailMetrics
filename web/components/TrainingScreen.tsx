@@ -848,7 +848,7 @@ function WeekDetailColumn({
             className={`trend-badge trend-badge--${fitnessTrend} trend-badge--compact`}
             title={t(`training.week.fitness_${fitnessTrend}`)}
           >
-            {arrow}
+            {t("training.week.fitness_label")} {arrow}
           </span>
         ) : "—"}
       </span>

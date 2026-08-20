@@ -1111,6 +1111,7 @@ TRANSLATIONS = {
     "ui.training.week.swimming": {"en": "Swim", "fr": "Nage"},
     "ui.training.week.other": {"en": "Other", "fr": "Autres"},
     "ui.training.week.summary_title": {"en": "Week summary", "fr": "Résumé de la semaine"},
+    "ui.training.week.fitness_label": {"en": "Fitness", "fr": "Fitness"},
     "ui.training.week.fitness_increasing": {
         "en": "Increasing Fitness", "fr": "Fitness en hausse",
     },
