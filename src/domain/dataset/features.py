@@ -18,8 +18,8 @@ rather than a pre-computed pace. Averages are derived by
 :mod:`src.domain.dataset.metrics` as ratios, so they re-aggregate correctly over
 any bin (Σ distance ÷ Σ time), which a mean of per-activity paces does not.
 
-Power is stored **per kilogram**. The model is ``P = m·v·(Cr + g·s)``, exactly
-linear in body mass, so a row computed once is valid for any weight:
+Power is stored **per kilogram**. The model is ``P = m·v·Cr·factor(gradient)``,
+exactly linear in body mass, so a row computed once is valid for any weight:
 :func:`apply_mass` multiplies through at read time. That keeps a stored row
 weight-independent — changing your weight rescales every power figure instantly
 instead of invalidating a decade of cached activities.
@@ -313,9 +313,9 @@ def build_activity_features(
             if mean_hr > 0:
                 row["power_to_hr_measured"] = float(np.mean(step_watts[both])) / mean_hr
     elif is_running:
-        # `compute_power_series` models running's cost of transport (P = m·v·(Cr +
-        # g·s)) — a bike's power comes from a real power meter or the cycling
-        # model below, never from this formula.
+        # `compute_power_series` models running's cost of transport (P =
+        # m·v·Cr·factor(gradient)) — a bike's power comes from a real power
+        # meter or the cycling model below, never from this formula.
         speed = np.divide(
             delta_dist, delta_time, out=np.zeros_like(delta_dist), where=delta_time > 0
         )

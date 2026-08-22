@@ -175,9 +175,9 @@ The analytics primitives it shared (`gap/`, `races/metrics.py`, `races/smoothing
 
 ## Notes on the data
 
-* **Power is stored per kilogram.** The model `P = m·v·(Cr + g·s)` is linear in body
-  mass, so a stored row is valid for any weight and changing yours rescales the whole
-  history instantly instead of invalidating it.
+* **Power is stored per kilogram.** The model `P = m·v·Cr·factor(gradient)` is linear
+  in body mass, so a stored row is valid for any weight and changing yours rescales
+  the whole history instantly instead of invalidating it.
 * **Relative Effort is reported, not computed.** Strava derives its training-load
   score from the athlete's own heart-rate zones, which its API does not expose — so
   `relative_effort` is read off the activity *listing* rather than from the streams.

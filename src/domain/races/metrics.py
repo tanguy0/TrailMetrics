@@ -42,10 +42,10 @@ _MIN_SPEED_M_PER_S = 3.0 / 3.6
 _MIN_PACE_S_PER_KM = 1000.0 / _MAX_SPEED_M_PER_S  # = 180 s/km (20 km/h)
 _MAX_PACE_S_PER_KM = 1000.0 / _MIN_SPEED_M_PER_S  # = 1200 s/km (3 km/h)
 
-# Mechanical running-power model: P = m * v * (Cr + g * s).
-_GRAVITY = 9.81  # m/s²
+# Mechanical running-power model: P = m * v * Cr * factor(gradient), where
+# factor is the same GAP cost-of-transport curve as gradient_adjustment_factor
+# (see compute_power_series for why).
 _COST_OF_TRANSPORT = 1.0  # J·kg⁻¹·m⁻¹ (typical range 0.9–1.1)
-_MIN_SLOPE = -0.05  # cap downhill slope at -5% to avoid unrealistic power reduction
 
 
 @dataclass
@@ -105,10 +105,13 @@ def compute_power_series(
 ) -> Optional[np.ndarray]:
     """Mechanical running power per step, in watts.
 
-    Uses ``P = m * v * (Cr + g * s)`` where ``s`` is the slope as a rise/run
-    fraction (our gradient is m/km, i.e. ``slope = gradient / 1000``), capped at
-    ``_MIN_SLOPE`` for steep downhills to avoid unrealistic power reduction.
-    Per-kg power is floored at 0.
+    Uses ``P = m * v * Cr * factor(gradient)``, where ``factor`` is the same
+    "balanced runner" cost-of-transport curve used for GAP (see
+    :func:`gradient_adjustment_factor`): it equals 1 on the flat, so ``Cr``
+    still sets the flat-ground scale, but unlike a plain linear ``g * slope``
+    term it correctly bottoms out around -10% grade and rises again on
+    steeper descents instead of assuming cost keeps falling forever. Per-kg
+    power is floored at 0.
 
     Returns ``None`` when ``mass_kg`` is missing — power needs the runner's
     weight, so power-based metrics stay unavailable until it is set.
@@ -116,8 +119,8 @@ def compute_power_series(
     if mass_kg is None:
         return None
     speed = np.asarray(speed_m_per_s, dtype=float)
-    slope = np.maximum(np.asarray(gradient_m_per_km, dtype=float) / 1000.0, _MIN_SLOPE)
-    power_per_kg = np.maximum(speed * (_COST_OF_TRANSPORT + _GRAVITY * slope), 0.0)
+    factor = gradient_adjustment_factor(np.asarray(gradient_m_per_km, dtype=float))
+    power_per_kg = np.maximum(speed * _COST_OF_TRANSPORT * factor, 0.0)
     return mass_kg * power_per_kg
 
 
