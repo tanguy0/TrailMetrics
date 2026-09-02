@@ -4,6 +4,12 @@ Also home to the per-athlete caches. Those matter more than they look: fitted
 XGBoost models and per-second series are expensive enough that recomputing them on
 every parameter tweak would make the builder unusable. They live here, keyed by
 athlete and bounded, and are dropped when a sync changes the underlying data.
+
+Two different bounds, because the two caches fail differently. Finished plot
+outputs are small and numerous, so they are capped by *count* per athlete. The
+memo holds decoded streams and fitted models — entries whose sizes differ by
+orders of magnitude — so it is capped by *bytes*, and across the whole process
+rather than per athlete: see :mod:`api.memo`.
 """
 
 import logging
@@ -15,6 +21,7 @@ from typing import Any, Dict, Optional
 from fastapi import Depends, HTTPException, Query, Request, status
 
 from api.config import Settings, get_settings
+from api.memo import AthleteMemo, MemoStore
 from api.security import constant_time_equals, read_session_token
 from src.domain.ports.activity_data import ActivityDataSource
 from src.domain.ports.page_repository import PageRepository
@@ -36,6 +43,7 @@ from src.infrastructure.postgres.planned_item_repository import (
 )
 from src.infrastructure.postgres.plot_output_repository import (
     PostgresPlotOutputRepository,
+    signature_key,
 )
 from src.infrastructure.postgres.pool import Database
 from src.infrastructure.postgres.precompute_repository import (
@@ -157,11 +165,16 @@ def get_precompute_repository(athlete_id: int) -> PostgresPrecomputeRepository:
 
 # --- Per-athlete caches ----------------------------------------------------
 
+# One byte budget shared by every athlete this worker has served. Per-athlete
+# would not bound the container: 16 athletes under a 192 MB cap each is 3 GB.
+_memo_store = MemoStore()
+
+
 @dataclass
 class AthleteCaches:
     """Warm state for one athlete: fitted models, series, finished plot outputs."""
 
-    memo: Dict[Any, Any] = field(default_factory=dict)
+    memo: Any
     outputs: "OrderedDict[str, Any]" = field(default_factory=OrderedDict)
 
     def trim(self) -> None:
@@ -175,10 +188,13 @@ _caches: "OrderedDict[int, AthleteCaches]" = OrderedDict()
 def get_caches(athlete_id: int) -> AthleteCaches:
     caches = _caches.get(athlete_id)
     if caches is None:
-        caches = AthleteCaches()
+        caches = AthleteCaches(memo=AthleteMemo(_memo_store, athlete_id))
         _caches[athlete_id] = caches
         while len(_caches) > MAX_CACHED_ATHLETES:
-            _caches.popitem(last=False)
+            evicted, _ = _caches.popitem(last=False)
+            # The memo outlives this dict, so dropping the athlete's entry here
+            # would otherwise leak every byte they had memoized.
+            _memo_store.discard_athlete(evicted)
     else:
         _caches.move_to_end(athlete_id)
     return caches
@@ -193,6 +209,12 @@ def invalidate_caches(athlete_id: int) -> None:
     "recompute" action), not a side effect of importing a run.
     """
     _caches.pop(athlete_id, None)
+    _memo_store.discard_athlete(athlete_id)
+
+
+def memo_stats() -> Dict[str, Any]:
+    """What the memo is holding — reported by ``GET /health`` for diagnosis."""
+    return _memo_store.stats()
 
 
 class PersistentOutputCache(OutputCache):
@@ -212,7 +234,7 @@ class PersistentOutputCache(OutputCache):
         self.athlete_id = athlete_id
 
     def get(self, signature: str) -> Optional[PlotOutput]:
-        hit = super().get(signature)
+        hit = super().get(signature_key(signature))
         if hit is not None:
             return hit
         try:
@@ -222,11 +244,15 @@ class PersistentOutputCache(OutputCache):
             return None
         if stored is not None:
             # Promote into memory so the next render in this process is free.
-            super().set(signature, "", stored)
+            super().set(signature_key(signature), "", stored)
         return stored
 
     def set(self, signature: str, plot_type: str, output: PlotOutput) -> None:
-        super().set(signature, plot_type, output)
+        # Hashed for the same reason the table hashes it: the raw signature embeds
+        # every activity id in the panel, which is tens of kilobytes for a long
+        # history — and this dict holds MAX_CACHED_OUTPUTS of them per athlete,
+        # for MAX_CACHED_ATHLETES athletes, so the *keys* alone were tens of MB.
+        super().set(signature_key(signature), plot_type, output)
         try:
             get_plot_output_repository(self.athlete_id).put(
                 signature, plot_type, output

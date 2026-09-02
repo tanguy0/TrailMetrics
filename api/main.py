@@ -16,8 +16,9 @@ import threading
 import time
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
+import anyio.to_thread
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -47,9 +48,30 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+# How many CPU-bound handlers may run at once.
+#
+# Handlers here are sync, so FastAPI runs each in anyio's threadpool — which
+# defaults to **40** threads. That default is sized for I/O, and this service is
+# not: a render can hold a feature frame, a decoded history and a fitted model, so
+# 40 of them at once is 40x the memory of one on a container sized for a handful.
+# Requests past this queue instead of running, which is the right failure — a
+# queued render is slow, a parallel one gets the worker OOM-killed. Raise it only
+# alongside the memory to back it (see docs/DEPLOYMENT.md).
+def _max_concurrent_requests() -> int:
+    try:
+        value = int(os.environ.get("MAX_CONCURRENT_REQUESTS", "") or 4)
+    except ValueError:
+        value = 4
+    return max(value, 1)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     """Open the pool and converge the schema on boot; close cleanly on shutdown."""
+    limiter = anyio.to_thread.current_default_thread_limiter()
+    limiter.total_tokens = _max_concurrent_requests()
+    logger.info("threadpool capped at %d concurrent handlers", limiter.total_tokens)
+
     if settings.has_database:
         from api.deps import get_blog_media_store, get_database, get_stream_store
 
@@ -144,8 +166,26 @@ def _rate_limit_key(request: Request) -> str:
     return f"ip:{ip}"
 
 
+# A caller whose bucket has aged out is forgotten rather than kept as an empty
+# deque. Without this the dict only ever grows — one entry per athlete and per
+# pre-session IP, for the life of the worker.
+_HITS_SWEEP_EVERY = 512
+_sweep_countdown = _HITS_SWEEP_EVERY
+
+
+def _sweep_hits(now: float) -> None:
+    """Drop buckets with nothing left in the window. Caller holds the lock."""
+    stale = [
+        key for key, hits in _hits.items()
+        if not hits or now - hits[-1] > _RATE_WINDOW_S
+    ]
+    for key in stale:
+        del _hits[key]
+
+
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
+    global _sweep_countdown
     is_auth_path = request.url.path in _AUTH_PATHS
     limit = _AUTH_RATE_LIMIT if is_auth_path else _DEFAULT_RATE_LIMIT
     bucket = "auth" if is_auth_path else "default"
@@ -160,6 +200,10 @@ async def rate_limit(request: Request, call_next):
                 {"detail": "Too many requests, slow down."}, status_code=429
             )
         hits.append(now)
+        _sweep_countdown -= 1
+        if _sweep_countdown <= 0:
+            _sweep_countdown = _HITS_SWEEP_EVERY
+            _sweep_hits(now)
     return await call_next(request)
 
 
@@ -183,6 +227,8 @@ def health() -> dict:
     ``missing_config`` is the fastest way to diagnose a half-configured deploy;
     it names environment variables, never their values.
     """
+    from api.deps import memo_stats
+
     return {
         "status": "ok",
         "database": settings.has_database,
@@ -190,4 +236,18 @@ def health() -> dict:
         "strava": settings.has_strava,
         "dev_mode": settings.dev_mode,
         "missing_config": settings.missing_for_auth(),
+        # What the worker is holding. The reason an OOM used to be un-diagnosable
+        # was that nothing reported this: a container is killed from outside and
+        # leaves no trace of what filled it.
+        "memory": {**memo_stats(), "rss_bytes": _rss_bytes()},
     }
+
+
+def _rss_bytes() -> Optional[int]:
+    """Resident set size, read from procfs. ``None`` where that isn't available."""
+    try:
+        with open("/proc/self/statm", "r") as handle:
+            pages = int(handle.read().split()[1])
+        return pages * os.sysconf("SC_PAGE_SIZE")
+    except (OSError, IndexError, ValueError):
+        return None

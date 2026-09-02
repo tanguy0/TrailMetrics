@@ -32,6 +32,7 @@ from api.deps import (
     language,
     render_context_for,
 )
+from api.memo import release_heap
 from src.domain.plots import all_plots
 from src.domain.plots.base import EXPENSIVE
 from src.domain.ports.storage import Athlete
@@ -149,6 +150,12 @@ def _run_precompute(athlete: Athlete, lang: str, force: bool) -> None:
             status="error", message=str(error)[:400],
             finished_at=datetime.now(timezone.utc),
         ))
+    finally:
+        # This pass is the largest single piece of work the container does — a
+        # whole history decoded and several models fitted. Hand the pages back
+        # rather than leaving the worker sitting at its high-water mark, where the
+        # next ordinary request is what gets it killed.
+        release_heap()
 
 
 # --- Helpers ---------------------------------------------------------------

@@ -151,20 +151,34 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     x_attribute, x_label_key, x_scale, x_unit = _X_AXES.get(x_key, _X_AXES["time"])
     as_speed = bool(params.get("as_speed"))
 
-    activity_ids = [
-        aid for aid in resolved.activity_ids
-        if (stream := resolved.stream(aid)) is not None
-        and getattr(stream, "has_streams", True)
-    ]
+    notes: List[str] = []
+    limit = int(params.get("max_series") or 8)
+
+    # Stop fetching once `limit` activities have a usable stream. The panel's
+    # selection can be a whole multi-year window while the overlay draws eight
+    # lines, and every stream this touches is decoded and then held in the render
+    # memo — so loading the selection to pick a prefix of it costs hundreds of
+    # megabytes to throw almost all of them away.
+    # One past the limit, so "there are more than we drew" is known without
+    # fetching the rest.
+    activity_ids: List[int] = []
+    for aid in resolved.activity_ids:
+        stream = resolved.stream(aid)
+        if stream is None or not getattr(stream, "has_streams", True):
+            continue
+        activity_ids.append(aid)
+        if len(activity_ids) > limit:
+            break
     if not activity_ids:
         return empty_output(translate("plot.stream.no_stream_data", lang))
 
-    notes: List[str] = []
-    limit = int(params.get("max_series") or 8)
     if len(activity_ids) > limit:
         # Say what was dropped: a silently truncated overlay reads as complete.
+        # `total` counts the selection, not the streams fetched — stopping early
+        # is what this loop is for, so the number of *usable* ones past the limit
+        # is deliberately never established.
         notes.append(translate("plot.stream.truncated", lang).format(
-            shown=limit, total=len(activity_ids)))
+            shown=limit, total=len(resolved.activity_ids)))
         activity_ids = activity_ids[:limit]
 
     # A single activity's own name is not useful information on every one of its

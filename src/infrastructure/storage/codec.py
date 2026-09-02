@@ -59,16 +59,23 @@ def decode_stream(payload: bytes) -> Optional[ActivityStream]:
             metadata = json.loads(str(archive["meta"]))
             if int(metadata.get("format_version", 0)) > FORMAT_VERSION:
                 return None
+            # float32, the dtype they were written in. Decoding to float64 would
+            # double what a cached stream costs to hold without recovering any
+            # precision that was not already discarded at encode time — and a
+            # whole history of them is held in the render memo at once. Every
+            # consumer upcasts what it derives (`np.asarray(..., dtype=float)`),
+            # which is where the precision actually matters; see the note in
+            # `DefaultStreamPreprocessor.process_single`.
             arrays = {
-                name: np.asarray(archive[name], dtype=float)
+                name: np.asarray(archive[name], dtype=np.float32)
                 for name in _REQUIRED_ARRAYS
             }
             n = arrays["time"].size
             for name in _OPTIONAL_ARRAYS:
                 arrays[name] = (
-                    np.asarray(archive[name], dtype=float)
+                    np.asarray(archive[name], dtype=np.float32)
                     if name in archive
-                    else np.full(n, np.nan)
+                    else np.full(n, np.nan, dtype=np.float32)
                 )
     except (ValueError, KeyError, OSError, json.JSONDecodeError):
         return None

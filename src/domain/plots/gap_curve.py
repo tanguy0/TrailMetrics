@@ -290,8 +290,8 @@ def _xgboost_model(
     """Fit (once) the auto-learning model, or say why it could not be fitted.
 
     Returns ``(model, reason_key)``. The failure is memoized along with the
-    success: building the calibration set pairs every sample against every flat
-    sample, so retrying it on each render would be very expensive.
+    success, so a group that cannot be calibrated is established once per render
+    context rather than re-derived from the splits on every parameter tweak.
     """
     from src.domain.gap.xgboost_model import XgboostGapModel
 
@@ -299,14 +299,14 @@ def _xgboost_model(
     key = ("gap_xgb_model", ids, params.get("split_min_time"), tolerance)
 
     def build():
-        features, targets = _PREPROCESSOR.prepare_calibration_dataset(
+        features, targets, weights = _PREPROCESSOR.prepare_calibration_dataset(
             dataset, hr_tolerance=tolerance
         )
         if features.size == 0:
             # No flat section shares a heart rate with any climbing section, so
             # there is nothing to learn the adjustment from.
             return (None, "gap.reason.no_calibration")
-        return (XgboostGapModel().fit(features, targets), None)
+        return (XgboostGapModel().fit(features, targets, sample_weight=weights), None)
 
     return resolved.memo(key, build)
 

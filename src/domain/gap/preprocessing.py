@@ -29,7 +29,7 @@ class StreamPreprocessor(ABC):
         dataset: DownsampledDataset,
         flat_elevation_gain_range: Tuple[float, float] = (-10.0, 10.0),
         hr_tolerance: float = 3.0,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         ...
 
 
@@ -38,7 +38,8 @@ class DefaultStreamPreprocessor(StreamPreprocessor):
     Default pipeline:
       - per-stream: derive instantaneous speed and elevation gain from time/distance/altitude.
       - across streams: cut warm-up, downsample by time, drop mixed-gradient splits, filter outliers.
-      - calibration set: pair each point with similar-HR flat points to obtain a (X, y) regression target.
+      - calibration set: target each point at the mean speed of the similar-HR flat
+        points, weighted by how many there were (see prepare_calibration_dataset).
     """
 
     DEFAULT_WARMUP_CUT_SECONDS: float = 60 * 15
@@ -56,10 +57,15 @@ class DefaultStreamPreprocessor(StreamPreprocessor):
         self.elevation_range = elevation_range
 
     def process_single(self, stream: ActivityStream) -> ProcessedStream:
-        time = np.asarray(stream.time)
-        distance = np.asarray(stream.distance)
-        altitude = np.asarray(stream.altitude)
-        heartrate = np.asarray(stream.heartrate)
+        # float64 explicitly: streams are *stored* (and held in memory) as float32
+        # to halve their footprint, but `np.diff` on a cumulative distance in
+        # float32 loses metres to cancellation — at 300 km the float32 spacing is
+        # ~3 cm against a ~3 m step. Upcasting here costs one transient copy per
+        # activity and keeps the derived speed exact.
+        time = np.asarray(stream.time, dtype=float)
+        distance = np.asarray(stream.distance, dtype=float)
+        altitude = np.asarray(stream.altitude, dtype=float)
+        heartrate = np.asarray(stream.heartrate, dtype=float)
 
         delta_dist = np.diff(distance)
         delta_time = np.diff(time)
@@ -142,30 +148,71 @@ class DefaultStreamPreprocessor(StreamPreprocessor):
         dataset: DownsampledDataset,
         flat_elevation_gain_range: Tuple[float, float] = (-10.0, 10.0),
         hr_tolerance: float = 3.0,
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        speeds = dataset.speed
-        elevation_gains = dataset.elevation_gain
-        heartrates = dataset.heartrate
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Regression targets for the auto-learning model: **one weighted row per split**.
+
+        The question the model answers is "how fast would this split have been on the
+        flat, at this heart rate", so each split's target comes from the flat splits
+        that share its heart rate (within ``hr_tolerance``).
+
+        The obvious way to express that is one training row per (split, matching flat
+        split) pair. Don't: it is quadratic. A year of running is tens of thousands
+        of splits, each matching thousands of flat ones, and the pair list reaches
+        tens of millions of rows — several GB before the model sees any of it, which
+        is what used to OOM the container on exactly the athletes with the most data.
+
+        The pairs are unnecessary. XGBoost minimises squared error, and for the ``m``
+        pairs sharing one split's features ``x``::
+
+            Σⱼ (f(x) − yⱼ)²  =  m · (f(x) − ȳ)²  +  Σⱼ (yⱼ − ȳ)²
+
+        The second term does not involve ``f``, so it shifts the loss by a constant
+        and changes no gradient, no split and no leaf value. One row carrying the
+        *mean* matching flat speed and a ``sample_weight`` of ``m`` is therefore the
+        same fit as ``m`` duplicated rows — not an approximation of it.
+
+        Both are obtained without materialising a pair: sort the flat splits by heart
+        rate once, and each split's matching window is a pair of ``searchsorted``
+        bounds, its count their difference and its mean a difference of prefix sums.
+
+        Returns ``(features, targets, weights)``; splits with no matching flat split
+        contribute nothing and are dropped, so all three may be empty.
+        """
+        speeds = np.asarray(dataset.speed, dtype=float)
+        elevation_gains = np.asarray(dataset.elevation_gain, dtype=float)
+        heartrates = np.asarray(dataset.heartrate, dtype=float)
 
         flat_mask = (
             (elevation_gains > flat_elevation_gain_range[0])
             & (elevation_gains < flat_elevation_gain_range[1])
         )
-
-        x_list: List[List[float]] = []
-        y_list: List[float] = []
-
         flat_hrs = heartrates[flat_mask]
         flat_speeds = speeds[flat_mask]
 
-        for i in range(len(speeds)):
-            similar = np.abs(flat_hrs - heartrates[i]) <= hr_tolerance
-            if np.any(similar):
-                for matching_speed in flat_speeds[similar]:
-                    x_list.append([speeds[i], elevation_gains[i], heartrates[i]])
-                    y_list.append(matching_speed)
+        empty = (np.empty((0, 3)), np.empty(0), np.empty(0))
+        if flat_hrs.size == 0 or speeds.size == 0:
+            return empty
 
-        return np.array(x_list), np.array(y_list)
+        order = np.argsort(flat_hrs, kind="stable")
+        sorted_hrs = flat_hrs[order]
+        # prefix_sums[k] is the total speed of the k lowest-HR flat splits, so the
+        # sum over any HR window is one subtraction.
+        prefix_sums = np.concatenate(([0.0], np.cumsum(flat_speeds[order])))
+
+        # Inclusive on both ends, matching `abs(flat_hr - hr) <= tolerance`.
+        left = np.searchsorted(sorted_hrs, heartrates - hr_tolerance, side="left")
+        right = np.searchsorted(sorted_hrs, heartrates + hr_tolerance, side="right")
+        counts = (right - left).astype(float)
+
+        matched = counts > 0
+        if not matched.any():
+            return empty
+
+        targets = (prefix_sums[right[matched]] - prefix_sums[left[matched]]) / counts[matched]
+        features = np.column_stack((
+            speeds[matched], elevation_gains[matched], heartrates[matched],
+        ))
+        return features, targets, counts[matched]
 
     def _downsample(
         self,

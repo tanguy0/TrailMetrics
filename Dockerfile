@@ -10,6 +10,20 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# glibc opens an arena per thread (up to 8x the core count) and each one fragments
+# independently, so a threaded process holds far more than it uses and its RSS
+# never comes back down — which is how a container gets killed on a request
+# smaller than the one that actually caused the spike. Two arenas costs a little
+# allocator contention and keeps the measured footprint near the live one.
+ENV MALLOC_ARENA_MAX=2
+
+# The two memory ceilings, both overridable per environment: how many CPU-bound
+# handlers may run at once (api/main.py) and the byte budget for the render memo
+# (api/memo.py). Raise them together with the container's memory, never ahead of
+# it — 4 x 192 MB is sized for a 1 GB instance.
+ENV MAX_CONCURRENT_REQUESTS=4 \
+    MEMO_BUDGET_MB=192
+
 # libgomp is required by XGBoost at runtime; curl is for the container healthcheck.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 curl \

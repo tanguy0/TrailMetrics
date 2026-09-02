@@ -100,7 +100,22 @@ Check `GET /health`: `missing_config` must be empty.
 
 **Sizing.** One worker per container — a request can hold a large pandas frame and a
 fitted model, and the per-athlete caches are per process. Scale with replicas, not
-workers. 512 MB is tight for an XGBoost fit over a long history; 1 GB is comfortable.
+workers. 1 GB is comfortable; 512 MB works with the knobs below turned down.
+
+Three environment variables are the memory ceiling. They have defaults in the
+Dockerfile sized for a 1 GB instance, and they are what to change when the
+container is being OOM-killed — before reaching for a bigger plan.
+
+| Variable | Default | What it bounds |
+|---|---|---|
+| `MAX_CONCURRENT_REQUESTS` | `4` | CPU-bound handlers running at once. Handlers are sync, so they run in anyio's threadpool, whose own default is 40 — sized for I/O, not for a render that holds a decoded history. Requests past this queue rather than run. |
+| `MEMO_BUDGET_MB` | `192` | Bytes of decoded streams, derived series and fitted models kept warm across requests, for **all** athletes together (see `api/memo.py`). Evicting is always safe — entries are memoized pure computations — so this can be cut hard. |
+| `MALLOC_ARENA_MAX` | `2` | glibc arenas. Left at its default a threaded process fragments across many arenas and its RSS never returns, so the kill lands on a later, smaller request than the one that caused the spike. |
+
+`GET /health` reports `memory.rss_bytes` alongside what the memo is holding, which
+is the fastest way to tell a real leak from a cache doing its job.
+
+On 512 MB, start from `MAX_CONCURRENT_REQUESTS=2` and `MEMO_BUDGET_MB=64`.
 
 ## 4. Web app (Vercel)
 

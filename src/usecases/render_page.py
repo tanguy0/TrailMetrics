@@ -208,7 +208,12 @@ class RenderPage(UseCase):
 # this invalidates every athlete's cached output once, on the next render
 # after deploy; leave it alone for changes that don't touch a plot's output
 # (an unrelated bug fix, a docstring, a new plot type).
-RENDER_VERSION = 2
+# v3: the auto-learning GAP model is fitted on one weighted row per split instead
+# of one row per (split, matching flat split) pair. The loss is algebraically
+# identical, but XGBoost's histogram sketch bins a different row multiset, so a
+# curve can shift by ~1-2% — enough that a cached pre-change render must not sit
+# alongside a fresh one on the same page.
+RENDER_VERSION = 3
 
 
 def plot_signature(

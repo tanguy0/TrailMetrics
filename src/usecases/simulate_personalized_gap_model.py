@@ -102,12 +102,16 @@ class SimulatePersonalizedGapModel(UseCase):
 
         xgboost_model: Optional[XgboostGapModel] = None
         if params.fit_xgboost:
-            X, y = self.preprocessor.prepare_calibration_dataset(
+            X, y, w = self.preprocessor.prepare_calibration_dataset(
                 dataset,
                 flat_elevation_gain_range=params.flat_elevation_gain_range,
                 hr_tolerance=params.hr_tolerance,
             )
-            xgboost_model = XgboostGapModel().fit(X, y)
+            # Notebooks read `X_train`/`y_train` off the returned model to plot a
+            # train-vs-test calibration curve, so this path keeps them.
+            xgboost_model = XgboostGapModel(retain_training_data=True).fit(
+                X, y, sample_weight=w
+            )
             xgboost_curve = self.smoother.smooth(
                 xgboost_model.gap_curve(bin_width=params.xgboost_bin_width)
             )
