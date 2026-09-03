@@ -163,7 +163,7 @@ class RefeaturizeAthleteActivities(UseCase):
                 result.needs_strava += 1
                 return None
             result.summary_only += 1
-            return row
+            return _keep_reported(row, activity)
 
         if activity["feature_version"] < MIN_LOCAL_REBUILD_VERSION:
             result.needs_strava += 1
@@ -184,7 +184,7 @@ class RefeaturizeAthleteActivities(UseCase):
             result.needs_strava += 1
             return None
         result.rebuilt += 1
-        return row
+        return _keep_reported(row, activity)
 
     def _flush(self, athlete_id: int, batch: List[Dict[str, Any]]) -> None:
         if not batch:
@@ -202,6 +202,32 @@ class RefeaturizeAthleteActivities(UseCase):
                 len(batch), athlete_id, error,
             )
         batch.clear()
+
+
+def _keep_reported(
+    row: Dict[str, Any], activity: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Carry the *reported* columns across from the stored row.
+
+    Relative Effort is the one feature this pipeline does not compute: Strava
+    derives it from the athlete's own heart-rate zones, which its API does not
+    expose, so it is read off the activity listing at sync time. That means it is
+    nowhere in the stream blob — a rebuilt row carries ``NaN`` for it, and
+    ``upsert_rows`` writes that as NULL over a value only a sync can fetch.
+    Which would be quiet and expensive: Relative Effort is the whole input to the
+    fitness/fatigue model (:func:`~src.domain.dataset.training_load.daily_training_load`
+    sums it per day), so losing it empties those curves while every other number
+    on the page looks fine.
+
+    The database is therefore the authority for anything reported rather than
+    computed, and a re-featurize copies it forward untouched. The blob is
+    deliberately *not* the place to fix this: Strava recomputes Relative Effort
+    when an athlete edits their zones, so a copy frozen at import time would go
+    stale, whereas ``_refresh_reported`` keeps the stored column current on every
+    sync for free.
+    """
+    row["relative_effort"] = activity["relative_effort"]
+    return row
 
 
 def _summary_stream(activity: Dict[str, Any]) -> ActivityStream:

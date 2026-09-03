@@ -7,6 +7,15 @@ A typical 2-hour activity lands around 30–60 kB.
 
 Metadata (sport type, start date, the summary totals) rides along as a JSON blob
 inside the same archive, so one object fully reconstructs the stream.
+
+One thing is deliberately *not* in here: Relative Effort. It is reported by Strava
+rather than derived from the streams, and it changes after the fact when an
+athlete edits their heart-rate zones — so a copy frozen at import time would go
+stale, and the stored column is refreshed from the activity listing on every sync
+instead (``SyncAthleteActivities._refresh_reported``). Anything rebuilding a
+feature row from a blob therefore has to carry that column over from the database
+rather than expect it here; see
+:func:`src.usecases.refeaturize_athlete_activities._keep_reported`.
 """
 
 import io
