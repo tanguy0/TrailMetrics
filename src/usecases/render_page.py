@@ -9,6 +9,7 @@ API hands straight to the browser as JSON — so presentation can change entirel
 without touching this file.
 """
 
+import hashlib
 import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -174,7 +175,7 @@ class RenderPage(UseCase):
             )
             return result
 
-        signature = plot_signature(panel, plot, params, resolved, context)
+        signature = plot_signature(panel, plot, params, resolved, context, definition)
         cached = None if context.refresh else context.output_cache.get(signature)
         if cached is not None:
             result.output = cached
@@ -214,7 +215,9 @@ class RenderPage(UseCase):
 # identical, but XGBoost's histogram sketch bins a different row multiset, so a
 # curve can shift by ~1-2% — enough that a cached pre-change render must not sit
 # alongside a fresh one on the same page.
-RENDER_VERSION = 3
+# v4: line widths are 30% thinner everywhere; the width lives in the cached IR,
+# so old rows would draw thick lines next to fresh thin ones.
+RENDER_VERSION = 4
 
 
 def plot_signature(
@@ -223,6 +226,7 @@ def plot_signature(
     params: Dict[str, Any],
     resolved: ResolvedPanelData,
     context: RenderContext,
+    definition: Optional[PlotDefinition] = None,
 ) -> str:
     """Stable cache key: everything that can change a plot's output.
 
@@ -234,6 +238,13 @@ def plot_signature(
     activity ids that are otherwise unchanged — without it, a bump would fix
     every stored row and the athlete would still be shown the old chart from
     `plot_outputs`, for as long as the page's activity set stayed the same.
+
+    A rating the athlete types is that same problem in miniature — same ids, new
+    values — but far too frequent to answer by dropping the store the way a
+    re-featurize does (see ``_run_sync`` in ``api/routers/activities.py``): every
+    session rated would cost the next reader an XGBoost fit. So the plots that
+    read ratings say so (``PlotDefinition.reads_ratings``) and get a digest of
+    them in their key instead, leaving every other plot's cache untouched.
     """
     payload = {
         "render_version": RENDER_VERSION,
@@ -246,4 +257,23 @@ def plot_signature(
         "mass_kg": context.mass_kg,
         "lang": context.lang,
     }
+    if definition is not None and definition.reads_ratings:
+        payload["ratings"] = _ratings_digest(resolved)
     return json.dumps(payload, sort_keys=True, default=str)
+
+
+def _ratings_digest(resolved: ResolvedPanelData) -> str:
+    """A fingerprint of every rating the athlete has entered.
+
+    Hashed rather than listed: the raw form is three values per rated activity,
+    which for a season of running is kilobytes inside a key that is itself stored
+    and compared.
+    """
+    rated = sorted(
+        (s.activity_id, s.rpe, s.feeling)
+        for s in resolved.all_summaries()
+        if s.rpe is not None or s.feeling is not None
+    )
+    return hashlib.sha1(
+        json.dumps(rated, default=str).encode()
+    ).hexdigest()

@@ -35,6 +35,13 @@ TEXT = "#241F19"             # deep warm near-black
 SPINE = "#B8AC97"
 DANGER = "#8E2C18"           # brick red — this palette's only true "red"
 
+# Pale washes of the three status colours, for a filled tag behind coloured ink
+# (the chart twin of `--moss-tint` / `--sunrise-tint` / `--danger-tint` in
+# web/app/globals.css). Only ever a background: too light to draw a mark with.
+MOSS_TINT = "#EFF3E8"
+SUNRISE_TINT = "#FDF4E3"
+DANGER_TINT = "#F4E8E2"
+
 # Distinct colors for overlaying several time scales on a single figure. Hues
 # are spread out (green / clay / amber / lake / plum) so up to five scales stay
 # easy to tell apart while keeping the warm Trail / Earthy feel.

@@ -26,6 +26,18 @@ function loadPlotly(): Promise<any> {
 
 const BAND_ALPHA = 0.16;
 
+// Where the badge row sits, as a share of the plot's height (1 = the very top).
+// Inside the frame: above it, the row would fight the title and legend for the
+// same strip of margin. Mirrors `_BADGE_ROW_Y` in src/domain/charts/plotly.py.
+const BADGE_ROW_Y = 0.98;
+const BADGE_FONT_SIZE = 9;
+// Tight: a 30-week window leaves each badge ~20px of x to sit in.
+const BADGE_PADDING = 1;
+// Pixels a badge needs before its full wording fits rather than its `short` form.
+// Mirrors `_MIN_FULL_BADGE_PX` in src/domain/charts/plotly.py — which has to
+// assume a width, where this side can measure the container it was given.
+const MIN_FULL_BADGE_PX = 62;
+
 /** Map IR values onto what Plotly needs for this axis kind. */
 function encode(values: (number | string | null)[], axis: Axis): unknown[] {
   if (axis.kind === "duration") {
@@ -133,7 +145,7 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
     if (trace.kind === "area") {
       scatter.stackgroup = trace.stack_group || "area";
       scatter.fillcolor = rgba(color, trace.stack_group ? 0.35 : 0.2);
-      scatter.line = { color, width: 0.5 };
+      scatter.line = { color, width: 0.35 };
     }
     out.push(scatter);
   });
@@ -141,7 +153,52 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
   return out;
 }
 
-function layoutFor(chart: ChartData): Record<string, unknown> {
+/** Bands as full-height rectangles behind the traces. */
+function toShapes(chart: ChartData): Record<string, unknown>[] {
+  return (chart.bands ?? []).map((band) => {
+    const [x0, x1] = encode([band.x0, band.x1], chart.x_axis);
+    return {
+      type: "rect",
+      xref: "x",
+      yref: "y domain",
+      x0,
+      x1,
+      y0: 0,
+      y1: 1,
+      fillcolor: rgba(band.color, band.opacity),
+      line: { width: 0 },
+      layer: "below",
+    };
+  });
+}
+
+/**
+ * Badges as a row of bordered annotations just inside the top of the plot.
+ *
+ * `width` is the figure's measured width: with too little room per badge the row
+ * falls back to each badge's `short` form, since Plotly draws every annotation
+ * whether or not they overlap.
+ */
+function toAnnotations(chart: ChartData, width: number): Record<string, unknown>[] {
+  const badges = chart.badges ?? [];
+  const room = width / Math.max(badges.length, 1);
+  return badges.map((badge) => ({
+    x: encode([badge.x], chart.x_axis)[0],
+    xref: "x",
+    y: BADGE_ROW_Y,
+    yref: "y domain",
+    yanchor: "top",
+    text: badge.short && room < MIN_FULL_BADGE_PX ? badge.short : badge.text,
+    showarrow: false,
+    font: { color: badge.color, size: BADGE_FONT_SIZE },
+    bgcolor: badge.fill ?? undefined,
+    bordercolor: badge.color,
+    borderwidth: 1,
+    borderpad: BADGE_PADDING,
+  }));
+}
+
+function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
   const stacked = chart.traces.some((t) => t.stack_group);
   const hasBars = chart.traces.some((t) => t.kind === "bar");
   return {
@@ -177,6 +234,8 @@ function layoutFor(chart: ChartData): Record<string, unknown> {
         }
       : {}),
     ...(hasBars ? { barmode: stacked ? "stack" : "group" } : {}),
+    ...(chart.bands?.length ? { shapes: toShapes(chart) } : {}),
+    ...(chart.badges?.length ? { annotations: toAnnotations(chart, width) } : {}),
   };
 }
 
@@ -196,15 +255,40 @@ export function ChartView({ chart }: { chart: ChartData }) {
     const element = node.current;
     if (!element) return;
 
-    loadPlotly()
-      .then((Plotly) => {
-        if (disposed) return;
-        return Plotly.react(element, toPlotlyTraces(chart), layoutFor(chart), CONFIG);
-      })
-      .catch((error: Error) => !disposed && setFailure(error.message));
+    const draw = () =>
+      loadPlotly()
+        .then((Plotly) => {
+          if (disposed) return;
+          return Plotly.react(
+            element,
+            toPlotlyTraces(chart),
+            layoutFor(chart, element.clientWidth),
+            CONFIG,
+          );
+        })
+        .catch((error: Error) => !disposed && setFailure(error.message));
+
+    draw();
+
+    // Plotly's own `responsive` handles the resize; what it cannot do is revisit a
+    // decision that depended on the width — whether the badge row fits its full
+    // wording. Only observed when there is a badge row to re-decide, and only
+    // redrawn when the answer actually flips.
+    let observer: ResizeObserver | undefined;
+    if (chart.badges?.length && typeof ResizeObserver !== "undefined") {
+      let fitted = element.clientWidth / chart.badges.length >= MIN_FULL_BADGE_PX;
+      observer = new ResizeObserver(() => {
+        const fits = element.clientWidth / chart.badges.length >= MIN_FULL_BADGE_PX;
+        if (fits === fitted) return;
+        fitted = fits;
+        draw();
+      });
+      observer.observe(element);
+    }
 
     return () => {
       disposed = true;
+      observer?.disconnect();
       // Plotly attaches listeners and a WebGL context; purge on unmount so a page
       // of many panels doesn't leak them.
       loadPlotly().then((Plotly) => element && Plotly.purge(element)).catch(() => {});

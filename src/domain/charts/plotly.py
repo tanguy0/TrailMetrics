@@ -29,6 +29,20 @@ _BAND_ALPHA = 0.16
 # Plotly line shape per trace kind; only STEP differs from a plain line.
 _LINE_SHAPE = {TraceKind.STEP: "hv"}
 
+# Where the badge row sits, as a share of the plot's height (1 = the very top).
+# Just inside the frame rather than above it: outside would fight the title and
+# the legend for the same strip of margin.
+_BADGE_ROW_Y = 0.98
+_BADGE_FONT_SIZE = 9
+# Tight: a 30-week window leaves each badge ~20 px of x to sit in.
+_BADGE_PADDING = 1
+# Pixels a badge needs before its full wording fits rather than its ``short``
+# form. This renderer has no width to measure — a figure is responsive and sized
+# by whatever embeds it — so it assumes a desktop-width figure, which is what a
+# notebook or an export is. The browser twin measures for real.
+_MIN_FULL_BADGE_PX = 62
+_ASSUMED_FIGURE_PX = 900
+
 
 def render_chart(chart: ChartData) -> go.Figure:
     """Draw one :class:`ChartData` as a themed, interactive Plotly figure."""
@@ -39,10 +53,12 @@ def render_chart(chart: ChartData) -> go.Figure:
         height=chart.height,
     )
 
+    _add_bands(fig, chart)
     for index, trace in enumerate(chart.traces):
         color = trace.color or CURVE_PALETTE[index % len(CURVE_PALETTE)]
         _add_band(fig, trace, chart, color)
         _add_trace(fig, trace, chart, color)
+    _add_badges(fig, chart)
 
     _apply_axis(fig.update_xaxes, chart.x_axis)
     _apply_axis(fig.update_yaxes, chart.y_axis)
@@ -67,6 +83,42 @@ def render_chart(chart: ChartData) -> go.Figure:
         stacked = any(t.stack_group for t in chart.traces)
         fig.update_layout(barmode="stack" if stacked else "group")
     return fig
+
+
+def _add_bands(fig: go.Figure, chart: ChartData) -> None:
+    """Shade every band across the full height of the plot, behind the traces."""
+    for band in chart.bands:
+        x0, x1 = _encode([band.x0, band.x1], chart.x_axis)
+        fig.add_shape(
+            type="rect",
+            xref="x", yref="y domain",
+            x0=x0, x1=x1, y0=0, y1=1,
+            fillcolor=rgba(band.color, band.opacity),
+            line_width=0, layer="below",
+        )
+
+
+def _add_badges(fig: go.Figure, chart: ChartData) -> None:
+    """Pin the badge row just inside the top of the plot area.
+
+    ``y domain`` coordinates rather than data ones, so the row stays put whatever
+    the y-scale is. Keeping it clear of the data is the *chart's* job — see
+    :class:`~src.domain.charts.ir.Badge`.
+    """
+    room = _ASSUMED_FIGURE_PX / max(len(chart.badges), 1)
+    for badge in chart.badges:
+        x = _encode([badge.x], chart.x_axis)[0]
+        text = badge.text
+        if badge.short and room < _MIN_FULL_BADGE_PX:
+            text = badge.short
+        fig.add_annotation(
+            x=x, xref="x",
+            y=_BADGE_ROW_Y, yref="y domain", yanchor="top",
+            text=text, showarrow=False,
+            font=dict(color=badge.color, size=_BADGE_FONT_SIZE),
+            bgcolor=badge.fill,
+            bordercolor=badge.color, borderwidth=1, borderpad=_BADGE_PADDING,
+        )
 
 
 def _axis_title(axis: Axis) -> str:
@@ -173,7 +225,7 @@ def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> No
         scatter["fillcolor"] = rgba(color, 0.35 if trace.stack_group else 0.2)
         scatter["stackgroup"] = trace.stack_group or "area"
         # A hairline keeps stacked bands readable without dominating the fill.
-        scatter["line"] = dict(color=color, width=0.5)
+        scatter["line"] = dict(color=color, width=0.35)
 
     fig.add_trace(go.Scatter(**scatter))
 

@@ -331,7 +331,7 @@ def _curve_trace(
         kind=TraceKind.LINE,
         color=curve.color or color,
         dash=dash,
-        width=11.2,
+        width=7.84,
         band_upper=upper,
         band_lower=lower,
         hover_template="%{x:.0f} m/km<br>%{y:.3f}<extra>%{fullData.name}</extra>",

@@ -57,6 +57,9 @@ _MANUAL_COLUMNS = ["rpe", "feeling"]
 _SUMMARY_COLUMNS = [
     "activity_id", "start_date", "sport_type", "has_streams",
     "distance_m", "moving_s", "relative_effort",
+    # Athlete-entered; see the note on ActivitySummary.rpe for why two manual
+    # columns ride on the cheap summary read.
+    *_MANUAL_COLUMNS,
 ]
 
 

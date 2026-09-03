@@ -378,6 +378,41 @@ TRANSLATIONS = {
         "en": "Training load (Relative Effort)",
         "fr": "Charge d'entraînement (Effort relatif)",
     },
+    "plot.weekly_feel.label": {
+        "en": "Weekly effort & feel", "fr": "Effort et ressenti par semaine",
+    },
+    "plot.weekly_feel.description": {
+        "en": "Your own weekly ratings against the model: average RPE as the "
+        "curve, average feeling as the week's background colour, and the "
+        "Fitness trend as the same tag the week summary shows. Answers whether "
+        "the load you feel is paying off, and at what cost.",
+        "fr": "Vos propres notes, semaine par semaine, face au modèle : le RPE "
+        "moyen en courbe, le ressenti moyen en couleur de fond, et la tendance "
+        "du Fitness sous forme du même tag que le résumé de la semaine. Répond "
+        "à : est-ce que la charge que je ressens paie, et à quel prix ?",
+    },
+    "plot.weekly_feel.rpe": {"en": "Average RPE", "fr": "RPE moyen"},
+    "plot.weekly_feel.y": {
+        "en": "Average RPE (1-10)", "fr": "RPE moyen (1-10)",
+    },
+    "plot.weekly_feel.caption": {
+        "en": "Background: the week's average feeling (red weak, gold ok, green "
+        "strong). Tags: Fitness over the week — ↑ up, → stable, ↓ down. Weeks "
+        "you did not rate leave a gap.",
+        "fr": "Fond : ressenti moyen de la semaine (rouge faible, gold ok, vert "
+        "fort). Tags : évolution du Fitness sur la semaine — ↑ hausse, → stable, "
+        "↓ baisse. Les semaines non notées laissent un trou.",
+    },
+    "plot.weekly_feel.hover_rpe": {
+        "en": "{label} {value}/10 · {count} rated",
+        "fr": "{label} {value}/10 · {count} notée(s)",
+    },
+    "plot.weekly_feel.no_entries": {
+        "en": "No RPE or feeling recorded over this period — rate your sessions "
+        "on the Training screen and this chart fills in.",
+        "fr": "Aucun RPE ni ressenti saisi sur cette période — notez vos séances "
+        "dans l'écran Entraînement et ce graphique se remplira.",
+    },
     "plot.fitness_fatigue.missing_relative_effort": {
         "en": "{count} activities without heart-rate data were not counted "
         "toward training load.",
@@ -910,6 +945,26 @@ TRANSLATIONS = {
               "lentement ; la fatigue réagit aux derniers jours — l'écart entre les "
               "deux, c'est ce qu'une semaine dure coûte avant de se transformer en "
               "Fitness.",
+    },
+    "ui.home.feel.title": {"en": "Effort & Feel", "fr": "Effort et ressenti"},
+    "ui.home.feel.subtitle": {
+        "en": "Your last 12 weeks as you rated them: average RPE per week as the curve, "
+              "the week's average feeling as its background colour, and the same "
+              "Fitness tag the week summary shows. Read together: a hard week that "
+              "felt strong and moved Fitness up is working; the same week felt weak "
+              "with Fitness flat is not.",
+        "fr": "Vos 12 dernières semaines telles que vous les avez notées : le RPE "
+              "moyen en courbe, "
+              "le ressenti moyen en couleur de fond, et le même tag de Fitness que "
+              "le résumé de la semaine. À lire ensemble : une semaine dure, bien "
+              "vécue et qui fait monter le Fitness, ça paie ; la même semaine mal "
+              "vécue avec un Fitness plat, non.",
+    },
+    "ui.home.feel.empty": {
+        "en": "Rate a few sessions — effort and how they felt — on the Training "
+              "screen, and this chart fills in week by week.",
+        "fr": "Notez quelques séances — effort et ressenti — dans l'écran "
+              "Entraînement, et ce graphique se remplira semaine après semaine.",
     },
     "ui.home.efficiency.title": {"en": "Recent Efficiency", "fr": "Efficacité récente"},
     "ui.home.efficiency.subtitle": {

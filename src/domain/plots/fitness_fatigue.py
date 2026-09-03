@@ -19,13 +19,13 @@ reusable as two ordinary, individually-selectable metrics inside
 :mod:`src.domain.plots.metric_trend` — see that module's ``_is_ff``.
 """
 
-from datetime import date, timedelta
-from typing import Any, Dict, List, Tuple
+from datetime import date
+from typing import Any, Dict, List
 
 from src.domain.charts.ir import Axis, AxisKind, ChartData, PlotOutput, Trace, TraceKind, empty_output
 from src.domain.dataset.resolved import DataLevel, ResolvedPanelData
 from src.domain.dataset.training_load import daily_training_load, fitness_fatigue_series
-from src.domain.plots.base import PlotDefinition, register
+from src.domain.plots.base import PlotDefinition, display_window, register
 from src.translations import translate
 
 # Fallback display window when the data source doesn't define one (a
@@ -48,7 +48,9 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     today = date.today()
     dates, fitness, fatigue = fitness_fatigue_series(daily, start, today)
 
-    lo, hi = _display_window(resolved, fallback_end=today)
+    lo, hi = display_window(
+        resolved, fallback_end=today, fallback_days=_FALLBACK_DISPLAY_DAYS,
+    )
     indices = [i for i, d in enumerate(dates) if lo <= d <= hi]
     if not indices:
         return empty_output(translate("plot.no_data", lang))
@@ -75,36 +77,18 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
             Trace(
                 name=translate("plot.fitness_fatigue.fitness", lang),
                 x=x, y=fitness_y, kind=TraceKind.LINE,
-                color=_FITNESS_COLOR, width=10.4,
+                color=_FITNESS_COLOR, width=7.28,
             ),
             Trace(
                 name=translate("plot.fitness_fatigue.fatigue", lang),
                 x=x, y=fatigue_y, kind=TraceKind.LINE,
-                color=_FATIGUE_COLOR, width=8.0,
+                color=_FATIGUE_COLOR, width=5.6,
             ),
         ],
         height=420,
         hover_mode="x unified",
     )
     return PlotOutput(charts=[chart], notes=notes)
-
-
-def _display_window(
-    resolved: ResolvedPanelData, *, fallback_end: date,
-) -> Tuple[date, date]:
-    """The panel's own selected date range, or a trailing fallback without one.
-
-    A time window is the only data-source mode with a natural continuous date
-    range. This plot borrows a window's ``[start, end]`` purely to decide what
-    to *show* — the activities that window matched were already discarded in
-    favour of ``all_summaries()`` above, since this plot is cross-sport by
-    design.
-    """
-    starts = [g.window.start for g in resolved.groups if g.window is not None]
-    ends = [g.window.end for g in resolved.groups if g.window is not None]
-    if starts and ends:
-        return min(starts), max(ends)
-    return fallback_end - timedelta(days=_FALLBACK_DISPLAY_DAYS), fallback_end
 
 
 register(PlotDefinition(

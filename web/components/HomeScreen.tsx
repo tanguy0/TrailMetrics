@@ -51,7 +51,7 @@ import type {
 } from "@/lib/types";
 
 const POLL_MS = 2000;
-const WEEKS_SHOWN = 30;
+const WEEKS_SHOWN = 20;
 
 /**
  * How stale the last import has to be before opening the app triggers another.
@@ -75,6 +75,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
   const [volumeCharts, setVolumeCharts] = useState<ChartData[] | null>(null);
   const [efficiencyCharts, setEfficiencyCharts] = useState<ChartData[] | null>(null);
   const [formCharts, setFormCharts] = useState<ChartData[] | null>(null);
+  const [feelCharts, setFeelCharts] = useState<ChartData[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Whether this mount has already fired the automatic passes. A ref, not state:
@@ -111,6 +112,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
       setVolumeCharts(null);
       setEfficiencyCharts(null);
       setFormCharts(null);
+      setFeelCharts(null);
       return;
     }
     let live = true;
@@ -127,6 +129,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
     load(recentHistoryPanel(t), setVolumeCharts);
     load(recentEfficiencyPanel(t), setEfficiencyCharts);
     load(recentFormPanel(t), setFormCharts);
+    load(recentFeelPanel(t), setFeelCharts);
     return () => {
       live = false;
     };
@@ -317,6 +320,11 @@ export function HomeScreen({ strings }: { strings: Strings }) {
             hasData={activityCount > 0}
             t={t}
           />
+          <RecentFeelBlock
+            charts={feelCharts}
+            hasData={activityCount > 0}
+            t={t}
+          />
         </div>
       </section>
     </main>
@@ -433,12 +441,39 @@ function recentFormPanel(t: T): PanelSpec {
   };
 }
 
-/** The last `WEEKS_SHOWN` weeks as a single named window. */
-function recentWindow(name: string): PanelSpec["source"] {
+/**
+ * The Effort & Feel panel: the athlete's own weekly ratings, `weekly_feel`.
+ *
+ * The one chart on this screen that plots something the athlete *typed* rather
+ * than something Strava measured — average RPE per week, the week's average
+ * feeling as a background colour, and the fitness trend as the same tag the week
+ * summary shows in Training. Like `fitness_fatigue` it takes no params and reads
+ * the whole cross-sport history, so the window below only decides what is shown.
+ */
+function recentFeelPanel(t: T): PanelSpec {
+  return {
+    id: "panel_home_feel",
+    title: t("home.feel.title"),
+    description: "",
+    columns: 1,
+    source: recentWindow(t("home.feel.title"), WEEKS_SHOWN),
+    plots: [
+      {
+        id: "plot_home_feel",
+        plot_type: "weekly_feel",
+        title: null,
+        params: {},
+      },
+    ],
+  };
+}
+
+/** The last `weeks` weeks as a single named window. */
+function recentWindow(name: string, weeks: number = WEEKS_SHOWN): PanelSpec["source"] {
   const end = new Date();
   const start = new Date(end);
-  // Inclusive of the current week, so the window spans exactly WEEKS_SHOWN weeks.
-  start.setDate(start.getDate() - (WEEKS_SHOWN * 7 - 1));
+  // Inclusive of the current week, so the window spans exactly `weeks` weeks.
+  start.setDate(start.getDate() - (weeks * 7 - 1));
   return {
     mode: "window",
     activity_ids: [],
@@ -988,6 +1023,54 @@ function RecentFormBlock({
         </div>
       ) : charts.length === 0 ? (
         <p className="muted">{t("home.last.empty")}</p>
+      ) : (
+        charts.map((chart, index) => (
+          <div className="chart-frame" key={index}>
+            <ChartView chart={chart} />
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/**
+ * The last 30 weeks as the athlete rated them: RPE, feeling, fitness tag.
+ *
+ * No trend badge on this one. The three series answer *together* ("a hard week
+ * that felt strong and moved fitness up") and a single arrow over any one of
+ * them would say something the block is specifically there not to say. The empty
+ * state is its own message rather than the shared "no activity" line: with
+ * activities but no ratings, the chart is empty for a reason the athlete can fix
+ * in two taps on the Training screen.
+ */
+function RecentFeelBlock({
+  charts,
+  hasData,
+  t,
+}: {
+  charts: ChartData[] | null;
+  hasData: boolean;
+  t: T;
+}) {
+  return (
+    <div className="data-block">
+      <div className="data-block__heading">
+        <h3 className="data-block__title">
+          <span aria-hidden="true">🫀</span> {t("home.feel.title")}
+        </h3>
+      </div>
+      <p className="data-block__lede">{t("home.feel.subtitle")}</p>
+
+      {!hasData ? (
+        <p className="muted">{t("home.last.empty")}</p>
+      ) : charts === null ? (
+        <div className="pending">
+          <span className="spinner" />
+          <p className="muted">{t("common.loading")}</p>
+        </div>
+      ) : charts.length === 0 ? (
+        <p className="note">{t("home.feel.empty")}</p>
       ) : (
         charts.map((chart, index) => (
           <div className="chart-frame" key={index}>

@@ -80,7 +80,7 @@ class Trace:
     axis: str = "y"
     # matplotlib-style code ("-", "--", "-.", ":"); mapped to a Plotly dash.
     dash: str = "-"
-    width: float = 9.6
+    width: float = 6.72
     markers: bool = False
     marker_size: float = 5.0
     opacity: float = 1.0
@@ -95,6 +95,55 @@ class Trace:
     hover_template: Optional[str] = None
     legend_group: Optional[str] = None
     show_legend: bool = True
+
+
+@dataclass
+class Band:
+    """A shaded vertical slab behind the traces.
+
+    It colours a *stretch of x* — one week, a race, a training block — and always
+    spans the full height of the plot, so it says nothing about y. ``x0``/``x1``
+    are x-axis values, positioned exactly like a trace point.
+
+    A band carries no label: on its own it is colour-only, which nothing should
+    ever have to decode. Pair it with a legend entry (a marker-only trace) or
+    with the chart's ``caption``.
+    """
+
+    x0: Any
+    x1: Any
+    color: str
+    opacity: float = 0.15
+
+
+@dataclass
+class Badge:
+    """A small tag pinned above the traces at one x position.
+
+    The chart twin of the app's ``.trend-badge``: coloured ink on a pale fill with
+    a matching border, carrying a *state* the reader scans as text ("Fitness ↑")
+    rather than a colour they have to decode. Same wording, same colours as the
+    week summary's tag, so a reader who learned it in Training already knows it
+    here.
+
+    Badges sit in a row just inside the top of the plot area, so the chart has to
+    leave them room: give ``y_axis.range`` some headroom above the data, or a badge
+    will land on the highest points. The one thing the renderer cannot reproduce is
+    the CSS pill's rounded corners — an annotation is a rectangle.
+
+    ``short`` is what the renderer falls back to when the row is too tight for the
+    full wording — thirty weekly tags on a phone. Annotations don't collide-hide,
+    so *something* has to give, and which one depends on how many pixels the
+    figure actually got: a decision only the renderer can make. Keep it a
+    recognisable stub of the same tag (an arrow, an initial), never a different
+    fact, and leave the full wording reachable in the hover.
+    """
+
+    x: Any
+    text: str
+    color: str                    # ink and border
+    fill: Optional[str] = None    # pale background; None leaves the tag unfilled
+    short: Optional[str] = None
 
 
 @dataclass
@@ -119,6 +168,9 @@ class ChartData:
     # Present only for dual-unit charts; ``None`` leaves the figure single-axis.
     y2_axis: Optional[Axis] = None
     traces: List[Trace] = field(default_factory=list)
+    # Shaded x-stretches drawn behind the traces, and a row of tags above them.
+    bands: List[Band] = field(default_factory=list)
+    badges: List[Badge] = field(default_factory=list)
     height: int = 460
     # "closest" | "x unified" — the latter suits stacked areas.
     hover_mode: str = "closest"
@@ -313,6 +365,8 @@ def _chart_from_dict(raw: Dict[str, Any]) -> ChartData:
         trace = _dataclass_from_dict(Trace, payload)
         trace.kind = TraceKind(trace.kind)
         chart.traces.append(trace)
+    chart.bands = [_dataclass_from_dict(Band, b) for b in (raw.get("bands") or [])]
+    chart.badges = [_dataclass_from_dict(Badge, b) for b in (raw.get("badges") or [])]
     return chart
 
 

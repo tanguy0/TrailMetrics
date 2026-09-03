@@ -52,6 +52,8 @@ class StoredActivityData(ActivityDataSource):
                         float(row["relative_effort"])
                         if row.get("relative_effort") is not None else None
                     ),
+                    rpe=int(row["rpe"]) if row.get("rpe") is not None else None,
+                    feeling=row.get("feeling") or None,
                 )
                 for row in self.activities.summaries(self.athlete_id)
             ]

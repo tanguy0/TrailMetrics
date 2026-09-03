@@ -41,6 +41,15 @@ class ActivitySummary:
     # plot) never has to pull every activity's feature row just for this one
     # number. ``None`` when the activity has no heart rate.
     relative_effort: Optional[float] = None
+    # The athlete's own two ratings — effort (1-10) and how it felt
+    # ("faible"/"ok"/"fort"). Carried here for the same reason as
+    # ``relative_effort``: the weekly RPE/feel plot needs them across the whole
+    # cross-sport history (``ResolvedPanelData.all_summaries``), and pulling
+    # every feature row just for two small columns would cost the read it saves.
+    # ``None`` when the athlete has not rated that activity — which is the normal
+    # case, so every reader has to handle it.
+    rpe: Optional[int] = None
+    feeling: Optional[str] = None
 
     @property
     def label(self) -> str:

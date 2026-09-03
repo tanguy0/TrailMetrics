@@ -12,7 +12,8 @@ one :func:`register` call — no page, no wiring.
 """
 
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from datetime import date, timedelta
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -53,6 +54,12 @@ class PlotDefinition:
     # image). Without this a text block in a panel that selects nothing would render
     # as "no activities in this selection", which is true and useless.
     requires_data: bool = True
+    # True for a plot whose output depends on what the athlete *typed* (RPE,
+    # feeling) rather than on what was imported. Those values change under
+    # activity ids that stay the same, which the render signature cannot see on
+    # its own — so it folds in a digest of them for these plots, and only for
+    # these: rating one run must not invalidate a fitted GAP curve.
+    reads_ratings: bool = False
     cost: str = CHEAP
     # Shown in the "add plot" picker to group related types.
     category_key: str = "plotcat.general"
@@ -103,6 +110,29 @@ def group_color(index: int) -> str:
 
 def series_color(index: int) -> str:
     return CURVE_PALETTE[index % len(CURVE_PALETTE)]
+
+
+# --- Display window --------------------------------------------------------
+
+def display_window(
+    resolved: ResolvedPanelData, *, fallback_end: date, fallback_days: int,
+) -> Tuple[date, date]:
+    """The panel's own selected date range, or a trailing fallback without one.
+
+    For the plots that draw a **continuous daily or weekly timeline** rather than
+    one point per activity (training load, and the weekly RPE/feel review). A time
+    window is the only data-source mode that defines such a range; a hand-picked
+    activity list does not, hence the fallback.
+
+    These plots borrow the window's ``[start, end]`` purely to decide what to
+    *show* — what they read is ``all_summaries()``, the whole cross-sport history,
+    so the window's own activity match is irrelevant to them.
+    """
+    starts = [g.window.start for g in resolved.groups if g.window is not None]
+    ends = [g.window.end for g in resolved.groups if g.window is not None]
+    if starts and ends:
+        return min(starts), max(ends)
+    return fallback_end - timedelta(days=fallback_days), fallback_end
 
 
 # --- Metric-driven axis and value formatting -------------------------------

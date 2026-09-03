@@ -194,6 +194,38 @@ export interface Trace {
   show_legend: boolean;
 }
 
+/**
+ * A shaded vertical slab behind the traces — one week, a race, a training block.
+ *
+ * Colours a stretch of x and always spans the full height, so it says nothing
+ * about y. It carries no label of its own: the legend or the caption has to.
+ */
+export interface Band {
+  x0: number | string;
+  x1: number | string;
+  color: string;
+  opacity: number;
+}
+
+/**
+ * A small tag pinned above the traces at one x position — the chart twin of
+ * `.trend-badge`: coloured ink on a pale fill, read as text, not as a colour.
+ * The chart leaves it room via `y_axis.range`; corners are square here, where
+ * the CSS pill's are round.
+ */
+export interface Badge {
+  x: number | string;
+  text: string;
+  color: string;
+  fill: string | null;
+  /**
+   * What to draw instead when the row is too tight for `text` — thirty weekly
+   * tags on a phone. Annotations don't collide-hide, so the renderer measures
+   * the figure and picks; the full wording stays in the hover.
+   */
+  short: string | null;
+}
+
 export interface ChartData {
   title: string;
   x_axis: Axis;
@@ -205,6 +237,9 @@ export interface ChartData {
    */
   y2_axis: Axis | null;
   traces: Trace[];
+  /** Shaded x-stretches behind the traces, and the row of tags above them. */
+  bands: Band[];
+  badges: Badge[];
   height: number;
   hover_mode: string;
   caption: string | null;
