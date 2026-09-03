@@ -20,6 +20,7 @@ from api.deps import (
     get_activity_comment_repository,
     get_activity_repository,
     get_athlete_repository,
+    get_plot_output_repository,
     get_stream_store,
     get_token_service,
     invalidate_caches,
@@ -233,6 +234,25 @@ def _run_sync(
             max_activities=max_activities,
         ))
         logger.info("sync for %s: %s", athlete_id, result)
+        if result.rebuilt or result.refreshed:
+            # These two rewrite stored numbers for activities that already
+            # existed, and `plot_signature` cannot see either: it keys on the
+            # resolved activity ids and FEATURE_VERSION, both of which are the
+            # same before and after. So a chart rendered between the deploy and
+            # this sync sits in `plot_outputs` under a key that will never come
+            # up again, and the athlete keeps being served pre-fix numbers.
+            #
+            # Importing *new* activities needs no clear — new ids change the key
+            # on their own, which is why this is gated rather than unconditional.
+            # Dropping the store costs the next reader a recomputation (an
+            # XGBoost fit included), so it must stay rare: `refreshed` counts
+            # rows whose value actually changed, not rows visited.
+            cleared = get_plot_output_repository(athlete_id).clear()
+            logger.info(
+                "cleared %d stored output(s) for %s: %d row(s) rebuilt, "
+                "%d Relative Effort value(s) changed",
+                cleared, athlete_id, result.rebuilt, result.refreshed,
+            )
     except Exception as error:
         logger.exception("sync failed for athlete %s", athlete_id)
         athletes.set_sync_state(

@@ -161,24 +161,39 @@ class PostgresActivityRepository(ActivityRepository):
     ) -> int:
         """Update Relative Effort on rows that already exist.
 
-        This is what backfills the column on a history imported before it existed.
-        Relative Effort rides on Strava's *activity list*, which a sync walks anyway,
-        so refreshing every stored activity costs no extra request — whereas
-        re-featurizing them all would cost one per activity and blow the rate limit.
+        This is what backfills the column on a history imported before it existed,
+        and what heals it after anything overwrote it. Relative Effort rides on
+        Strava's *activity list*, which a sync walks anyway, so refreshing every
+        stored activity costs no extra request — whereas re-featurizing them all
+        would cost one per activity and blow the rate limit.
 
-        ``coalesce`` so a value Strava has stopped reporting (an activity whose heart
-        rate was removed) does not erase the number we already have.
+        Returns the number of rows whose value actually *changed*, which is a
+        stronger claim than "statements sent" and the reason for the ``is distinct
+        from`` guard: the caller uses this count to decide whether stored renders
+        are now stale (see ``api.routers.activities._run_sync``), and this runs
+        over a whole history on every sync — so a count of "all of them" would
+        mean throwing away every cached fit every 15 minutes. The guard also skips
+        the write itself, leaving ``updated_at`` alone when nothing moved.
+
+        Values Strava does not report are filtered out rather than written, so an
+        activity whose heart rate was removed keeps the number we already have.
         """
-        cleaned = [(_clean(value), athlete_id, int(activity_id))
+        cleaned = [(int(activity_id), _clean(value))
                    for activity_id, value in values if _clean(value) is not None]
         if not cleaned:
             return 0
-        return self.db.execute_many(
-            "update activities "
-            "set relative_effort = coalesce(%s, relative_effort), updated_at = now() "
-            "where athlete_id = %s and activity_id = %s",
-            cleaned,
+        # One statement over both arrays instead of one per activity: this is the
+        # only query in the app that touches every row of a history at once.
+        changed = self.db.fetch_all(
+            "update activities a set relative_effort = v.effort, updated_at = now() "
+            "from (select unnest(%s::bigint[]) as activity_id, "
+            "             unnest(%s::double precision[]) as effort) v "
+            "where a.athlete_id = %s and a.activity_id = v.activity_id "
+            "  and a.relative_effort is distinct from v.effort "
+            "returning a.activity_id",
+            ([i for i, _ in cleaned], [v for _, v in cleaned], athlete_id),
         )
+        return len(changed)
 
     def set_stream_object(
         self, athlete_id: int, activity_id: int, object_path: Optional[str]
