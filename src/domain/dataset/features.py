@@ -44,6 +44,33 @@ from src.domain.races.smoothing import (
     default_smoothing_params,
 )
 
+# Bump when :func:`build_activity_features` changes in a way that invalidates
+# stored rows. Two things read it: the storage layer, which stamps every row it
+# writes and treats anything else as pending (see
+# :mod:`src.infrastructure.postgres.activity_repository`), and the render
+# signature, so a cached chart drawn from pre-change numbers is not served
+# alongside a fresh one. It versions the featurizer, so it lives beside it —
+# a bump here is the *only* thing that recomputes a stored row.
+#
+# v2: real power-meter watts (both sports) and the cycling power model — every
+# activity needs its streams re-fetched (for the new `watts` stream) and its
+# row re-featurized to pick these up.
+# v3: fixed a bug where an activity with real power-meter watts never got a
+# power_to_hr figure at all (the measured branch didn't compute one) — same
+# full resync as any other bump, even though the underlying watts stream
+# itself is unchanged since v2.
+# v4: two changes to running's power, both of which rewrite stored numbers for
+# activities whose streams are unchanged — so this is the first bump that can be
+# served from stored blobs rather than a Strava re-import (see
+# :mod:`src.usecases.refeaturize_athlete_activities`). The cost-of-transport
+# model moved from `P = m·v·(Cr + g·s)` to `P = m·v·Cr·factor(gradient)`: flat
+# running is unaffected but anything with gradient shifts, so a history imported
+# before that fix reads wrong on hilly and trail runs. And a run now always uses
+# that model even when Strava sends real watts, so a footpod-equipped run's
+# `power_source` flips from "measured" to "estimated" and its power-to-HR moves
+# from the `_measured` column to the `_per_kg` one.
+FEATURE_VERSION = 4
+
 # A time jump larger than this between samples means the watch was paused; the
 # bridging step adds no real distance, time or climb, so it is excluded.
 PAUSE_THRESHOLD_S = 60.0
@@ -70,9 +97,10 @@ STORED_COLUMNS: List[str] = (
         "distance_m", "elevation_gain_m", "moving_s", "elapsed_s",
         "gap_distance_m", "avg_hr", "max_hr",
         "avg_power_w_per_kg", "power_to_hr_per_kg",
-        # Real power-meter watts (either sport) and cycling's modelled absolute
-        # estimate — see the note on avg_power_w_modelled below and in apply_mass
-        # for why these aren't per-kg like running's. power_to_hr_measured pairs
+        # Real power-meter watts (never a run — see build_activity_features) and
+        # cycling's modelled absolute estimate — see the note on
+        # avg_power_w_modelled below and in apply_mass for why these aren't
+        # per-kg like running's. power_to_hr_measured pairs
         # with avg_power_w_measured the same way power_to_hr_per_kg pairs with
         # avg_power_w_per_kg — an absolute ratio, needing no weight to use.
         "avg_power_w_measured", "avg_power_w_modelled", "power_to_hr_measured",
@@ -169,9 +197,12 @@ def apply_mass(frame: pd.DataFrame, mass_kg: Optional[float]) -> pd.DataFrame:
             return _numeric(per_kg_column) * float(mass_kg)
         return pd.Series(np.nan, index=out.index)
 
-    # Absolute average power: real watts always win; otherwise whichever
-    # per-sport model produced a value. Cycling's modelled figure is already
-    # absolute; running's is per-kg and needs the current weight to scale up.
+    # Absolute average power: real watts win where they exist; otherwise
+    # whichever per-sport model produced a value. Cycling's modelled figure is
+    # already absolute; running's is per-kg and needs the current weight to
+    # scale up. No sport test is needed to keep a run on its model: a running
+    # row never carries measured watts in the first place (see
+    # :func:`build_activity_features`), so the two are never both populated.
     out["avg_power_w"] = (
         _numeric("avg_power_w_measured")
         .fillna(_numeric("avg_power_w_modelled"))
@@ -298,24 +329,20 @@ def build_activity_features(
     row["power_to_hr_measured"] = np.nan
     row["power_source"] = None
 
-    # Real power-meter watts always win — either sport, a footpod-equipped run
-    # counts too — over any modelled estimate.
     watts = np.asarray(stream.watts, dtype=float)
     step_watts = watts[1:] if watts.size == n else np.full(n - 1, np.nan)
     watts_valid = moving & np.isfinite(step_watts)
 
-    if watts_valid.any():
-        row["avg_power_w_measured"] = float(np.mean(step_watts[watts_valid]))
-        row["power_source"] = "measured"
-        both = watts_valid & hr_valid
-        if both.any():
-            mean_hr = float(np.mean(step_hr[both]))
-            if mean_hr > 0:
-                row["power_to_hr_measured"] = float(np.mean(step_watts[both])) / mean_hr
-    elif is_running:
+    # Running ignores the watts stream entirely, even when one is there: a
+    # watch's running power is itself an undocumented per-vendor model, not a
+    # measurement, so trusting it would make power-to-HR trend with which watch
+    # was worn instead of with fitness. Cycling is the opposite case and keeps
+    # the usual order: a crank meter is a real measurement, so it wins over the
+    # aero model whenever Strava sends it.
+    if is_running:
         # `compute_power_series` models running's cost of transport (P =
-        # m·v·Cr·factor(gradient)) — a bike's power comes from a real power
-        # meter or the cycling model below, never from this formula.
+        # m·v·Cr·factor(gradient)) — it is a running formula only, never applied
+        # to a ride.
         speed = np.divide(
             delta_dist, delta_time, out=np.zeros_like(delta_dist), where=delta_time > 0
         )
@@ -334,6 +361,17 @@ def build_activity_features(
                 mean_hr = float(np.mean(step_hr[both]))
                 if mean_hr > 0:
                     row["power_to_hr_per_kg"] = float(np.mean(power[both])) / mean_hr
+    elif watts_valid.any():
+        # Real power-meter watts win over any modelled estimate, for every sport
+        # that has a meter worth the name — cycling in practice, and a hike or a
+        # swim carrying one rather than being dropped.
+        row["avg_power_w_measured"] = float(np.mean(step_watts[watts_valid]))
+        row["power_source"] = "measured"
+        both = watts_valid & hr_valid
+        if both.any():
+            mean_hr = float(np.mean(step_hr[both]))
+            if mean_hr > 0:
+                row["power_to_hr_measured"] = float(np.mean(step_watts[both])) / mean_hr
     elif sport_family(sport) == CYCLING:
         power = compute_cycling_power_series(
             time=time, distance=distance, altitude=altitude_smoothed, mass_kg=mass_kg,

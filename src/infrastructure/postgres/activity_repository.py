@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from src.domain.dataset.features import (
+    FEATURE_VERSION,
     GENERATED_COLUMNS,
     band_column,
     best_column,
@@ -21,15 +22,18 @@ from src.domain.ports.storage import ActivityRepository
 from src.domain.progress.models import GRADIENT_BANDS, PR_DISTANCES
 from src.infrastructure.postgres.pool import Database
 
-# Bump when build_activity_features changes in a way that invalidates stored rows.
-# v2: real power-meter watts (both sports) and the cycling power model — every
-# activity needs its streams re-fetched (for the new `watts` stream) and its
-# row re-featurized to pick these up.
-# v3: fixed a bug where an activity with real power-meter watts never got a
-# power_to_hr figure at all (the measured branch didn't compute one) — same
-# full resync as any other bump, even though the underlying watts stream
-# itself is unchanged since v2.
-FEATURE_VERSION = 3
+# The oldest ``feature_version`` whose stored stream blob can rebuild a row
+# locally, with no Strava call — see
+# :mod:`src.usecases.refeaturize_athlete_activities`.
+#
+# A blob is written by the same import that stamps the row, so the row's version
+# also says what the blob contains. ``watts`` only started being written at v2,
+# and a v1 archive decodes it as NaN rather than failing (see
+# :func:`~src.infrastructure.storage.codec.decode_stream`) — which would quietly
+# turn a metered ride into an aero-model estimate. So v1 rows go back to Strava;
+# v2 and up carry every stream the featurizer reads and can be rebuilt offline.
+# Raise this the next time a bump adds a stream, in the same edit.
+MIN_LOCAL_REBUILD_VERSION = 2
 
 # Scalar feature columns that are real SQL columns.
 _SCALAR_COLUMNS = [
@@ -218,6 +222,38 @@ class PostgresActivityRepository(ActivityRepository):
                 (athlete_id, ids),
             )
         return [_to_feature_row(row) for row in raw]
+
+    def stale_activities(self, athlete_id: int) -> List[Dict[str, Any]]:
+        """Activities whose row was computed by an older featurizer, oldest first.
+
+        The complement of :meth:`known_ids`, and it selects what a *rebuild*
+        needs rather than a whole feature row: where the streams are, the version
+        that wrote them (see :data:`MIN_LOCAL_REBUILD_VERSION`), and the summary
+        totals that are all a streamless activity's row was ever made of.
+        """
+        rows = self.db.fetch_all(
+            "select activity_id, start_date, sport_type, has_streams, "
+            "stream_object, feature_version, distance_m, elevation_gain_m, "
+            "moving_s, relative_effort "
+            "from activities where athlete_id = %s and feature_version <> %s "
+            "order by start_date",
+            (athlete_id, FEATURE_VERSION),
+        )
+        return [
+            {
+                "activity_id": int(row["activity_id"]),
+                "start_date": _naive(row["start_date"]),
+                "sport_type": row["sport_type"],
+                "has_streams": bool(row["has_streams"]),
+                "stream_object": row["stream_object"],
+                "feature_version": int(row["feature_version"] or 0),
+                "distance_m": _clean(row["distance_m"]),
+                "elevation_gain_m": _clean(row["elevation_gain_m"]),
+                "moving_s": _clean(row["moving_s"]),
+                "relative_effort": _clean(row["relative_effort"]),
+            }
+            for row in rows
+        ]
 
     def known_ids(self, athlete_id: int) -> set:
         rows = self.db.fetch_all(

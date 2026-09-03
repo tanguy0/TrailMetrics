@@ -20,9 +20,11 @@ class ActivityStream:
     distance: np.ndarray
     altitude: np.ndarray
     heartrate: np.ndarray
-    # Real power-meter watts, when Strava has them (a metered ride, or a
-    # footpod-equipped run). NaN-filled like altitude/heartrate when absent —
-    # never a modelled estimate, that lives downstream in the feature pipeline.
+    # Power-meter watts, as Strava sends them (a metered ride, or a run whose
+    # watch reported "running power"). NaN-filled like altitude/heartrate when
+    # absent. Carried verbatim for every sport; whether they are *used* is the
+    # feature pipeline's call, and it uses them for everything except running
+    # (see build_activity_features). Never a modelled estimate of ours.
     watts: np.ndarray = field(default_factory=lambda: np.full(0, np.nan))
     # When the activity took place. Optional so older callers/mocks stay valid;
     # used by the app to filter pre-fetched history by date without re-fetching.

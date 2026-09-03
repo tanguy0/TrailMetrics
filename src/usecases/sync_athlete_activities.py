@@ -4,13 +4,18 @@ The one write path into the database. For each activity it does the expensive wo
 exactly once — the per-second pass that produces a feature row — then keeps the
 row in Postgres and the raw arrays in object storage.
 
-Two properties make it usable on a real history:
+Three properties make it usable on a real history:
 
 * **Incremental.** Activities already stored are skipped, so the first sync is
   long and every later one is short. Strava's rate limit (100 requests / 15 min)
   makes this non-optional.
 * **Resumable.** Rows are written in batches as it goes, so a sync that dies
   halfway leaves everything it had already fetched. Re-running continues.
+* **Local-first after a feature change.** A ``FEATURE_VERSION`` bump makes every
+  stored row pending again, which would mean re-fetching a whole history. So the
+  sync first rebuilds what the stored stream blobs can answer
+  (:mod:`src.usecases.refeaturize_athlete_activities`) and asks Strava only for
+  the remainder.
 """
 
 import logging
@@ -36,6 +41,10 @@ from src.domain.ports.storage import (
 from src.infrastructure.storage.codec import encode_stream
 from src.infrastructure.strava.strava_client import StravaClient
 from src.usecases.base import UseCase
+from src.usecases.refeaturize_athlete_activities import (
+    RefeaturizeAthleteActivities,
+    RefeaturizeAthleteActivitiesInput,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +81,8 @@ class SyncAthleteActivitiesOutput:
     total_seen: int = 0
     # Already-stored activities whose Relative Effort was refreshed from the listing.
     refreshed: int = 0
+    # Rows re-featurized from their stored streams, costing no Strava request.
+    rebuilt: int = 0
 
 
 class SyncAthleteActivities(UseCase):
@@ -108,6 +119,15 @@ class SyncAthleteActivities(UseCase):
         if self.athletes is not None:
             athlete = self.athletes.get(athlete_id)
             mass_kg = athlete.weight_kg if athlete else None
+
+        # Rows left behind by an older featurizer are rebuilt from their stored
+        # streams first. Everything that succeeds is stamped at the current
+        # version, so `known_ids` below counts it as present and Strava is asked
+        # only for what no blob could answer — which is the difference between a
+        # feature bump costing one request per activity and costing almost
+        # nothing. Skipped under `force`, which means "go back to the source".
+        if not params.force:
+            result.rebuilt = self._rebuild_stale(athlete_id)
 
         self._report(athlete_id, SyncState(
             status="running", message="listing activities",
@@ -172,6 +192,40 @@ class SyncAthleteActivities(UseCase):
             last_synced_at=datetime.now(timezone.utc),
         ))
         return result
+
+    # --- Local rebuild -----------------------------------------------------
+
+    def _rebuild_stale(self, athlete_id: int) -> int:
+        """Re-featurize what the stored blobs can answer. Returns how many.
+
+        Costs one indexed query when nothing is stale, which is the normal case
+        — so this runs on every sync rather than needing to be triggered.
+        """
+        def report(done: int, total: int) -> None:
+            # Same cadence as the import loop's: a state write per activity
+            # would cost more than the rebuild it is reporting on.
+            if done % 5 == 0 or done == total:
+                self._report(athlete_id, SyncState(
+                    status="running", done=done, total=total, message="rebuilding",
+                ))
+
+        usecase = RefeaturizeAthleteActivities(
+            activities=self.activities, streams=self.streams, athletes=self.athletes,
+        )
+        try:
+            outcome = usecase.execute(
+                RefeaturizeAthleteActivitiesInput(athlete_id=athlete_id),
+                progress_callback=report,
+            )
+        except Exception as error:
+            # A failed rebuild is not a failed sync: every row it could not
+            # write kept its old version, so the Strava pass below picks them
+            # up exactly as it did before this pass existed.
+            logger.warning("could not rebuild stale rows for %s: %s", athlete_id, error)
+            return 0
+        if outcome.stale:
+            logger.info("rebuilt %s for athlete %s", outcome, athlete_id)
+        return outcome.done
 
     # --- One activity ------------------------------------------------------
 

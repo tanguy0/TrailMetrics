@@ -178,6 +178,26 @@ The analytics primitives it shared (`gap/`, `races/metrics.py`, `races/smoothing
 * **Power is stored per kilogram.** The model `P = m·v·Cr·factor(gradient)` is linear
   in body mass, so a stored row is valid for any weight and changing yours rescales
   the whole history instantly instead of invalidating it.
+* **Running power is always ours; cycling power prefers the meter.** A crank power
+  meter is a real measurement, so a ride uses Strava's watts when they exist and the
+  aero model otherwise. A watch's *running* power is not a measurement — it is that
+  vendor's own undocumented model — so a run always uses the model above, and
+  power-to-HR stays comparable across watches and across a whole history.
+* **Stored feature rows are recomputed only on a `FEATURE_VERSION` bump.** Nothing is
+  re-derived at read time except the body-mass scaling above, so any change to
+  `build_activity_features` that alters a stored number has to bump that constant
+  (`src/domain/dataset/features.py`) or existing athletes keep their old values
+  forever while new ones get the new ones. The bump also invalidates cached renders,
+  since `plot_signature` includes it — otherwise a rebuilt row would still be drawn
+  from `plot_outputs` as it was before.
+* **A bump is served from stored streams, not from Strava.** A feature row is a pure
+  function of the per-second arrays (already in object storage) and body mass, so
+  `refeaturize_athlete_activities` rebuilds a whole history locally: no rate limit,
+  and it works for athletes whose Strava token is long gone. Every sync runs it
+  before touching the API, and `python -m api.refeaturize` does the whole population
+  in one pass after a deploy (`--dry-run` counts first). Strava is needed only where
+  a blob is missing or predates a stream the featurizer now reads — that bound is
+  `MIN_LOCAL_REBUILD_VERSION`, which any bump that *adds* a stream must raise.
 * **Relative Effort is reported, not computed.** Strava derives its training-load
   score from the athlete's own heart-rate zones, which its API does not expose — so
   `relative_effort` is read off the activity *listing* rather than from the streams.

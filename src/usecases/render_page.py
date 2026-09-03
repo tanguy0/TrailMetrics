@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from src.domain.charts.ir import PlotOutput
+from src.domain.dataset.features import FEATURE_VERSION
 from src.domain.dataset.resolved import ResolvedPanelData
 from src.domain.ports.activity_data import ActivityDataSource
 from src.domain.plots import base as plot_registry
@@ -227,11 +228,16 @@ def plot_signature(
 
     Includes the resolved activity ids rather than the source spec alone, so a
     freshly loaded history invalidates naturally while re-rendering the same page
-    twice does not recompute anything. `RENDER_VERSION` covers the rest: a
-    change to how a plot is drawn, not to what it's drawn from.
+    twice does not recompute anything. `RENDER_VERSION` covers a change to how a
+    plot is drawn; `FEATURE_VERSION` covers a change to what it is drawn *from*.
+    That second one matters because a re-featurize rewrites the numbers under
+    activity ids that are otherwise unchanged — without it, a bump would fix
+    every stored row and the athlete would still be shown the old chart from
+    `plot_outputs`, for as long as the page's activity set stayed the same.
     """
     payload = {
         "render_version": RENDER_VERSION,
+        "feature_version": FEATURE_VERSION,
         "plot_type": plot.plot_type,
         "params": params,
         "source": panel.source.to_dict(),

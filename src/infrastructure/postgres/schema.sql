@@ -135,9 +135,11 @@ alter table activities add column if not exists relative_effort double precision
 -- plots read. Nullable — older imports predate it, and indoor runs have no route.
 alter table activities add column if not exists summary_polyline text;
 
--- Power, beyond running's existing `avg_power_w_per_kg`: real meter data always
--- wins when Strava has it (either sport — a footpod-equipped run counts too), so
--- it gets its own absolute column rather than reusing the per-kg one. Cycling's
+-- Power, beyond running's existing `avg_power_w_per_kg`: real meter data wins
+-- when Strava has it, so it gets its own absolute column rather than reusing the
+-- per-kg one. Running is the exception and never uses it — a watch's running
+-- power is a per-vendor model rather than a measurement, so a run always uses
+-- ours (see build_activity_features) and leaves this column null. Cycling's
 -- modelled estimate (src/domain/cycling/power.py) is also absolute rather than
 -- per-kg: unlike running's, its aero term is a fixed population constant, not
 -- proportional to rider mass, so "compute once at 1 kg and rescale on read"

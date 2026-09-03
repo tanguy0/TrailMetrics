@@ -253,7 +253,8 @@ def _avg_power_w(row: Dict[str, Any], weight_kg: Optional[float]) -> Optional[fl
     """Real watts, else cycling's modelled absolute figure, else running's modelled
     per-kg figure scaled by the current weight — mirrors the fallback in
     :func:`src.domain.dataset.features.apply_mass`, which this raw-dict-based
-    endpoint doesn't go through."""
+    endpoint doesn't go through. A run reaches the per-kg branch even with a
+    footpod: the measured columns are left null for running at featurize time."""
     measured = _num(row.get("avg_power_w_measured"))
     if measured is not None:
         return measured

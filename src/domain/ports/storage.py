@@ -182,6 +182,15 @@ class ActivityRepository(ABC):
         """Activity ids already stored — so a sync only fetches what is new."""
 
     @abstractmethod
+    def stale_activities(self, athlete_id: int) -> List[Dict[str, Any]]:
+        """Activities stored by an older featurizer, with what a rebuild needs.
+
+        The complement of :meth:`known_ids`: those two partition an athlete's
+        history, so anything listed here is what a sync would otherwise re-fetch
+        from Strava.
+        """
+
+    @abstractmethod
     def date_range(self, athlete_id: int) -> Optional[Tuple[datetime, datetime]]:
         ...
 
