@@ -6,6 +6,9 @@
 const SECURITY_HEADERS = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
+  // Blanket no-referrer. Anything that needs a third party to recognise this app
+  // has to opt back in per element — `RouteMap` does exactly that for map tiles,
+  // because OpenStreetMap refuses tile requests it cannot attribute to an app.
   { key: "Referrer-Policy", value: "no-referrer" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
   // Harmless to send over plain HTTP in local dev — browsers only act on it once

@@ -2,7 +2,7 @@
 
 /**
  * Training: the diary calendar shared between an athlete and (eventually) their
- * coach — a week per row, a day per column, today's week on top when the screen
+ * coach — a week per row, a day per column, today's week centred when the screen
  * opens.
  *
  * Three kinds of cell: a planned workout and a planned goal are both plain text
@@ -69,8 +69,12 @@ const MONTH_LABELS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+// Symmetric on purpose: the calendar opens with today's week centred (see the
+// scroll effect in `TrainingScreen`), which needs about half a viewport of weeks
+// loaded on *both* sides — with a single future week the scroll clamps at the
+// bottom and the current week lands near the foot of the calendar instead.
 const INITIAL_PAST_WEEKS = 4;
-const INITIAL_FUTURE_WEEKS = 1;
+const INITIAL_FUTURE_WEEKS = 4;
 const PAGE_WEEKS = 4;
 
 // Fixed display order within a day cell: note, then workout, then goal.
@@ -147,6 +151,9 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
   // week through today — see the effect below. Keyed by ISO date, same
   // format as every other date string in this file.
   const [fitnessByDate, setFitnessByDate] = useState<Record<string, number>>({});
+  // Whether the first calendar fetch has come back — the cue to centre today's
+  // week, see the scroll effect below.
+  const [initialLoaded, setInitialLoaded] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const weekRefs = useRef(new Map<string, HTMLDivElement>());
@@ -184,7 +191,10 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
   useEffect(() => {
     const start = weekStarts[0];
     const end = addDays(weekStarts[weekStarts.length - 1], 6);
-    fetchRange(start, end);
+    // Resolved either way: with nothing to show, an empty calendar still has to
+    // settle on today's week rather than sit at the top waiting for a load that
+    // already failed.
+    fetchRange(start, end).finally(() => setInitialLoaded(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -245,22 +255,37 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
     };
   }, [earliestWeekStart, todayIso]);
 
-  // Scroll so today's week starts at the top, once it is on the page. Guarded so
-  // a later week being added (top or bottom) never re-triggers it.
-  useEffect(() => {
-    if (scrolledToTodayRef.current) return;
+  // Scroll so today's week sits in the middle of the calendar. Waits for the first
+  // fetch: a week row is as tall as its busiest day, so measuring before the
+  // sessions land would centre on heights that are about to change. Guarded after
+  // that, so a later week being added (top or bottom) never re-triggers it.
+  //
+  // `scrollIntoView({ block: "center" })` would do this, but it also scrolls every
+  // scrollable ancestor — the document included — so the page header gets pushed
+  // out of view on short viewports. Setting `scrollTop` moves the calendar alone.
+  useLayoutEffect(() => {
+    if (scrolledToTodayRef.current || !initialLoaded) return;
+    const container = containerRef.current;
     const element = weekRefs.current.get(todayWeekStart);
-    if (!element) return;
-    element.scrollIntoView({ block: "start" });
+    if (!container || !element) return;
+    const offsetWithin = element.getBoundingClientRect().top
+      - container.getBoundingClientRect().top
+      + container.scrollTop;
+    // Clamped by the browser at both ends, so a current week too close to either
+    // edge of the loaded range simply lands as close to centre as it can.
+    container.scrollTop = offsetWithin - (container.clientHeight - element.offsetHeight) / 2;
     scrolledToTodayRef.current = true;
-  }, [weekStarts, todayWeekStart]);
+  }, [weekStarts, todayWeekStart, initialLoaded]);
 
   // Preserve scroll position when older weeks are prepended: the container grew
-  // taller above the fold, so push scrollTop down by exactly that much.
+  // taller above the fold, so push scrollTop down by exactly that much. Skipped
+  // before the initial centring has happened — the top sentinel can be on screen
+  // from the first paint, and that pending prepend must not fight the effect above
+  // for `scrollTop`.
   useLayoutEffect(() => {
     if (prependAdjustRef.current == null) return;
     const container = containerRef.current;
-    if (container) {
+    if (container && scrolledToTodayRef.current) {
       container.scrollTop += container.scrollHeight - prependAdjustRef.current;
     }
     prependAdjustRef.current = null;
