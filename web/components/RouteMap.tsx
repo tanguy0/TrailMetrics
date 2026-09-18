@@ -7,15 +7,39 @@
  * approach `ChartView` takes with Plotly, and for the same reason: the library and
  * its CSS are dead weight on any screen without a map.
  *
- * Worth knowing: rendering this map makes the browser request tiles from
- * openstreetmap.org, which discloses the area the route covers to a third party.
- * That is inherent to a tiled map rather than something this component adds, but it
- * is the reason the component draws nothing at all when there is no route.
+ * Worth knowing: rendering this map makes the browser request tiles from the tile
+ * host, which discloses the area the route covers to a third party. That is
+ * inherent to a tiled map rather than something this component adds, but it is the
+ * reason the component draws nothing at all when there is no route.
  */
 
 import { useEffect, useRef, useState } from "react";
 
 import { theme } from "@/lib/theme";
+
+/**
+ * Where the base tiles come from, and how we identify ourselves to that host.
+ *
+ * OSM's tile usage policy requires every request to identify the application, by
+ * Referer or User-Agent; from a browser only the Referer is ours to set. This app
+ * sends `Referrer-Policy: no-referrer` on every response (see next.config.mjs), so
+ * tile requests arrived anonymous and osm.org answered them with its "tile usage
+ * policy" placeholder image instead of a map. Hence `referrerPolicy` on the layer
+ * below: an element's own referrer policy overrides the document's, so tile
+ * requests — and only tile requests — carry this app's origin. `strict-origin-…`
+ * rather than a full URL: the host needs to know which app is asking, not which
+ * activity is being looked at.
+ *
+ * The URL is configurable because osm.org's servers are volunteer-run and the same
+ * policy rules out apps with real traffic. Point NEXT_PUBLIC_MAP_TILE_URL (and the
+ * matching attribution) at a provider with a paid plan once this app is past
+ * hobby-scale; nothing else here has to change.
+ */
+const TILE_URL =
+  process.env.NEXT_PUBLIC_MAP_TILE_URL || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const TILE_ATTRIBUTION =
+  process.env.NEXT_PUBLIC_MAP_TILE_ATTRIBUTION ||
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 // Resolved once per session. The stylesheet is a side-effect import: Leaflet
 // positions tiles with it, so the map is unusable without it.
@@ -58,9 +82,10 @@ export function RouteMap({
           attributionControl: true,
         });
 
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        L.tileLayer(TILE_URL, {
           maxZoom: 18,
-          attribution: "&copy; OpenStreetMap contributors",
+          attribution: TILE_ATTRIBUTION,
+          referrerPolicy: "strict-origin-when-cross-origin",
         }).addTo(map);
 
         const line = L.polyline(points, {

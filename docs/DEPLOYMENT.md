@@ -127,6 +127,16 @@ Import the repository with **root directory `web`**. Vercel detects Next.js.
 | `TRAILMETRICS_SERVICE_TOKEN` | same value as the API's `SERVICE_TOKEN` |
 | `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` |
 | `NEXT_PUBLIC_LANG` | `fr` or `en` |
+| `NEXT_PUBLIC_MAP_TILE_URL` | optional — route-map tile URL template |
+| `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION` | optional — attribution for that tile host |
+
+The two map variables are optional: unset, route maps fall back to
+OpenStreetMap's own tile servers. That is within their [tile usage
+policy](https://operations.osmfoundation.org/policies/tiles/) at hobby scale
+only — the policy rules out apps with real traffic, and osm.org answers
+traffic it objects to with a placeholder image in place of the map. Set both
+variables to a provider with a plan (MapTiler, Stadia, Thunderforest, …) before
+the app has an audience.
 
 `TRAILMETRICS_API_URL` and `TRAILMETRICS_SERVICE_TOKEN` are read only in server
 components and route handlers, so neither reaches the browser bundle. Do not rename
