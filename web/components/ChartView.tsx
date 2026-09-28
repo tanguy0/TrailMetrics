@@ -211,9 +211,13 @@ function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
       bordercolor: theme.spine,
       borderwidth: 1,
       font: { color: theme.text },
+      // The default spot, just right of the plot, is where a right-hand axis puts
+      // its ticks — so a dual-axis figure carries its legend underneath instead.
+      ...(chart.y2_axis ? { orientation: "h", x: 0, y: -0.2, yanchor: "top" } : {}),
     },
-    // A right-hand axis needs room for its own ticks and title.
-    margin: { l: 64, r: chart.y2_axis ? 64 : 20, t: 48, b: 48 },
+    // A right-hand axis needs room for its own ticks and title, and the legend
+    // moved under the plot needs room below.
+    margin: { l: 64, r: chart.y2_axis ? 64 : 20, t: 48, b: chart.y2_axis ? 100 : 48 },
     height: chart.height,
     // On a dual-axis chart the shared x-value is the only thing the two series
     // genuinely have in common, so read them together rather than one at a time.

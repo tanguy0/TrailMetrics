@@ -5,7 +5,7 @@
  *
  * A client component only because the active item depends on the current path;
  * the labels arrive already translated from the server, so nothing is fetched here.
- * Every item but Blog needs an athlete's own data, so `authenticated` renders
+ * Every item but Race plan and Blog needs an athlete's own data, so `authenticated` renders
  * those as inert (no href, no click) rather than hiding the rail itself — a
  * visitor should see what TrailMetrics offers before signing in, not guess.
  */
@@ -29,6 +29,7 @@ export function Sidebar({
     { href: "/home", label: t("nav.home"), icon: "🏠", public: false },
     { href: "/pages", label: t("nav.analysis"), icon: "📊", public: false },
     { href: "/training", label: t("nav.training"), icon: "📅", public: false },
+    { href: "/race-plan", label: t("nav.race_plan"), icon: "🏁", public: true },
     { href: "/blog", label: t("nav.blog"), icon: "📰", public: true },
   ];
 

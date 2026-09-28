@@ -1188,6 +1188,218 @@ TRANSLATIONS = {
     "ui.training.session.feeling_ok": {"en": "OK", "fr": "Ok"},
     "ui.training.session.feeling_fort": {"en": "Strong", "fr": "Fort"},
 
+    # --- Race plan ("Plan de course") -------------------------------------------
+    "race_plan.series.elevation": {"en": "Elevation", "fr": "Altitude"},
+    "race_plan.series.target_pace": {"en": "Target pace", "fr": "Allure cible"},
+    "race_plan.series.gap_pace": {"en": "Constant GAP pace", "fr": "Allure GAP constante"},
+    "race_plan.series.section_pace": {"en": "Section pace", "fr": "Allure par section"},
+    "race_plan.series.leg_pace": {"en": "Leg pace", "fr": "Allure par tronçon"},
+    "race_plan.series.aid_stations": {"en": "Aid stations", "fr": "Ravitaillements"},
+    "race_plan.axis.elevation": {"en": "Elevation (m)", "fr": "Altitude (m)"},
+    "race_plan.axis.pace": {"en": "Pace (min/km)", "fr": "Allure (min/km)"},
+    "race_plan.axis.distance": {"en": "Distance (km)", "fr": "Distance (km)"},
+    "race_plan.hover.elapsed": {"en": "elapsed", "fr": "écoulé"},
+    "race_plan.hover.arrival": {"en": "arrival", "fr": "arrivée"},
+    "race_plan.chart.profile": {
+        "en": "Target pace along the course", "fr": "Allure cible sur le parcours",
+    },
+    "race_plan.chart.sections": {
+        "en": "Pace per climb, descent and flat",
+        "fr": "Allure par montée, descente et plat",
+    },
+    "race_plan.chart.aid_stations": {
+        "en": "Pace between aid stations", "fr": "Allure entre ravitaillements",
+    },
+    "race_plan.caption.profile": {
+        "en": "Holding a constant effort — a GAP pace of {gap} — lands exactly on the "
+              "target time. Average pace over the course: {avg}.",
+        "fr": "Tenir un effort constant — une allure GAP de {gap} — donne exactement le "
+              "temps visé. Allure moyenne sur le parcours : {avg}.",
+    },
+    "race_plan.caption.sections": {
+        "en": "Sections are detected from the smoothed profile: a climb or descent "
+              "averages more than 3 % and changes elevation by at least 25 m; "
+              "anything else is flat. Numbers match the table below.",
+        "fr": "Les sections sont détectées sur le profil lissé : une montée ou une "
+              "descente dépasse 3 % de pente moyenne et au moins 25 m de dénivelé ; "
+              "le reste est du plat. Les numéros renvoient au tableau ci-dessous.",
+    },
+    "race_plan.caption.aid_stations": {
+        "en": "Tags show the planned elapsed time at each aid station and at the finish.",
+        "fr": "Les étiquettes indiquent le temps de course prévu à chaque ravitaillement "
+              "et à l'arrivée.",
+    },
+    "race_plan.table.sections": {"en": "Sections", "fr": "Sections"},
+    "race_plan.table.aid_stations": {"en": "Aid stations", "fr": "Ravitaillements"},
+    "race_plan.section.climb": {"en": "Climb", "fr": "Montée"},
+    "race_plan.section.descent": {"en": "Descent", "fr": "Descente"},
+    "race_plan.section.flat": {"en": "Flat", "fr": "Plat"},
+    "race_plan.col.type": {"en": "Type", "fr": "Type"},
+    "race_plan.col.start_km": {"en": "From (km)", "fr": "Début (km)"},
+    "race_plan.col.end_km": {"en": "To (km)", "fr": "Fin (km)"},
+    "race_plan.col.distance": {"en": "Distance", "fr": "Distance"},
+    "race_plan.col.grade": {"en": "Avg. grade", "fr": "Pente moy."},
+    "race_plan.col.pace": {"en": "Avg. pace", "fr": "Allure moy."},
+    "race_plan.col.duration": {"en": "Time", "fr": "Durée"},
+    "race_plan.col.elapsed_end": {"en": "Elapsed at end", "fr": "Temps à la fin"},
+    "race_plan.col.station": {"en": "Aid station", "fr": "Ravitaillement"},
+    "race_plan.col.km": {"en": "km", "fr": "km"},
+    "race_plan.col.leg_distance": {"en": "Leg distance", "fr": "Distance tronçon"},
+    "race_plan.col.leg_time": {"en": "Leg time", "fr": "Temps tronçon"},
+    "race_plan.col.arrival": {"en": "Arrival (elapsed)", "fr": "Arrivée (temps de course)"},
+    "race_plan.col.clock": {"en": "Arrival (clock)", "fr": "Arrivée (heure)"},
+    "race_plan.finish": {"en": "Finish", "fr": "Arrivée"},
+    "race_plan.aid_station_n": {"en": "Aid station {n}", "fr": "Ravito {n}"},
+    "race_plan.next_day": {"en": "(+{n}d)", "fr": "(+{n}j)"},
+    "race_plan.curve.personal_efficiency": {
+        "en": "My curve (efficiency model)", "fr": "Ma courbe (modèle d'efficacité)",
+    },
+    "race_plan.curve.personal_auto": {
+        "en": "My curve (auto-learning model)", "fr": "Ma courbe (modèle auto-apprenant)",
+    },
+    "race_plan.note.ignored_stations": {
+        "en": "Ignored aid stations outside the course (0–{total} km): {km}.",
+        "fr": "Ravitaillements ignorés, hors du parcours (0–{total} km) : {km}.",
+    },
+    "race_plan.note.personal_fallback": {
+        "en": "Your personal GAP curve could not be used ({reason}), so this plan uses "
+              "the balanced-runner reference curve.",
+        "fr": "Votre courbe GAP personnelle n'a pas pu être utilisée ({reason}) : ce plan "
+              "utilise la courbe de référence du coureur équilibré.",
+    },
+    "race_plan.reason.no_runs": {
+        "en": "no run with per-second data yet",
+        "fr": "aucune course avec données détaillées pour l'instant",
+    },
+    "race_plan.reason.not_enough_data": {
+        "en": "not enough runs with heart rate", "fr": "pas assez de sorties avec cardio",
+    },
+    "race_plan.reason.fit_failed": {
+        "en": "the model could not be fitted", "fr": "le modèle n'a pas pu être ajusté",
+    },
+    "race_plan.error.gpx_invalid": {
+        "en": "This file is not a readable GPX.", "fr": "Ce fichier n'est pas un GPX lisible.",
+    },
+    "race_plan.error.gpx_no_points": {
+        "en": "This GPX has no track or route points.",
+        "fr": "Ce GPX ne contient aucun point de trace ou d'itinéraire.",
+    },
+    "race_plan.error.gpx_no_elevation": {
+        "en": "This GPX has no elevation data — export it with elevation to plan on it.",
+        "fr": "Ce GPX n'a pas de données d'altitude — exportez-le avec l'altitude pour "
+              "pouvoir le planifier.",
+    },
+    "race_plan.error.gpx_too_short": {
+        "en": "This course is too short to plan.", "fr": "Ce parcours est trop court.",
+    },
+    "race_plan.error.gpx_too_large": {
+        "en": "This GPX is too large (15 MB max).", "fr": "Ce GPX est trop lourd (15 Mo max).",
+    },
+    "race_plan.error.no_gpx": {"en": "Choose a GPX file.", "fr": "Choisissez un fichier GPX."},
+    "race_plan.error.target_time": {
+        "en": "Enter a target finish time.", "fr": "Indiquez un temps d'arrivée visé.",
+    },
+
+    "ui.nav.race_plan": {"en": "Race plan", "fr": "Plan de course"},
+    "ui.race_plan.title": {"en": "Race plan", "fr": "Plan de course"},
+    "ui.race_plan.intro": {
+        "en": "Upload the course GPX, list the aid stations and set your target time: "
+              "you get the pace to hold at every point of the course — the one "
+              "constant effort, adjusted for the gradient, that lands exactly on your time.",
+        "fr": "Importez le GPX du parcours, indiquez les ravitaillements et votre temps "
+              "visé : vous obtenez l'allure à tenir en chaque point du parcours — l'effort "
+              "constant, ajusté à la pente, qui donne exactement votre temps.",
+    },
+    "ui.race_plan.gpx": {"en": "Course GPX", "fr": "GPX du parcours"},
+    "ui.race_plan.target_time": {"en": "Target finish time", "fr": "Temps d'arrivée visé"},
+    "ui.race_plan.target_time_help": {
+        "en": "h:mm or h:mm:ss", "fr": "h:mm ou h:mm:ss",
+    },
+    "ui.race_plan.start_time": {
+        "en": "Start time (optional)", "fr": "Heure de départ (optionnel)",
+    },
+    "ui.race_plan.start_time_help": {
+        "en": "Adds the time of day at each aid station.",
+        "fr": "Ajoute l'heure de passage à chaque ravitaillement.",
+    },
+    "ui.race_plan.aid_stations": {"en": "Aid stations", "fr": "Ravitaillements"},
+    "ui.race_plan.aid_station_km": {"en": "km", "fr": "km"},
+    "ui.race_plan.aid_station_name": {"en": "Name (optional)", "fr": "Nom (optionnel)"},
+    "ui.race_plan.add_aid_station": {"en": "+ Add an aid station", "fr": "+ Ajouter un ravito"},
+    "ui.race_plan.remove": {"en": "Remove", "fr": "Retirer"},
+    "ui.race_plan.curve": {"en": "GAP curve", "fr": "Courbe GAP"},
+    "ui.race_plan.curve_sign_in": {"en": "sign in", "fr": "connexion requise"},
+    "ui.race_plan.submit": {"en": "Compute the plan", "fr": "Calculer le plan"},
+    "ui.race_plan.computing": {"en": "Computing…", "fr": "Calcul en cours…"},
+    "ui.race_plan.computing_personal": {
+        "en": "Fitting your GAP curve on your runs — the first plan can take a minute…",
+        "fr": "Ajustement de votre courbe GAP sur vos sorties — le premier plan peut "
+              "prendre une minute…",
+    },
+    "ui.race_plan.error.no_gpx": {"en": "Choose a GPX file.", "fr": "Choisissez un fichier GPX."},
+    "ui.race_plan.error.target_time": {
+        "en": "Enter the target time as h:mm or h:mm:ss.",
+        "fr": "Indiquez le temps visé au format h:mm ou h:mm:ss.",
+    },
+    "ui.race_plan.error.start_time": {
+        "en": "Enter the start time as hh:mm.", "fr": "Indiquez l'heure de départ au format hh:mm.",
+    },
+    "ui.race_plan.public_warning": {
+        "en": "You are not signed in, so this plan uses a reference GAP curve (an average "
+              "runner). Sign in with Strava and the simulation is fine-tuned to your own "
+              "data — how you actually climb and descend — and is much more precise.",
+        "fr": "Vous n'êtes pas connecté : ce plan utilise une courbe GAP de référence (un "
+              "coureur moyen). Connectez-vous avec Strava et la simulation sera ajustée à "
+              "vos propres données — votre façon réelle de monter et de descendre — et "
+              "beaucoup plus précise.",
+    },
+    "ui.race_plan.new.button": {"en": "New race plan", "fr": "Nouveau plan de course"},
+    "ui.race_plan.new.hint": {
+        "en": "A GPX, the aid stations, a target time",
+        "fr": "Un GPX, les ravitos, un temps visé",
+    },
+    "ui.race_plan.empty": {
+        "en": "No saved plan yet.", "fr": "Aucun plan enregistré pour l'instant.",
+    },
+    "ui.race_plan.plan_title": {"en": "Plan title", "fr": "Titre du plan"},
+    "ui.race_plan.title_placeholder": {
+        "en": "e.g. UTMB 2026", "fr": "ex. UTMB 2026",
+    },
+    "ui.race_plan.untitled": {"en": "Untitled plan", "fr": "Plan sans titre"},
+    "ui.race_plan.save": {"en": "Save", "fr": "Enregistrer"},
+    "ui.race_plan.saving": {"en": "Saving…", "fr": "Enregistrement…"},
+    "ui.race_plan.saved": {"en": "Saved", "fr": "Enregistré"},
+    "ui.race_plan.delete": {"en": "Delete", "fr": "Supprimer"},
+    "ui.race_plan.delete_confirm": {
+        "en": "Delete “{title}”? This cannot be undone.",
+        "fr": "Supprimer « {title} » ? Cette action est définitive.",
+    },
+    "ui.race_plan.back": {"en": "← My race plans", "fr": "← Mes plans de course"},
+    "ui.race_plan.gpx_current": {"en": "Current file: {name}", "fr": "Fichier actuel : {name}"},
+    "ui.race_plan.gpx_replace": {
+        "en": "Choose another file to replace it.",
+        "fr": "Choisissez un autre fichier pour le remplacer.",
+    },
+    "ui.race_plan.sign_in_to_save": {
+        "en": "Sign in to save your plans and come back to them later.",
+        "fr": "Connectez-vous pour enregistrer vos plans et les retrouver plus tard.",
+    },
+    "ui.race_plan.updated": {"en": "Updated {date}", "fr": "Modifié le {date}"},
+    "ui.race_plan.sign_in": {"en": "Sign in with Strava", "fr": "Se connecter avec Strava"},
+    "ui.race_plan.summary.distance": {"en": "Distance", "fr": "Distance"},
+    "ui.race_plan.summary.elevation": {"en": "Elevation", "fr": "Dénivelé"},
+    "ui.race_plan.summary.target": {"en": "Target time", "fr": "Temps visé"},
+    "ui.race_plan.summary.gap_pace": {"en": "Constant GAP pace", "fr": "Allure GAP constante"},
+    "ui.race_plan.summary.avg_pace": {"en": "Average pace", "fr": "Allure moyenne"},
+    "ui.race_plan.summary.curve": {"en": "Curve used", "fr": "Courbe utilisée"},
+    "ui.race_plan.section.profile": {"en": "Pace profile", "fr": "Profil d'allure"},
+    "ui.race_plan.section.sections": {
+        "en": "By climb, descent and flat", "fr": "Par montée, descente et plat",
+    },
+    "ui.race_plan.section.aid_stations": {
+        "en": "Between aid stations", "fr": "Entre ravitaillements",
+    },
+
 }
 
 UI_PREFIX = "ui."

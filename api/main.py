@@ -33,6 +33,7 @@ from api.routers import (
     home,
     pages,
     precompute,
+    race_plan,
     registry,
     render,
     training,
@@ -218,6 +219,8 @@ app.include_router(precompute.router)
 app.include_router(assets.router)
 app.include_router(coach.router)
 app.include_router(blog.router)
+app.include_router(race_plan.router)
+app.include_router(race_plan.saved_router)
 
 
 @app.get("/health", tags=["ops"])
