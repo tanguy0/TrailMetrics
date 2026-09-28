@@ -75,7 +75,13 @@ def render_chart(chart: ChartData) -> go.Figure:
         }
         # Axis kwargs win: they carry the coloured title when one is set.
         secondary.update(_axis_kwargs(chart.y2_axis))
-        fig.update_layout(yaxis2=secondary)
+        # The default legend sits just right of the plot — exactly where the right
+        # axis's ticks are — so a dual-axis figure moves it underneath instead.
+        fig.update_layout(
+            yaxis2=secondary,
+            legend={"orientation": "h", "x": 0, "y": -0.2, "yanchor": "top"},
+            margin={"b": 100},
+        )
     if chart.hover_mode:
         fig.update_layout(hovermode=chart.hover_mode)
     if any(t.kind is TraceKind.BAR for t in chart.traces):

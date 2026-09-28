@@ -1,0 +1,197 @@
+"""Plan a race: GPX + target time + aid stations → a pace profile.
+
+Which GAP curve drives the plan is the one real choice here. A visitor gets the
+published reference curves; a signed-in athlete additionally gets curves fitted
+on their own running history — the same two models as the GAP simulator — and
+those are the default, because they are the whole point of planning on *your*
+data rather than on an average runner's.
+
+Fitting is the expensive part and is kept out of :class:`PlanRace` entirely: the
+caller passes a ``personal_curve`` function, so this use case stays storage-free
+and the API decides how to cache (see ``api/routers/race_plan.py``).
+"""
+
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+
+from src.domain.dataset.sport import RUNNING_SPORT_TYPES
+from src.domain.gap.efficiency_model import EfficiencyGapModel
+from src.domain.gap.preprocessing import DefaultStreamPreprocessor
+from src.domain.gap.reference_curves import balanced_runner, kilian_jornet
+from src.domain.gap.smoothing import LoessCurveSmoother
+from src.domain.models.gap import GapCurve
+from src.domain.ports.activity_data import ActivityDataSource
+from src.domain.race_plan.gpx import parse_gpx
+from src.domain.race_plan.output import build_outputs, summary
+from src.domain.race_plan.planner import adjuster, build_course, plan_race, usable_curve
+from src.translations import translate
+from src.usecases.base import UseCase
+
+PERSONAL_EFFICIENCY = "personal_efficiency"
+PERSONAL_AUTO = "personal_auto"
+BALANCED_RUNNER = "balanced_runner"
+KILIAN = "kilian"
+
+PERSONAL_CURVES = (PERSONAL_EFFICIENCY, PERSONAL_AUTO)
+CURVE_LABEL_KEYS = {
+    PERSONAL_EFFICIENCY: "race_plan.curve.personal_efficiency",
+    PERSONAL_AUTO: "race_plan.curve.personal_auto",
+    BALANCED_RUNNER: "gap.refs.balanced",
+    KILIAN: "gap.refs.kilian",
+}
+_REFERENCES = {BALANCED_RUNNER: balanced_runner, KILIAN: kilian_jornet}
+
+# ``model key → (curve, reason_key)``; a ``None`` curve carries why.
+PersonalCurve = Callable[[str], Tuple[Optional[GapCurve], Optional[str]]]
+
+
+@dataclass
+class PlanRaceInput:
+    gpx: bytes
+    target_time_s: float
+    aid_stations_km: Sequence[float] = ()
+    aid_station_names: Sequence[str] = ()
+    start_clock_s: Optional[float] = None
+    # ``None`` picks the default: personal when available, else the reference.
+    curve: Optional[str] = None
+    lang: str = "en"
+
+
+@dataclass
+class PlanRaceOutput:
+    curve: str
+    curve_label: str
+    personalized: bool
+    summary: Dict[str, float]
+    outputs: Dict[str, Any]
+    notes: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "curve": self.curve,
+            "curve_label": self.curve_label,
+            "personalized": self.personalized,
+            "summary": self.summary,
+            "outputs": {k: v.to_dict() for k, v in self.outputs.items()},
+            "notes": self.notes,
+        }
+
+
+def curve_options(signed_in: bool, lang: str) -> List[Dict[str, Any]]:
+    """The selector's entries; personal curves listed but disabled for visitors."""
+    keys = list(PERSONAL_CURVES) + [BALANCED_RUNNER, KILIAN]
+    return [
+        {
+            "key": key,
+            "label": translate(CURVE_LABEL_KEYS[key], lang),
+            "personal": key in PERSONAL_CURVES,
+            "available": signed_in or key not in PERSONAL_CURVES,
+        }
+        for key in keys
+    ]
+
+
+class PlanRace(UseCase):
+    def __init__(self, personal_curve: Optional[PersonalCurve] = None):
+        self.personal_curve = personal_curve
+
+    def execute(self, params: PlanRaceInput) -> PlanRaceOutput:
+        lang = params.lang
+        notes: List[str] = []
+
+        key = params.curve or (PERSONAL_EFFICIENCY if self.personal_curve else BALANCED_RUNNER)
+        curve, key = self._curve(key, lang, notes)
+
+        course = build_course(parse_gpx(params.gpx))
+        reference = balanced_runner() if key in PERSONAL_CURVES else None
+        plan = plan_race(
+            course,
+            params.target_time_s,
+            adjuster(curve, reference),
+            params.aid_stations_km,
+            params.aid_station_names,
+        )
+        return PlanRaceOutput(
+            curve=key,
+            curve_label=translate(CURVE_LABEL_KEYS[key], lang),
+            personalized=key in PERSONAL_CURVES,
+            summary=summary(plan),
+            outputs=build_outputs(plan, lang, params.start_clock_s),
+            notes=notes,
+        )
+
+    def _curve(self, key: str, lang: str, notes: List[str]) -> Tuple[GapCurve, str]:
+        """The requested curve, falling back to the balanced runner with a note."""
+        if key in _REFERENCES:
+            return _REFERENCES[key](), key
+        if key in PERSONAL_CURVES and self.personal_curve is not None:
+            curve, reason = self.personal_curve(key)
+            if usable_curve(curve):
+                return curve, key
+            notes.append(translate("race_plan.note.personal_fallback", lang).format(
+                reason=translate(reason or "race_plan.reason.not_enough_data", lang),
+            ))
+        return balanced_runner(), BALANCED_RUNNER
+
+
+# --- Personal curves --------------------------------------------------------
+
+# The most recent runs to fit on. Enough splits for a stable curve many times
+# over, and a bound on how many streams a first plan has to download.
+MAX_ACTIVITIES = 150
+SPLIT_MIN_TIME = 10.0
+EFFICIENCY_MIN_SAMPLES = 250
+
+_PREPROCESSOR = DefaultStreamPreprocessor()
+_SMOOTHER = LoessCurveSmoother(bandwidth_fraction=0.4, polyorder=2)
+
+
+def running_activity_ids(data: ActivityDataSource) -> Tuple[int, ...]:
+    """The runs a personal curve is fitted on — the key its cache is keyed by."""
+    runs = [
+        s for s in data.summaries()
+        if s.has_streams and s.sport_type in RUNNING_SPORT_TYPES
+    ]
+    runs.sort(key=lambda s: s.start_date)
+    return tuple(s.activity_id for s in runs[-MAX_ACTIVITIES:])
+
+
+def fit_personal_curve(
+    data: ActivityDataSource, activity_ids: Sequence[int], model: str,
+    memo: Optional[Dict[Any, Any]] = None,
+) -> Tuple[Optional[GapCurve], Optional[str]]:
+    """Fit one personal GAP curve on ``activity_ids``: ``(curve, reason_key)``.
+
+    ``memo`` shares the pooled splits between the two models, so switching curve
+    in the selector downloads and preprocesses the history once, not twice.
+    """
+    if not activity_ids:
+        return None, "race_plan.reason.no_runs"
+    memo = memo if memo is not None else {}
+    dataset_key = ("race_plan_dataset", tuple(activity_ids))
+    if dataset_key not in memo:
+        streams = [s for s in (data.stream(i) for i in activity_ids) if s is not None]
+        try:
+            memo[dataset_key] = _PREPROCESSOR.process_many(
+                streams, split_min_time=SPLIT_MIN_TIME, verbose=False
+            ) if streams else None
+        except (ValueError, IndexError):
+            memo[dataset_key] = None
+    dataset = memo[dataset_key]
+    if dataset is None or dataset.speed.size < 2 * EFFICIENCY_MIN_SAMPLES:
+        return None, "race_plan.reason.not_enough_data"
+
+    try:
+        if model == PERSONAL_EFFICIENCY:
+            fitted = EfficiencyGapModel(min_samples_per_bucket=EFFICIENCY_MIN_SAMPLES).fit(dataset)
+            return _SMOOTHER.smooth(fitted.gap_curve()), None
+
+        from src.domain.gap.xgboost_model import XgboostGapModel
+
+        features, targets, weights = _PREPROCESSOR.prepare_calibration_dataset(dataset)
+        if features.size == 0:
+            return None, "gap.reason.no_calibration"
+        fitted = XgboostGapModel().fit(features, targets, sample_weight=weights)
+        return _SMOOTHER.smooth(fitted.gap_curve(bin_width=20.0)), None
+    except Exception:
+        return None, "race_plan.reason.fit_failed"

@@ -551,3 +551,69 @@ export interface BlogPost {
   created_at: string | null;
   updated_at: string | null;
 }
+
+// --- Race plan ---------------------------------------------------------------
+
+export interface RacePlanCurveOption {
+  key: string;
+  label: string;
+  /** Fitted on the athlete's own runs, rather than a published reference. */
+  personal: boolean;
+  /** False for a personal curve when nobody is signed in. */
+  available: boolean;
+}
+
+export interface RacePlanOptions {
+  signed_in: boolean;
+  curves: RacePlanCurveOption[];
+}
+
+export interface RacePlanAidStation {
+  km: number;
+  name: string;
+}
+
+export interface RacePlanParams {
+  target_time_s: number;
+  aid_stations: RacePlanAidStation[];
+  /** Seconds after midnight; adds a time-of-day column when set. */
+  start_time_s: number | null;
+  curve: string | null;
+}
+
+export interface RacePlanSummary {
+  distance_m: number;
+  elevation_gain_m: number;
+  elevation_loss_m: number;
+  target_time_s: number;
+  gap_pace_s_per_km: number;
+  average_pace_s_per_km: number;
+  section_count: number;
+  aid_station_count: number;
+}
+
+export interface RacePlanResult extends RacePlanOptions {
+  /** The curve actually used — the balanced runner when a personal one fell back. */
+  curve: string;
+  curve_label: string;
+  personalized: boolean;
+  summary: RacePlanSummary;
+  outputs: {
+    profile: PlotOutput;
+    sections: PlotOutput;
+    aid_stations: PlotOutput;
+  };
+  notes: string[];
+}
+
+/** A saved plan: its inputs only — the result is recomputed on every open. */
+export interface SavedRacePlan {
+  id: string;
+  title: string;
+  gpx_name: string;
+  params: RacePlanParams;
+  distance_m: number | null;
+  elevation_gain_m: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}

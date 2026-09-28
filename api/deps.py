@@ -49,6 +49,7 @@ from src.infrastructure.postgres.pool import Database
 from src.infrastructure.postgres.precompute_repository import (
     PostgresPrecomputeRepository,
 )
+from src.infrastructure.postgres.race_plan_repository import PostgresRacePlanRepository
 from src.infrastructure.postgres.stored_activity_data import StoredActivityData
 from src.domain.ports.blog_media import BlogMediaStore
 from src.infrastructure.storage.local_blog_media_store import LocalBlogMediaStore
@@ -161,6 +162,10 @@ def get_plot_output_repository(athlete_id: int) -> PostgresPlotOutputRepository:
 
 def get_precompute_repository(athlete_id: int) -> PostgresPrecomputeRepository:
     return PostgresPrecomputeRepository(get_database(), athlete_id)
+
+
+def get_race_plan_repository(athlete_id: int) -> PostgresRacePlanRepository:
+    return PostgresRacePlanRepository(get_database(), athlete_id)
 
 
 # --- Per-athlete caches ----------------------------------------------------

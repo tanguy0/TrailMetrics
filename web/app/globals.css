@@ -3156,3 +3156,122 @@ input[type="radio"] {
   display: flex;
   gap: 0.6rem;
 }
+/* --- Race plan ------------------------------------------------------------ */
+
+/* The list's "new plan" is a link rather than a button (nothing to create until
+   the first save), so it needs the link underline taken off. */
+a.new-page {
+  text-decoration: none;
+}
+
+.race-plan__back {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.race-plan__back:hover {
+  color: var(--primary);
+}
+
+.race-plan__warning {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.race-plan__warning p {
+  margin: 0;
+}
+
+.race-plan__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.race-plan__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.9rem 1.25rem;
+}
+
+.race-plan__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  min-width: 0;
+}
+
+.race-plan__help {
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.race-plan__aid {
+  border: 1px solid var(--surface-alt);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.8rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.race-plan__aid legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 0.3rem;
+}
+
+.race-plan__aid-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.race-plan__aid-km {
+  width: 6rem;
+}
+
+.race-plan__aid-name {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.race-plan__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.race-plan__summary {
+  margin: 1.25rem 0 0.5rem;
+}
+
+.race-plan .page-header__name {
+  min-width: min(26rem, 100%);
+}
+
+/* A curve name or a D+/D- pair is longer than Home's single numbers. */
+.race-plan__tile-value {
+  font-size: 1.05rem;
+}
+
+@media (max-width: 720px) {
+  .race-plan .page-header__name {
+    min-width: 0;
+    width: 100%;
+  }
+}

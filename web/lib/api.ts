@@ -25,6 +25,10 @@ import type {
   PlannedItemImportance,
   PlannedItemKind,
   PrecomputeStatus,
+  RacePlanOptions,
+  RacePlanParams,
+  RacePlanResult,
+  SavedRacePlan,
   Registry,
   RouteResult,
   SyncStatus,
@@ -213,6 +217,47 @@ export const uploadAsset = (file: File) => {
   form.append("file", file);
   return request<AssetUpload>("/assets", { method: "POST", body: form });
 };
+
+// --- Race plan -------------------------------------------------------------
+
+/** Signed-in state and the GAP curves this visitor can plan on. Public. */
+export const getRacePlanOptions = () => request<RacePlanOptions>("/race-plan/options");
+
+/**
+ * A plan for one course: a freshly chosen GPX, or a saved plan's stored one.
+ * Nothing is stored by this call.
+ */
+export const planRace = (source: { gpx: File } | { planId: string }, params: RacePlanParams) => {
+  const form = new FormData();
+  if ("gpx" in source) form.append("gpx", source.gpx);
+  else form.append("plan_id", source.planId);
+  form.append("params", JSON.stringify(params));
+  return request<RacePlanResult>("/race-plan", { method: "POST", body: form });
+};
+
+export const listRacePlans = () =>
+  request<{ plans: SavedRacePlan[] }>("/race-plans").then((r) => r.plans);
+
+export const getRacePlan = (id: string) => request<SavedRacePlan>(`/race-plans/${id}`);
+
+/** Create (no `id`) or replace a saved plan; `gpx` only when a new file was chosen. */
+export const saveRacePlan = (
+  id: string | null,
+  title: string,
+  params: RacePlanParams,
+  gpx: File | null,
+) => {
+  const form = new FormData();
+  form.append("meta", JSON.stringify({ title, params }));
+  if (gpx) form.append("gpx", gpx);
+  return request<SavedRacePlan>(id ? `/race-plans/${id}` : "/race-plans", {
+    method: id ? "PATCH" : "POST",
+    body: form,
+  });
+};
+
+export const deleteRacePlan = (id: string) =>
+  request<void>(`/race-plans/${id}`, { method: "DELETE" });
 
 // --- Pages -----------------------------------------------------------------
 

@@ -342,6 +342,30 @@ create table if not exists blog_posts (
 create index if not exists blog_posts_published_created_idx
     on blog_posts (published, created_at desc);
 
+-- --- Race plans -------------------------------------------------------------
+
+-- A saved "Plan de course": its inputs, not its result. The plan is recomputed on
+-- every open (it is fast), so a plan on a personal GAP curve follows the athlete's
+-- newer runs rather than freezing the curve it was first built with. The GPX is
+-- gzipped in place, like an asset: a course is a few hundred KB of repetitive XML,
+-- and keeping it here needs no bucket. `distance_m` / `elevation_gain_m` are
+-- denormalized from the course only so the list can show them without a parse.
+create table if not exists race_plans (
+    id                text primary key,
+    athlete_id        bigint not null references athletes(id) on delete cascade,
+    title             text not null default '',
+    gpx_name          text not null default '',
+    gpx_gz            bytea not null,
+    params            jsonb not null,
+    distance_m        double precision,
+    elevation_gain_m  double precision,
+    created_at        timestamptz not null default now(),
+    updated_at        timestamptz not null default now()
+);
+
+create index if not exists race_plans_athlete_updated_idx
+    on race_plans (athlete_id, updated_at desc);
+
 -- --- Row-level security -----------------------------------------------------
 
 -- No policies defined: this is a default-deny backstop for any role other than
@@ -358,3 +382,4 @@ alter table planned_items enable row level security;
 alter table assets enable row level security;
 alter table activity_comments enable row level security;
 alter table blog_posts enable row level security;
+alter table race_plans enable row level security;
