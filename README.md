@@ -112,6 +112,7 @@ TrailMetrics/
 │   │   ├── charts/                 # chart IR + the Plotly renderer
 │   │   ├── plots/                  # the plot registry (one module per type)
 │   │   ├── gap/ races/ progress/   # the analytics primitives
+│   │   ├── durability/             # in-race cost drift phi(t): model, fit, calibration
 │   │   └── ports/                  # interfaces infrastructure must implement
 │   ├── infrastructure/
 │   │   ├── strava/                 # API client + OAuth/refresh
@@ -121,6 +122,7 @@ TrailMetrics/
 │   └── dashboards/                 # the default analyses, as PageSpecs
 ├── api/                            # FastAPI compute service
 ├── web/                            # Next.js app (Vercel)
+├── tests/                          # unittest suite (no extra dependency)
 └── notebook/                       # exploratory notebooks
 ```
 
@@ -221,6 +223,19 @@ The analytics primitives it shared (`gap/`, `races/metrics.py`, `races/smoothing
   preprocessor drops it — a year with no HR data produces no curve, and the plot says
   so rather than drawing an empty axis. This is also why the GAP analysis includes
   road runs: they are where the flat reference samples come from.
+* **Durability, not fatigue.** The race plan multiplies each point's GAP cost by
+  `phi(t) >= 1` — duration, time above critical speed, descent and heat — so pacing
+  starts faster than average and finishes slower for the same target. *Fatigue* in this
+  app is the Banister series only. The population coefficients in
+  `src/domain/durability/config.py` are placeholders (`status="placeholder"`, shown
+  in the UI); `python -m api.calibrate_durability` fits versioned ones from every
+  athlete's past year (athlete-level split, leave-one-activity-out validation) and
+  writes JSON — adopting them is a reviewed code change. Personalization and the
+  Durability analysis only ever read the last 365 days. The athlete's reference
+  (critical) speed comes from their *gradient-adjusted* best efforts (`best_gap_*`,
+  `FEATURE_VERSION` 5 — run `python -m api.refeaturize` after deploying), with a
+  cross-distance consensus that drops GPS-glitch bests (a tunnel's 1 km).
+  Tests: `python -m unittest discover -s tests -t .` with the project venv.
 * **Road runs are included in the GAP analysis on purpose.** See the comment on
   `_DEFAULT_SPORTS` in [`gap_simulator.py`](src/dashboards/gap_simulator.py) — excluding
   them starves the flat reference both models calibrate against.

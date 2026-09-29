@@ -579,7 +579,14 @@ export interface RacePlanParams {
   /** Seconds after midnight; adds a time-of-day column when set. */
   start_time_s: number | null;
   curve: string | null;
+  /** Durability: cost drift over a long effort. Absent on plans saved before it. */
+  durability?: boolean;
+  temperature_start_c?: number | null;
+  temperature_end_c?: number | null;
+  relative_humidity_pct?: number | null;
 }
+
+export type DurabilityConfidence = "population_only" | "partially_personalized" | "personalized";
 
 export interface RacePlanSummary {
   distance_m: number;
@@ -590,6 +597,13 @@ export interface RacePlanSummary {
   average_pace_s_per_km: number;
   section_count: number;
   aid_station_count: number;
+  /** Present when the plan accounts for durability. */
+  durability_enabled?: boolean;
+  durability_multiplier_finish?: number;
+  gap_pace_finish_s_per_km?: number;
+  durability_confidence?: DurabilityConfidence;
+  durability_status?: "placeholder" | "fitted";
+  reference_source?: string;
 }
 
 export interface RacePlanResult extends RacePlanOptions {
@@ -602,6 +616,7 @@ export interface RacePlanResult extends RacePlanOptions {
     profile: PlotOutput;
     sections: PlotOutput;
     aid_stations: PlotOutput;
+    durability?: PlotOutput;
   };
   notes: string[];
 }

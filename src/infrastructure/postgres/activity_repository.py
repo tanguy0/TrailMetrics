@@ -12,14 +12,8 @@ import math
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from src.domain.dataset.features import (
-    FEATURE_VERSION,
-    GENERATED_COLUMNS,
-    band_column,
-    best_column,
-)
+from src.domain.dataset.features import FEATURE_VERSION, GENERATED_COLUMNS
 from src.domain.ports.storage import ActivityRepository
-from src.domain.progress.models import GRADIENT_BANDS, PR_DISTANCES
 from src.infrastructure.postgres.pool import Database
 
 # The oldest ``feature_version`` whose stored stream blob can rebuild a row
@@ -314,11 +308,9 @@ def _to_feature_row(row: Dict[str, Any]) -> Dict[str, Any]:
     }
     for name in (*_SCALAR_COLUMNS, *_TEXT_COLUMNS, *_MANUAL_COLUMNS):
         out[name] = row.get(name)
-    for key, _, _ in GRADIENT_BANDS:
-        column = band_column(key)
-        out[column] = generated.get(column)
-    for label, _ in PR_DISTANCES:
-        column = best_column(label)
+    # Every generated family (gradient bands, raw and gradient-adjusted bests);
+    # a row stored before a family existed simply reads None for it.
+    for column in GENERATED_COLUMNS:
         out[column] = generated.get(column)
     return out
 

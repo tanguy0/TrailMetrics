@@ -19,6 +19,7 @@ fitted on: a new run makes a new key, exactly like a cached plot.
 
 import json
 import logging
+from datetime import date
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -37,10 +38,17 @@ from api.deps import (
 )
 from src.domain.charts.ir import ChartData, PlotOutput, Trace
 from src.domain.models.gap import GapCurve
+from src.domain.durability.config import DEFAULT_CONFIG as DURABILITY_CONFIG
+from src.domain.durability.model import RaceWeather
+from src.domain.durability.personalization import AthleteDurabilityModel
 from src.domain.ports.storage import Athlete
 from src.domain.race_plan.gpx import GpxError, parse_gpx
 from src.domain.race_plan.planner import PlanError, build_course
 from src.translations import translate
+from src.domain.durability.history import (
+    durability_activity_ids,
+    fit_athlete_durability,
+)
 from src.usecases.plan_race import (
     PlanRace,
     PlanRaceInput,
@@ -73,6 +81,19 @@ class PlanParams(BaseModel):
     # Seconds after midnight; only adds a wall-clock column.
     start_time_s: Optional[float] = Field(default=None, ge=0, lt=86400)
     curve: Optional[str] = None
+    # Durability (cost drift over a long effort). Optional so plans saved before it
+    # existed still load; weather left empty means neutral conditions.
+    durability: bool = True
+    temperature_start_c: Optional[float] = Field(default=None, ge=-40, le=55)
+    temperature_end_c: Optional[float] = Field(default=None, ge=-40, le=55)
+    relative_humidity_pct: Optional[float] = Field(default=None, ge=0, le=100)
+
+    def weather(self) -> RaceWeather:
+        return RaceWeather(
+            temperature_start_c=self.temperature_start_c,
+            temperature_end_c=self.temperature_end_c,
+            relative_humidity_pct=self.relative_humidity_pct,
+        )
 
 
 class SavedPlanMeta(BaseModel):
@@ -109,7 +130,10 @@ def plan(
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             detail=translate("race_plan.error.no_gpx", lang))
 
-    usecase = PlanRace(personal_curve=_personal_curves(athlete) if athlete else None)
+    usecase = PlanRace(
+        personal_curve=_personal_curves(athlete) if athlete else None,
+        durability_model=_durability_model(athlete) if athlete else None,
+    )
     try:
         result = usecase.execute(PlanRaceInput(
             gpx=payload,
@@ -119,6 +143,8 @@ def plan(
             start_clock_s=parsed.start_time_s,
             curve=parsed.curve,
             lang=lang,
+            durability=parsed.durability,
+            weather=parsed.weather(),
         ))
     except (GpxError, PlanError) as error:
         raise HTTPException(
@@ -273,6 +299,26 @@ def _personal_curves(athlete: Athlete):
             except Exception as error:
                 logger.warning("could not store race-plan curve: %s", error)
         return result
+
+    return provide
+
+
+def _durability_model(athlete: Athlete):
+    """A provider of this athlete's durability model, memoized in their warm caches.
+
+    Keyed by today's date and the past-year long runs it reads, so a new run — or a
+    run ageing out of the one-year window — makes a new key.
+    """
+    data = data_source_for(athlete)
+    memo = get_caches(athlete.id).memo
+
+    def provide() -> AthleteDurabilityModel:
+        today = date.today()
+        ids = durability_activity_ids(data.summaries(), today, DURABILITY_CONFIG)
+        key = ("race_plan_durability", DURABILITY_CONFIG.population.version, today, ids)
+        if key not in memo:
+            memo[key] = fit_athlete_durability(data, today, DURABILITY_CONFIG, memo=memo)
+        return memo[key]
 
     return provide
 

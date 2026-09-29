@@ -27,6 +27,7 @@ from src.domain.plots import gradient_map      # noqa: F401
 from src.domain.plots import records           # noqa: F401
 from src.domain.plots import stream_evolution  # noqa: F401
 from src.domain.plots import gap_curve         # noqa: F401
+from src.domain.plots import durability_curve  # noqa: F401
 from src.domain.plots import metric_scatter    # noqa: F401
 from src.domain.plots import metric_distribution  # noqa: F401
 from src.domain.plots import data_table        # noqa: F401

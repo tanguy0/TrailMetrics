@@ -1301,6 +1301,287 @@ TRANSLATIONS = {
     },
 
     "ui.nav.race_plan": {"en": "Race plan", "fr": "Plan de course"},
+    # --- Durability (cost drift over a long effort) ---------------------------
+    # "Durability", never "fatigue": fatigue is the Banister acute-load series.
+    "race_plan.series.gap_pace_durability": {
+        "en": "Effort-equivalent GAP pace (with durability)",
+        "fr": "Allure GAP à effort égal (avec durabilité)",
+    },
+    "race_plan.series.durability_total": {"en": "Extra cost", "fr": "Surcoût"},
+    "race_plan.chart.durability": {
+        "en": "Durability — extra energetic cost along the course",
+        "fr": "Durabilité — surcoût énergétique le long du parcours",
+    },
+    "race_plan.axis.durability": {"en": "Extra cost (%)", "fr": "Surcoût (%)"},
+    "race_plan.caption.durability": {
+        "en": "Running gets costlier as the race goes on: the same GAP speed costs +{pct} % "
+              "more energy at the finish. At constant effort your GAP pace therefore drifts "
+              "from {start} at the start to {finish} at the finish, for the same target time. "
+              "Coloured areas split the extra cost into its causes.",
+        "fr": "Courir coûte de plus en plus cher au fil de la course : la même vitesse GAP "
+              "coûte +{pct} % d'énergie à l'arrivée. À effort constant, votre allure GAP "
+              "passe donc de {start} au départ à {finish} à l'arrivée, pour le même temps "
+              "visé. Les aires colorées répartissent ce surcoût par cause.",
+    },
+    "durability.component.duration": {"en": "Duration", "fr": "Durée"},
+    "durability.component.severe_intensity": {
+        "en": "Time above threshold", "fr": "Temps au-dessus du seuil",
+    },
+    "durability.component.downhill": {
+        "en": "Downhill (muscle damage)", "fr": "Descente (dommages musculaires)",
+    },
+    "durability.component.thermal": {"en": "Heat", "fr": "Chaleur"},
+    "durability.component.pre_race_load": {
+        "en": "Pre-race load", "fr": "Charge avant course",
+    },
+    "durability.table.title": {"en": "Durability model", "fr": "Modèle de durabilité"},
+    "durability.table.caption": {
+        "en": "Coefficients multiply each exposure in log-cost. Personal share: how much of "
+              "the applied value comes from your own runs rather than the population prior.",
+        "fr": "Chaque coefficient multiplie son exposition, en log-coût. Part personnelle : "
+              "la part de la valeur appliquée qui vient de vos sorties plutôt que de l'a "
+              "priori population.",
+    },
+    "durability.col.component": {"en": "Cause", "fr": "Cause"},
+    "durability.col.unit": {"en": "Unit", "fr": "Unité"},
+    "durability.col.population": {"en": "Population", "fr": "Population"},
+    "durability.col.applied": {"en": "Applied", "fr": "Appliqué"},
+    "durability.col.weight": {"en": "Personal share", "fr": "Part personnelle"},
+    "durability.col.posterior_sd": {"en": "Uncertainty (±1σ)", "fr": "Incertitude (±1σ)"},
+    "durability.col.exposure": {"en": "Exposure at finish", "fr": "Exposition à l'arrivée"},
+    "durability.col.contribution": {"en": "Extra cost at finish", "fr": "Surcoût à l'arrivée"},
+    "durability.confidence.population_only": {
+        "en": "Durability: population model (not personalized).",
+        "fr": "Durabilité : modèle population (non personnalisé).",
+    },
+    "durability.confidence.partially_personalized": {
+        "en": "Durability: partially personalized from {runs} long runs ({hours} h) of the "
+              "past year — still close to the population prior.",
+        "fr": "Durabilité : partiellement personnalisée à partir de {runs} sorties longues "
+              "({hours} h) de l'année écoulée — encore proche de l'a priori population.",
+    },
+    "durability.confidence.personalized": {
+        "en": "Durability: personalized from {runs} long runs ({hours} h) of the past year.",
+        "fr": "Durabilité : personnalisée à partir de {runs} sorties longues ({hours} h) de "
+              "l'année écoulée.",
+    },
+    "durability.reason.no_history": {
+        "en": "No usable long run with heart rate in the past year.",
+        "fr": "Aucune sortie longue exploitable avec cardio sur l'année écoulée.",
+    },
+    "durability.reason.no_reference_speed": {
+        "en": "No best effort in the past year to set your reference speed.",
+        "fr": "Aucun meilleur effort sur l'année écoulée pour fixer votre vitesse de référence.",
+    },
+    "durability.reason.too_few_runs": {
+        "en": "Too few usable long runs to personalize.",
+        "fr": "Trop peu de sorties longues exploitables pour personnaliser.",
+    },
+    "durability.reason.weak_evidence": {
+        "en": "Your runs do not yet separate your durability clearly from the population's, "
+              "so the prior still carries most of the weight.",
+        "fr": "Vos sorties ne distinguent pas encore clairement votre durabilité de celle de "
+              "la population : l'a priori garde l'essentiel du poids.",
+    },
+    "durability.reason.clipped_at_zero": {
+        "en": "A coefficient fitted below zero was set to zero (cost cannot fall with effort).",
+        "fr": "Un coefficient ajusté sous zéro a été ramené à zéro (le coût ne peut pas "
+              "baisser avec l'effort).",
+    },
+    "durability.reason.signed_out": {
+        "en": "Sign in to personalize durability from your own runs.",
+        "fr": "Connectez-vous pour personnaliser la durabilité à partir de vos sorties.",
+    },
+    "durability.reason.fit_failed": {
+        "en": "Your durability model could not be fitted; the population model is used.",
+        "fr": "Votre modèle de durabilité n'a pas pu être ajusté : le modèle population est "
+              "utilisé.",
+    },
+    "durability.note.placeholder": {
+        "en": "Population coefficients are conservative product defaults ({version}), not "
+              "validated individual physiology.",
+        "fr": "Les coefficients population sont des valeurs produit prudentes ({version}), "
+              "pas une physiologie individuelle validée.",
+    },
+    "durability.note.target_reference": {
+        "en": "Intensity is inferred from the target time itself (treated as a full race "
+              "effort), not from your best efforts.",
+        "fr": "L'intensité est déduite du temps visé lui-même (considéré comme un effort de "
+              "course complet), pas de vos meilleurs efforts.",
+    },
+    "durability.note.clamped": {
+        "en": "The extra cost reached the model's safety ceiling and was capped.",
+        "fr": "Le surcoût a atteint le plafond de sécurité du modèle et a été plafonné.",
+    },
+    "durability.note.not_converged": {
+        "en": "The pacing did not fully converge; the last iterate is shown.",
+        "fr": "Le calcul d'allure n'a pas complètement convergé : la dernière itération est "
+              "affichée.",
+    },
+    "durability.note.fresh_fallback": {
+        "en": "Durability could not be applied numerically; this plan ignores it.",
+        "fr": "La durabilité n'a pas pu être appliquée numériquement : ce plan l'ignore.",
+    },
+    "durability.note.past_year": {
+        "en": "Only runs from the last {days} days are used.",
+        "fr": "Seules les sorties des {days} derniers jours sont utilisées.",
+    },
+    "durability.note.reference": {
+        "en": "Reference (critical) speed: {pace} GAP, from your best {distance} of the year.",
+        "fr": "Vitesse de référence (critique) : {pace} GAP, d'après votre meilleur {distance} "
+              "de l'année.",
+    },
+    "durability.note.reference_gap": {
+        "en": "Reference (critical) speed: {pace} GAP, from your best gradient-adjusted "
+              "{distance} of the year.",
+        "fr": "Vitesse de référence (critique) : {pace} GAP, d'après votre meilleur {distance} "
+              "ajusté à la pente de l'année.",
+    },
+    "durability.note.outliers": {
+        "en": "{count} best effort(s) ignored as implausible next to your other distances "
+              "(GPS glitch, tunnel…): {distances}.",
+        "fr": "{count} meilleur(s) effort(s) ignoré(s) car invraisemblable(s) au regard de vos "
+              "autres distances (erreur GPS, tunnel…) : {distances}.",
+    },
+    "durability.note.excluded": {
+        "en": "Runs left out — {details}.", "fr": "Sorties écartées — {details}.",
+    },
+    "durability.excluded.sport": {"en": "treadmill / other sport", "fr": "tapis / autre sport"},
+    "durability.excluded.too_short": {"en": "too short", "fr": "trop courtes"},
+    "durability.excluded.no_heart_rate": {"en": "no heart rate", "fr": "sans cardio"},
+    "durability.excluded.poor_elevation": {"en": "poor elevation", "fr": "altitude incomplète"},
+    "durability.excluded.few_valid_segments": {
+        "en": "too few steady stretches", "fr": "trop peu de portions régulières",
+    },
+    "durability.excluded.intermittent": {
+        "en": "intermittent (intervals)", "fr": "fractionnées",
+    },
+    "durability.excluded.no_stream": {"en": "no detailed data", "fr": "sans données détaillées"},
+    "durability.nothing": {
+        "en": "No long run in the selection.", "fr": "Aucune sortie longue dans la sélection.",
+    },
+    "durability.series.observed": {"en": "Observed (median, IQR)", "fr": "Observé (médiane, IQR)"},
+    "durability.series.population": {"en": "Population model", "fr": "Modèle population"},
+    "durability.series.personal": {"en": "Your model", "fr": "Votre modèle"},
+    "durability.chart.drift": {
+        "en": "Cost drift within your long runs", "fr": "Dérive du coût pendant vos sorties longues",
+    },
+    "durability.chart.projection": {
+        "en": "Projected durability", "fr": "Durabilité projetée",
+    },
+    "durability.axis.elapsed": {"en": "Elapsed time (h)", "fr": "Temps écoulé (h)"},
+    "durability.axis.drift": {
+        "en": "Cost drift since the start (%)", "fr": "Dérive du coût depuis le début (%)",
+    },
+    "durability.axis.extra_cost": {"en": "Extra cost (%)", "fr": "Surcoût (%)"},
+    "durability.caption.drift": {
+        "en": "Each steady 5-minute stretch of your long runs: heart-rate reserve per unit of "
+              "GAP speed, relative to the start of that run, after removing typical cardiac "
+              "drift. Lines are what each model predicts for the same stretches.",
+        "fr": "Chaque portion régulière de 5 minutes de vos sorties longues : réserve "
+              "cardiaque par unité de vitesse GAP, relative au début de la sortie, une fois "
+              "retirée la dérive cardiaque typique. Les courbes sont ce que prédit chaque "
+              "modèle pour ces mêmes portions.",
+    },
+    "durability.caption.projection": {
+        "en": "Extra cost of a steady, flat run at your typical long-run intensity "
+              "({intensity} of critical speed), neutral weather. The band is ±1σ on your "
+              "duration coefficient.",
+        "fr": "Surcoût d'une sortie régulière sur le plat à votre intensité habituelle de "
+              "sortie longue ({intensity} de la vitesse critique), météo neutre. La bande "
+              "représente ±1σ sur votre coefficient de durée.",
+    },
+    "plot.durability_curve.label": {"en": "Durability curve", "fr": "Courbe de durabilité"},
+    "plot.durability_curve.description": {
+        "en": "How your running cost drifts over long efforts, fitted on your past year of "
+              "long runs — the model the race plan paces with.",
+        "fr": "Comment votre coût de course dérive sur les efforts longs, ajusté sur vos "
+              "sorties longues de l'année écoulée — le modèle utilisé par le plan de course.",
+    },
+    "param.durability.lookback": {"en": "History (days)", "fr": "Historique (jours)"},
+    "param.durability.lookback.help": {
+        "en": "At most the past year, whatever the data source selects.",
+        "fr": "Au plus l'année écoulée, quelle que soit la source de données.",
+    },
+    "param.durability.min_run": {
+        "en": "Minimum run length (min)", "fr": "Durée minimale de sortie (min)",
+    },
+    "param.durability.bin": {"en": "Time bins (min)", "fr": "Pas de temps (min)"},
+    "param.durability.show_observed": {
+        "en": "Show observed drift", "fr": "Afficher la dérive observée",
+    },
+    "page.durability.title": {"en": "Durability", "fr": "Durabilité"},
+    "durability.intro": {
+        "en": "How much more running costs you after two, three, five hours — measured on "
+              "your long runs of the past year, compared with a typical runner.",
+        "fr": "Combien la course vous coûte en plus après deux, trois, cinq heures — mesuré "
+              "sur vos sorties longues de l'année écoulée, comparé à un coureur typique.",
+    },
+    "dash.durability.window": {"en": "Past 12 months", "fr": "12 derniers mois"},
+    "dash.durability.panel.method": {"en": "What is measured", "fr": "Ce qui est mesuré"},
+    "dash.durability.text.what": {
+        "en": "Durability is how well you hold your efficiency as an effort gets long. Late "
+              "in a long race the same pace costs more energy: that extra cost is what this "
+              "analysis estimates.",
+        "fr": "La durabilité, c'est votre capacité à garder votre efficacité quand l'effort "
+              "s'allonge. Tard dans une longue course, la même allure coûte plus d'énergie : "
+              "c'est ce surcoût que cette analyse estime.",
+    },
+    "dash.durability.text.how": {
+        "en": "Only your runs of the past year are used. Each steady 5-minute stretch of a "
+              "long run compares your heart-rate reserve with your gradient-adjusted speed; "
+              "typical cardiac drift is removed first, because a rising heart rate alone is "
+              "not a rising cost. Intervals, treadmill runs, pauses and stretches without "
+              "heart rate are left out. The result starts from a population model and moves "
+              "toward yours only as far as your data support.",
+        "fr": "Seules vos sorties de l'année écoulée sont utilisées. Chaque portion régulière "
+              "de 5 minutes d'une sortie longue compare votre réserve cardiaque à votre "
+              "vitesse ajustée à la pente ; la dérive cardiaque typique est retirée d'abord, "
+              "car un cardio qui monte ne signifie pas à lui seul un coût qui monte. Les "
+              "fractionnés, le tapis, les pauses et les portions sans cardio sont écartés. "
+              "Le résultat part d'un modèle population et ne s'en éloigne qu'autant que vos "
+              "données le justifient.",
+    },
+    "dash.durability.panel.long_runs": {"en": "Your long runs", "fr": "Vos sorties longues"},
+    "dash.durability.panel.long_runs.help": {
+        "en": "Durability is only visible on long runs: the longer and more regular they "
+              "are, the more personal the curve below.",
+        "fr": "La durabilité ne se voit que sur les sorties longues : plus elles sont longues "
+              "et régulières, plus la courbe ci-dessous est personnelle.",
+    },
+    "dash.durability.panel.curve": {"en": "Your durability", "fr": "Votre durabilité"},
+    "dash.durability.panel.curve.help": {
+        "en": "The same model the race plan uses to pace your long races.",
+        "fr": "Le même modèle que celui qu'utilise le plan de course pour vos longues courses.",
+    },
+    "ui.race_plan.conditions": {"en": "Durability & conditions", "fr": "Durabilité et conditions"},
+    "ui.race_plan.durability": {
+        "en": "Account for durability (pace drifts as the race gets long)",
+        "fr": "Tenir compte de la durabilité (l'allure dérive quand la course s'allonge)",
+    },
+    "ui.race_plan.temperature_start": {"en": "Start temperature (°C)", "fr": "Température au départ (°C)"},
+    "ui.race_plan.temperature_end": {"en": "Finish temperature (°C)", "fr": "Température à l'arrivée (°C)"},
+    "ui.race_plan.humidity": {"en": "Relative humidity (%)", "fr": "Humidité relative (%)"},
+    "ui.race_plan.weather_help": {
+        "en": "Optional. Heat and humidity add cost only above mild conditions.",
+        "fr": "Optionnel. Chaleur et humidité n'ajoutent un coût qu'au-delà de conditions "
+              "douces.",
+    },
+    "ui.race_plan.error.weather": {
+        "en": "Temperatures must be numbers between −40 and 55 °C, humidity between 0 and 100 %.",
+        "fr": "Les températures doivent être entre −40 et 55 °C, l'humidité entre 0 et 100 %.",
+    },
+    "ui.race_plan.summary.durability_finish": {
+        "en": "Extra cost at finish", "fr": "Surcoût à l'arrivée",
+    },
+    "ui.race_plan.summary.gap_finish": {"en": "GAP pace at finish", "fr": "Allure GAP à l'arrivée"},
+    "ui.race_plan.summary.durability_model": {"en": "Durability model", "fr": "Modèle de durabilité"},
+    "ui.race_plan.confidence.population_only": {"en": "Population", "fr": "Population"},
+    "ui.race_plan.confidence.partially_personalized": {
+        "en": "Partly personal", "fr": "Partiellement personnel",
+    },
+    "ui.race_plan.confidence.personalized": {"en": "Personal", "fr": "Personnel"},
+    "ui.race_plan.section.durability": {"en": "Durability", "fr": "Durabilité"},
     "ui.race_plan.title": {"en": "Race plan", "fr": "Plan de course"},
     "ui.race_plan.intro": {
         "en": "Upload the course GPX, list the aid stations and set your target time: "

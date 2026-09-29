@@ -69,7 +69,11 @@ from src.domain.races.smoothing import (
 # that model even when Strava sends real watts, so a footpod-equipped run's
 # `power_source` flips from "measured" to "estimated" and its power-to-HR moves
 # from the `_measured` column to the `_per_kg` one.
-FEATURE_VERSION = 4
+# v5: gradient-adjusted best efforts (`best_gap_*`, running only) — the fastest time
+# to cover D metres of *GAP distance*, so a trail runner's best 10 km credits the
+# climbing instead of reading as a slow flat 10 km. Streams are unchanged, so this
+# rebuilds from stored blobs like v4.
+FEATURE_VERSION = 5
 
 # A time jump larger than this between samples means the watch was paused; the
 # bridging step adds no real distance, time or climb, so it is excluded.
@@ -78,6 +82,7 @@ PAUSE_THRESHOLD_S = 60.0
 # Column-name prefixes for the families of generated columns.
 BAND_PREFIX = "time_"        # time_flat, time_steep_ascent, …  (seconds)
 BEST_PREFIX = "best_"        # best_10km, best_marathon, …      (seconds)
+GAP_BEST_PREFIX = "best_gap_"  # best_gap_10_km, …  (seconds, over GAP distance)
 
 
 def band_column(band_key: str) -> str:
@@ -88,6 +93,12 @@ def best_column(pr_label: str) -> str:
     """Column name for a PR distance's best effort (``"10 km"`` → ``best_10_km``)."""
     slug = pr_label.lower().replace(" ", "_")
     return f"{BEST_PREFIX}{slug}"
+
+
+def gap_best_column(pr_label: str) -> str:
+    """Column for a PR distance's gradient-adjusted best (``"10 km"`` → ``best_gap_10_km``)."""
+    slug = pr_label.lower().replace(" ", "_")
+    return f"{GAP_BEST_PREFIX}{slug}"
 
 
 # Columns computed and stored per activity, independent of body weight.
@@ -112,6 +123,7 @@ STORED_COLUMNS: List[str] = (
     ]
     + [band_column(key) for key, _, _ in GRADIENT_BANDS]
     + [best_column(label) for label, _ in PR_DISTANCES]
+    + [gap_best_column(label) for label, _ in PR_DISTANCES]
 )
 
 # Derived at read time via the fallback logic in :func:`apply_mass` (real watts
@@ -127,6 +139,7 @@ FEATURE_COLUMNS: List[str] = STORED_COLUMNS + DERIVED_POWER_COLUMNS
 GENERATED_COLUMNS: List[str] = (
     [band_column(key) for key, _, _ in GRADIENT_BANDS]
     + [best_column(label) for label, _ in PR_DISTANCES]
+    + [gap_best_column(label) for label, _ in PR_DISTANCES]
 )
 
 
@@ -307,9 +320,14 @@ def build_activity_features(
     # The adjuster comes from a running metabolic-cost curve (see
     # src/domain/gap/reference_curves.py), so it has nothing to say about a ride.
     row["gap_distance_m"] = np.nan
+    gap_cumulative = None
     if is_running:
         factor = gradient_adjustment_factor(gradient_m_per_km)
         row["gap_distance_m"] = float(np.nansum((delta_dist * factor)[moving]))
+        # The same adjuster, accumulated along the whole trace (pauses included,
+        # like the raw distance), for the gradient-adjusted best efforts below.
+        gap_step = np.where(delta_dist > 0, np.nan_to_num(delta_dist * factor), 0.0)
+        gap_cumulative = distance[0] + np.concatenate([[0.0], np.cumsum(gap_step)])
 
     # Time per gradient band — the raw material of the gradient map, and of
     # "how much of my season was steep climbing" style questions.
@@ -391,6 +409,11 @@ def build_activity_features(
     for label, meters in PR_DISTANCES:
         best = best_effort_time(distance, time, meters)
         row[best_column(label)] = float(best) if best is not None else np.nan
+        # Gradient-adjusted: the fastest time to cover D metres of GAP distance.
+        # Equal to the raw best on the flat; faster than it on hilly terrain.
+        gap_best = (best_effort_time(gap_cumulative, time, meters)
+                    if gap_cumulative is not None else None)
+        row[gap_best_column(label)] = float(gap_best) if gap_best is not None else np.nan
 
     return row
 
@@ -424,6 +447,7 @@ def _summary_only_row(stream: ActivityStream) -> Optional[Dict[str, Any]]:
         row[band_column(key)] = np.nan
     for label, _ in PR_DISTANCES:
         row[best_column(label)] = np.nan
+        row[gap_best_column(label)] = np.nan
     return row
 
 

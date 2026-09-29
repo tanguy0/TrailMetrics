@@ -71,6 +71,15 @@ function parseKm(text: string): number | null {
   return text.trim() && Number.isFinite(value) ? value : null;
 }
 
+/** An optional bounded number: `null` when empty, `undefined` when invalid. */
+function parseOptional(text: string, min: number, max: number): number | null | undefined {
+  if (!text.trim()) return null;
+  const value = parseKm(text);
+  return value != null && value >= min && value <= max ? value : undefined;
+}
+
+const numberText = (value: number | null | undefined) => (value == null ? "" : String(value));
+
 const SIGN_IN_HREF = "/api/auth/strava/start?next=/race-plan";
 
 export function RacePlanScreen({
@@ -93,6 +102,10 @@ export function RacePlanScreen({
   const [aidRows, setAidRows] = useState<AidRow[]>([]);
   const [curve, setCurve] = useState<string | null>(null);
   const [curves, setCurves] = useState<RacePlanCurveOption[]>([]);
+  const [durability, setDurability] = useState(true);
+  const [temperatureStart, setTemperatureStart] = useState("");
+  const [temperatureEnd, setTemperatureEnd] = useState("");
+  const [humidity, setHumidity] = useState("");
 
   const [result, setResult] = useState<RacePlanResult | null>(null);
   const [computing, setComputing] = useState(false);
@@ -113,8 +126,37 @@ export function RacePlanScreen({
     const aid_stations = aidRows
       .map((row) => ({ km: parseKm(row.km), name: row.name.trim() }))
       .filter((row): row is { km: number; name: string } => row.km != null);
-    return { target_time_s: target, aid_stations, start_time_s: start, curve };
-  }, [targetTime, startTime, aidRows, curve, t]);
+    const temperature_start_c = parseOptional(temperatureStart, -40, 55);
+    const temperature_end_c = parseOptional(temperatureEnd, -40, 55);
+    const relative_humidity_pct = parseOptional(humidity, 0, 100);
+    if (
+      temperature_start_c === undefined ||
+      temperature_end_c === undefined ||
+      relative_humidity_pct === undefined
+    ) {
+      return t("race_plan.error.weather");
+    }
+    return {
+      target_time_s: target,
+      aid_stations,
+      start_time_s: start,
+      curve,
+      durability,
+      temperature_start_c,
+      temperature_end_c,
+      relative_humidity_pct,
+    };
+  }, [
+    targetTime,
+    startTime,
+    aidRows,
+    curve,
+    durability,
+    temperatureStart,
+    temperatureEnd,
+    humidity,
+    t,
+  ]);
 
   const compute = useCallback(
     async (params: RacePlanParams, source: { gpx: File } | { planId: string }) => {
@@ -151,6 +193,10 @@ export function RacePlanScreen({
         setStartTime(p.start_time_s != null ? formatClock(p.start_time_s) : "");
         setAidRows(p.aid_stations.map((s) => ({ km: String(s.km), name: s.name })));
         setCurve(p.curve);
+        setDurability(p.durability ?? true);
+        setTemperatureStart(numberText(p.temperature_start_c));
+        setTemperatureEnd(numberText(p.temperature_end_c));
+        setHumidity(numberText(p.relative_humidity_pct));
         setLoading(false);
         return compute(p, { planId: initialPlanId });
       })
@@ -368,6 +414,54 @@ export function RacePlanScreen({
           </button>
         </fieldset>
 
+        <fieldset className="race-plan__aid">
+          <legend>{t("race_plan.conditions")}</legend>
+          <label className="race-plan__check">
+            <input
+              type="checkbox"
+              checked={durability}
+              onChange={(e) => setDurability(e.target.checked)}
+            />
+            <span>{t("race_plan.durability")}</span>
+          </label>
+          <div className="race-plan__fields">
+            <label className="race-plan__field">
+              <span>{t("race_plan.temperature_start")}</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="12"
+                value={temperatureStart}
+                disabled={!durability}
+                onChange={(e) => setTemperatureStart(e.target.value)}
+              />
+            </label>
+            <label className="race-plan__field">
+              <span>{t("race_plan.temperature_end")}</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="22"
+                value={temperatureEnd}
+                disabled={!durability}
+                onChange={(e) => setTemperatureEnd(e.target.value)}
+              />
+            </label>
+            <label className="race-plan__field">
+              <span>{t("race_plan.humidity")}</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="60"
+                value={humidity}
+                disabled={!durability}
+                onChange={(e) => setHumidity(e.target.value)}
+              />
+            </label>
+          </div>
+          <span className="muted race-plan__help">{t("race_plan.weather_help")}</span>
+        </fieldset>
+
         <div className="race-plan__actions">
           <button type="submit" className="button" disabled={computing}>
             {computing ? t("race_plan.computing") : t("race_plan.submit")}
@@ -402,6 +496,19 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
     [t("race_plan.summary.avg_pace"), formatPace(s.average_pace_s_per_km)],
     [t("race_plan.summary.curve"), result.curve_label],
   ];
+  if (s.durability_multiplier_finish != null && s.durability_enabled) {
+    tiles.push(
+      [
+        t("race_plan.summary.durability_finish"),
+        `+${formatNumber((s.durability_multiplier_finish - 1) * 100, 1)} %`,
+      ],
+      [t("race_plan.summary.gap_finish"), formatPace(s.gap_pace_finish_s_per_km ?? NaN)],
+      [
+        t("race_plan.summary.durability_model"),
+        t(`race_plan.confidence.${s.durability_confidence ?? "population_only"}`),
+      ],
+    );
+  }
 
   return (
     <div className="race-plan__result">
@@ -425,6 +532,12 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
         title={t("race_plan.section.aid_stations")}
         output={result.outputs.aid_stations}
       />
+      {result.outputs.durability && (
+        <OutputSection
+          title={t("race_plan.section.durability")}
+          output={result.outputs.durability}
+        />
+      )}
     </div>
   );
 }

@@ -13,6 +13,7 @@ an empty page on first open.
 from datetime import date
 from typing import Callable, Dict, List, Optional
 
+from src.dashboards.durability import DURABILITY_KEY, build_durability
 from src.dashboards.gap_simulator import GAP_SIMULATOR_KEY, build_gap_simulator
 from src.dashboards.long_term_progress import (
     LONG_TERM_PROGRESS_KEY,
@@ -30,6 +31,7 @@ BUILDERS: Dict[str, PageBuilder] = {
     GAP_SIMULATOR_KEY: build_gap_simulator,
     RACE_COMPARATOR_KEY: build_race_comparator,
     LONG_TERM_PROGRESS_KEY: build_long_term_progress,
+    DURABILITY_KEY: build_durability,
 }
 
 
@@ -47,6 +49,7 @@ def build_all(oldest: date, newest: date, lang: str = "en") -> List[PageSpec]:
 
 __all__ = [
     "BUILDERS",
+    "DURABILITY_KEY",
     "GAP_SIMULATOR_KEY",
     "LONG_TERM_PROGRESS_KEY",
     "RACE_COMPARATOR_KEY",
