@@ -1,8 +1,10 @@
-"""A :class:`RacePlan` as chart IR — three blocks, one per question the runner asks.
+"""A :class:`RacePlan` as chart IR — one block per question the runner asks.
 
 1. *How fast, here?* — the target pace along the whole course over its profile.
 2. *What does each climb / descent / flat cost?* — the sections, charted and tabled.
 3. *When am I at each aid station?* — the legs, charted and tabled.
+4. *How much does durability cost me, and why?* — ``phi`` along the course, split
+   into its components, with the model's coefficients and confidence.
 
 Every chart shares the same backdrop: the elevation profile on the left axis, pace
 on the right. The profile is the thing the reader navigates by ("the second big
@@ -29,6 +31,16 @@ from src.domain.charts.ir import (
     Trace,
     TraceKind,
 )
+from src.domain.durability.config import (
+    COMPONENTS,
+    DOWNHILL,
+    DURATION,
+    PRE_RACE_LOAD,
+    SEVERE_INTENSITY,
+    THERMAL,
+)
+from src.domain.durability.personalization import AthleteDurabilityModel
+from src.domain.durability.report import durability_notes, durability_table
 from src.domain.gap import theme
 from src.domain.plotting_common import fmt_hms, fmt_pace
 from src.domain.race_plan.planner import CLIMB, DESCENT, FLAT, STEP_M, RacePlan, Stretch
@@ -48,18 +60,33 @@ DISPLAY_SMOOTHING_M = 200.0
 MAX_BADGES = 40
 
 
-def build_outputs(plan: RacePlan, lang: str, start_clock_s: Optional[float] = None
+DURABILITY_COLOR = theme.TERRACOTTA
+COMPONENT_COLORS = {
+    DURATION: theme.SUNRISE,
+    SEVERE_INTENSITY: theme.DANGER,
+    DOWNHILL: "#3A6EA5",
+    THERMAL: theme.TERRACOTTA,
+    PRE_RACE_LOAD: theme.KILIAN,
+}
+
+
+def build_outputs(plan: RacePlan, lang: str, start_clock_s: Optional[float] = None,
+                  durability: Optional[AthleteDurabilityModel] = None
                   ) -> Dict[str, PlotOutput]:
-    return {
+    outputs = {
         "profile": _profile_output(plan, lang),
         "sections": _sections_output(plan, lang),
         "aid_stations": _legs_output(plan, lang, start_clock_s),
     }
+    if plan.durability is not None and durability is not None:
+        outputs["durability"] = _durability_output(plan, durability, lang)
+    return outputs
 
 
-def summary(plan: RacePlan) -> Dict[str, float]:
+def summary(plan: RacePlan, durability: Optional[AthleteDurabilityModel] = None
+            ) -> Dict[str, object]:
     gain, loss = plan.course.elevation_gain()
-    return {
+    out: Dict[str, object] = {
         "distance_m": plan.course.total_m,
         "elevation_gain_m": gain,
         "elevation_loss_m": loss,
@@ -69,6 +96,18 @@ def summary(plan: RacePlan) -> Dict[str, float]:
         "section_count": len(plan.sections),
         "aid_station_count": max(len(plan.legs) - 1, 0),
     }
+    solution = plan.durability
+    if solution is not None and durability is not None:
+        profile = plan.gap_pace_profile
+        out.update({
+            "durability_enabled": solution.fallback != "disabled",
+            "durability_multiplier_finish": float(solution.profile.multiplier[-1]),
+            "gap_pace_finish_s_per_km": float(profile[-1]),
+            "durability_confidence": durability.confidence,
+            "durability_status": durability.coefficients.status,
+            "reference_source": solution.reference.source,
+        })
+    return out
 
 
 # --- Shared backdrop ------------------------------------------------------
@@ -182,16 +221,25 @@ def _profile_output(plan: RacePlan, lang: str) -> PlotOutput:
         ],
         hover_template="%{customdata}<extra>%{fullData.name}</extra>",
     )
+    if plan.durability is not None:
+        # Effort-equivalent GAP pace drifts slower as durability costs accumulate.
+        gap_x = (mids[idx] / 1000).round(3).tolist()
+        gap_y = plan.gap_pace_profile[idx].round(1)
+        gap_name = translate("race_plan.series.gap_pace_durability", lang)
+    else:
+        gap_x = [0.0, round(course.total_m / 1000, 3)]
+        gap_y = np.array([round(plan.gap_pace_s_per_km, 1)] * 2)
+        gap_name = translate("race_plan.series.gap_pace", lang)
     gap_trace = Trace(
-        name=translate("race_plan.series.gap_pace", lang),
-        x=[0.0, round(course.total_m / 1000, 3)],
-        y=[round(plan.gap_pace_s_per_km, 1)] * 2,
+        name=gap_name,
+        x=gap_x,
+        y=gap_y.tolist(),
         kind=TraceKind.LINE,
         color=theme.KILIAN,
         axis="y2",
         dash="--",
         width=1.5,
-        hover_text=[fmt_pace(plan.gap_pace_s_per_km)] * 2,
+        hover_text=[fmt_pace(v) for v in gap_y],
         hover_template="%{customdata}<extra>%{fullData.name}</extra>",
     )
     chart = ChartData(
@@ -412,3 +460,78 @@ def _legs_output(plan: RacePlan, lang: str, start_clock_s: Optional[float]) -> P
         download_name="race_plan_aid_stations",
     )
     return PlotOutput(charts=[chart], tables=[table], notes=notes)
+
+
+# --- 4. Durability ----------------------------------------------------------
+
+def _durability_output(plan: RacePlan, model: AthleteDurabilityModel, lang: str) -> PlotOutput:
+    """``phi`` along the course over the profile, its components stacked beneath.
+
+    Components are additive in log-cost, so they are drawn as log-cost × 100 —
+    which reads as "percent" for the few-percent values a race produces — and the
+    total line is the exact ``(phi − 1) × 100``.
+    """
+    solution = plan.durability
+    profile = solution.profile
+    course = plan.course
+    idx = _chart_indices(len(course.distance))
+    x = (course.distance[idx] / 1000).round(3).tolist()
+    elapsed = plan.elapsed[idx]
+
+    traces = [_elevation_trace(plan, lang)]
+    names = [name for name in COMPONENTS + (PRE_RACE_LOAD,) if name in profile.components]
+    for name in names:
+        values = profile.components[name][idx] * 100
+        if not np.any(values > 1e-6):
+            continue
+        traces.append(Trace(
+            name=translate(f"durability.component.{name}", lang),
+            x=x,
+            y=values.round(3).tolist(),
+            kind=TraceKind.AREA,
+            color=COMPONENT_COLORS[name],
+            axis="y2",
+            stack_group="components",
+            opacity=0.55,
+            hover_template="%{y:.2f} %<extra>%{fullData.name}</extra>",
+        ))
+    total = (profile.multiplier[idx] - 1) * 100
+    traces.append(Trace(
+        name=translate("race_plan.series.durability_total", lang),
+        x=x,
+        y=total.round(3).tolist(),
+        kind=TraceKind.LINE,
+        color=DURABILITY_COLOR,
+        axis="y2",
+        width=2.5,
+        hover_text=[
+            f"+{v:.1f} % · {translate('race_plan.hover.elapsed', lang)} {fmt_hms(t)}"
+            for v, t in zip(total, elapsed)
+        ],
+        hover_template="%{customdata}<extra>%{fullData.name}</extra>",
+    ))
+    chart = ChartData(
+        title=translate("race_plan.chart.durability", lang),
+        x_axis=_distance_axis(lang),
+        y_axis=_elevation_axis(plan, lang),
+        y2_axis=Axis(
+            title=translate("race_plan.axis.durability", lang),
+            kind=AxisKind.LINEAR,
+            tick_format=",.1f",
+            suffix=" %",
+            color=DURABILITY_COLOR,
+        ),
+        traces=traces,
+        height=420,
+        caption=translate("race_plan.caption.durability", lang).format(
+            start=fmt_pace(plan.gap_pace_s_per_km),
+            finish=fmt_pace(float(plan.gap_pace_profile[-1])),
+            pct=f"{(profile.multiplier[-1] - 1) * 100:.1f}",
+        ),
+    )
+    return PlotOutput(
+        charts=[chart],
+        tables=[durability_table(model, profile, lang)],
+        notes=durability_notes(model, lang, solution=solution),
+    )
+

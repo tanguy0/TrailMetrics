@@ -10,6 +10,11 @@ means running each stretch at ``P · a(g)``, and the finish time is
 which is *linear* in ``P``. So the constant GAP pace that yields exactly the target
 time is not searched for, it is solved: ``P = T / Σ ds_i · a(g_i)``.
 
+**Durability.** Optionally each stretch's cost is also multiplied by ``phi(t) >= 1``
+(the cost drift of a long effort, :mod:`src.domain.durability`), which keeps the
+equation linear in ``P`` — ``P = T / Σ ds_i · a(g_i) · phi_i`` — but makes ``phi``
+depend on the elapsed time it produces, hence a short fixed-point iteration.
+
 **Two smoothings.** GPX elevation is noisy at the metre scale, and that noise both
 inflates D+ and turns every 10 m step into a spurious 15 % ramp. The pacing reads a
 light smoothing (a stride-scale ~150 m window) so short real ramps still show on the
@@ -29,6 +34,12 @@ from typing import List, Optional, Sequence, Tuple
 import numpy as np
 from scipy.signal import savgol_filter
 
+from src.domain.durability.solver import (
+    DurabilitySolution,
+    RouteDurability,
+    solve_pacing,
+    solve_route,
+)
 from src.domain.models.gap import GapCurve
 from src.domain.race_plan.gpx import CoursePoints, GpxError
 
@@ -124,6 +135,7 @@ class Stretch:
 class RacePlan:
     course: Course
     target_time_s: float
+    # The fresh GAP pace: the effort-equivalent pace at the start line.
     gap_pace_s_per_km: float
     pace: np.ndarray          # s/km, per interval
     elapsed: np.ndarray       # s, per node
@@ -131,10 +143,19 @@ class RacePlan:
     legs: List[Stretch] = field(default_factory=list)
     # Aid-station distances that were dropped (outside the course), in km.
     ignored_aid_stations_km: List[float] = field(default_factory=list)
+    # Set when the plan accounts for durability (see src.domain.durability.solver).
+    durability: Optional[DurabilitySolution] = None
 
     @property
     def average_pace_s_per_km(self) -> float:
         return self.target_time_s / (self.course.total_m / 1000)
+
+    @property
+    def gap_pace_profile(self) -> np.ndarray:
+        """Effort-equivalent GAP pace per interval: ``P · phi`` (constant without durability)."""
+        multiplier = (self.durability.interval_multiplier if self.durability is not None
+                      else np.ones_like(self.pace))
+        return self.gap_pace_s_per_km * multiplier
 
 
 # --- Course ---------------------------------------------------------------
@@ -252,15 +273,28 @@ def plan_race(
     adjust,
     aid_stations_km: Sequence[float] = (),
     aid_station_names: Optional[Sequence[str]] = None,
+    durability: Optional[RouteDurability] = None,
 ) -> RacePlan:
+    """Pace the course for the target time.
+
+    Without ``durability`` the cost of each stretch is ``a(g)`` and the GAP pace is
+    constant. With it, the cost is ``phi(t) · a(g)``: the same closed form, solved
+    iteratively because ``phi`` depends on elapsed time — the plan then starts
+    faster than average and finishes slower, for the same target.
+    """
     if not np.isfinite(target_time_s) or target_time_s <= 0:
         raise PlanError("race_plan.error.target_time")
 
     ds_km = np.diff(course.distance) / 1000
     factors = adjust(course.grade)
-    gap_pace = target_time_s / float(np.sum(ds_km * factors))
-    pace = gap_pace * factors
-    elapsed = np.concatenate([[0.0], np.cumsum(ds_km * pace)])
+    solution = None
+    if durability is not None:
+        descent_m = np.maximum(-np.diff(course.elevation_smooth), 0.0)
+        solution = solve_route(durability, ds_km, factors, descent_m, target_time_s)
+        gap_pace, pace, elapsed = solution.gap_pace_s_per_km, solution.pace, solution.elapsed
+    else:
+        gap_pace, pace, elapsed = solve_pacing(ds_km, factors, target_time_s,
+                                               np.ones_like(factors))
 
     plan = RacePlan(
         course=course,
@@ -268,6 +302,7 @@ def plan_race(
         gap_pace_s_per_km=gap_pace,
         pace=pace,
         elapsed=elapsed,
+        durability=solution,
     )
     plan.sections = [
         _stretch(plan, i, _LABELS[label], start, end)

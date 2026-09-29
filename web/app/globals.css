@@ -3244,6 +3244,19 @@ a.new-page {
   width: 6rem;
 }
 
+/* The fieldset aligns its rows to the start; a grid of fields inside it still
+   has to span the full width. */
+.race-plan__aid .race-plan__fields {
+  width: 100%;
+}
+
+.race-plan__check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
 .race-plan__aid-name {
   flex: 1 1 12rem;
   min-width: 0;

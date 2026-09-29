@@ -11,10 +11,20 @@ caller passes a ``personal_curve`` function, so this use case stays storage-free
 and the API decides how to cache (see ``api/routers/race_plan.py``).
 """
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from src.domain.dataset.sport import RUNNING_SPORT_TYPES
+from src.domain.durability.config import DEFAULT_CONFIG, DurabilityConfig
+from src.domain.durability.model import RaceWeather
+from src.domain.durability.personalization import (
+    REASON_FIT_FAILED,
+    REASON_SIGNED_OUT,
+    AthleteDurabilityModel,
+    population_model,
+)
+from src.domain.durability.solver import RouteDurability
 from src.domain.gap.efficiency_model import EfficiencyGapModel
 from src.domain.gap.preprocessing import DefaultStreamPreprocessor
 from src.domain.gap.reference_curves import balanced_runner, kilian_jornet
@@ -26,6 +36,8 @@ from src.domain.race_plan.output import build_outputs, summary
 from src.domain.race_plan.planner import adjuster, build_course, plan_race, usable_curve
 from src.translations import translate
 from src.usecases.base import UseCase
+
+logger = logging.getLogger(__name__)
 
 PERSONAL_EFFICIENCY = "personal_efficiency"
 PERSONAL_AUTO = "personal_auto"
@@ -43,6 +55,8 @@ _REFERENCES = {BALANCED_RUNNER: balanced_runner, KILIAN: kilian_jornet}
 
 # ``model key → (curve, reason_key)``; a ``None`` curve carries why.
 PersonalCurve = Callable[[str], Tuple[Optional[GapCurve], Optional[str]]]
+# The signed-in athlete's durability model, fitted (and cached) by the caller.
+DurabilityProvider = Callable[[], AthleteDurabilityModel]
 
 
 @dataclass
@@ -55,6 +69,9 @@ class PlanRaceInput:
     # ``None`` picks the default: personal when available, else the reference.
     curve: Optional[str] = None
     lang: str = "en"
+    # Durability: the cost drift of a long effort, on by default.
+    durability: bool = True
+    weather: RaceWeather = field(default_factory=RaceWeather)
 
 
 @dataclass
@@ -92,8 +109,15 @@ def curve_options(signed_in: bool, lang: str) -> List[Dict[str, Any]]:
 
 
 class PlanRace(UseCase):
-    def __init__(self, personal_curve: Optional[PersonalCurve] = None):
+    def __init__(
+        self,
+        personal_curve: Optional[PersonalCurve] = None,
+        durability_model: Optional[DurabilityProvider] = None,
+        durability_config: DurabilityConfig = DEFAULT_CONFIG,
+    ):
         self.personal_curve = personal_curve
+        self.durability_model = durability_model
+        self.durability_config = durability_config
 
     def execute(self, params: PlanRaceInput) -> PlanRaceOutput:
         lang = params.lang
@@ -104,21 +128,44 @@ class PlanRace(UseCase):
 
         course = build_course(parse_gpx(params.gpx))
         reference = balanced_runner() if key in PERSONAL_CURVES else None
+        model = self._durability(params) if params.durability else None
         plan = plan_race(
             course,
             params.target_time_s,
             adjuster(curve, reference),
             params.aid_stations_km,
             params.aid_station_names,
+            durability=RouteDurability(
+                coefficients=model.coefficients,
+                config=self.durability_config,
+                athlete_reference=model.reference,
+                weather=params.weather,
+                pre_race_exposure=model.pre_race_exposure,
+            ) if model is not None else None,
         )
         return PlanRaceOutput(
             curve=key,
             curve_label=translate(CURVE_LABEL_KEYS[key], lang),
             personalized=key in PERSONAL_CURVES,
-            summary=summary(plan),
-            outputs=build_outputs(plan, lang, params.start_clock_s),
+            summary=summary(plan, model),
+            outputs=build_outputs(plan, lang, params.start_clock_s, model),
             notes=notes,
         )
+
+    def _durability(self, params: PlanRaceInput) -> AthleteDurabilityModel:
+        """The athlete's model when signed in, else the population model.
+
+        A failing fit must not cost the athlete their plan: it degrades to the
+        population model, which is what a visitor gets anyway.
+        """
+        population = self.durability_config.population
+        if self.durability_model is None:
+            return population_model(population, [REASON_SIGNED_OUT])
+        try:
+            return self.durability_model()
+        except Exception as error:
+            logger.warning("durability fit failed, using the population model: %s", error)
+            return population_model(population, [REASON_FIT_FAILED])
 
     def _curve(self, key: str, lang: str, notes: List[str]) -> Tuple[GapCurve, str]:
         """The requested curve, falling back to the balanced runner with a note."""
