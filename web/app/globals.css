@@ -354,112 +354,51 @@ input[type="radio"] {
 /* --- Panels --------------------------------------------------------------- */
 
 .panel {
-  background: var(--bg-surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
-  padding: 1rem;
-  margin: 1.25rem 0;
+  /* Two panels sit `space-6` apart (Panel.md). */
+  margin: var(--space-6) 0;
 }
 
-.panel__header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  border-bottom: 1px solid var(--bg-surface-alt);
-  padding-bottom: 0.6rem;
-}
-
-.panel__title {
-  font-size: 1.1rem;
-  color: var(--ink);
-  margin: 0;
-}
-
-.panel__title-input {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--ink);
-  border: none;
-  background: transparent;
-  padding: 0;
-  min-width: 14rem;
-}
-
-.panel__meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-
-.panel__actions {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
-
-.panel__description {
-  color: var(--ink-muted);
-  font-size: 0.9rem;
-}
-
-.plot-grid {
-  display: grid;
-  gap: var(--space-4);
-  margin-top: 0.75rem;
-}
-
-.plot-grid--one {
-  grid-template-columns: 1fr;
-}
-
-/* `auto-fit` rather than a flat `repeat(2, ...)`: an empty track collapses to
-   0 width and the remaining track's `1fr` max takes the freed space, so two
-   plots still sit side by side when there's room for both, but a single
-   leftover plot (the other one was removed, or is a `plot-card--wide` table
-   living in its own row) stretches to the panel's full width instead of
-   being stuck at half with a blank gap beside it. The `minmax` floor is
-   sized so exactly two columns fit a panel at the page's max width — any
-   narrower and it falls back to one, no separate breakpoint needed. */
-.plot-grid--two {
-  grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr));
-}
-
-/* Tables are unreadable in a half-width column, so they span. */
-.plot-card--wide {
-  grid-column: 1 / -1;
-}
-
-.plot-card {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  padding: 0.75rem;
-  /* let charts shrink inside the grid instead of overflowing */
+.panel__heading {
+  flex: 1;
   min-width: 0;
 }
 
-.plot-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.panel__title-input:hover,
+.panel__title-input:focus {
+  border-bottom-color: var(--line-strong);
+  outline: none;
+}
+
+.panel__title-input {
+  /* The editable panel title keeps `.tm-panel__title`'s type. */
+  display: block;
+  width: min(32rem, 100%);
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed transparent;
+  padding: 0;
+}
+
+.tm-plot:hover .plot-card__actions,
+.tm-plot:focus-within .plot-card__actions {
+  opacity: 1;
 }
 
 .plot-card__actions {
   display: flex;
-  gap: 0.3rem;
+  gap: var(--space-1);
   flex-wrap: wrap;
+  margin-left: auto;
+  /* Card actions show on hover or focus (PlotCard.md). */
+  opacity: 0;
+  transition: opacity 0.12s;
 }
 
 /* A text or image block is page content, not a figure: no frame around it, so a
    page reads as a document rather than as a stack of cards. The editor keeps its
    own affordances (see `plot-card--content` handling in PanelEditor). */
-.plot-card--content {
+.tm-plot.plot-card--content {
   border-color: transparent;
-  box-shadow: none;
   padding: 0.25rem 0.75rem;
 }
 
@@ -482,7 +421,12 @@ input[type="radio"] {
 /* --- Charts & tables ------------------------------------------------------ */
 
 .chart {
-  margin: 0.5rem 0 0;
+  margin: 0;
+}
+
+.chart__title {
+  display: block;
+  margin-bottom: var(--space-2);
 }
 
 .chart__canvas {
@@ -491,48 +435,29 @@ input[type="radio"] {
 }
 
 .chart__caption {
-  font-size: 0.8rem;
-  color: var(--ink-muted);
-  margin: 0.2rem 0 0.4rem;
+  margin: var(--space-1) 0 var(--space-2);
 }
 
 .table-block {
   margin-top: 0.75rem;
 }
 
-.table-scroll {
-  overflow-x: auto;
+/* In a panel the table is not a card of its own (DataTable.md). */
+.table-block .tm-table {
+  box-shadow: none;
 }
 
-.table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.875rem;
-}
-
-.table th,
-.table td {
-  border-bottom: 1px solid var(--bg-surface-alt);
-  padding: 0.35rem 0.6rem;
-  text-align: right;
+.table-block .tm-table td,
+.table-block .tm-table th {
   white-space: nowrap;
 }
 
-.table th {
-  color: var(--ink-muted);
-  font-weight: 600;
-  text-align: right;
+.table-block > .tm-btn {
+  margin-top: var(--space-2);
 }
 
-.table th:first-child,
-.table td:first-child {
-  text-align: left;
-}
-
-.cell--best {
-  background: var(--moss);
-  color: var(--on-forest);
-  font-weight: 700;
+.table-scroll {
+  overflow-x: auto;
 }
 
 /* --- Notes & status ------------------------------------------------------- */
@@ -709,20 +634,20 @@ input[type="radio"] {
 
 /* Plain text under the name, not a tile: strip the tile's chrome and caption,
    keep only the (still click-to-edit) value. */
-.hero__email .tile {
+.hero__email .tm-kpi {
   background: none;
   border: none;
   padding: 0;
   margin-top: 0.15rem;
+  box-shadow: none;
 }
 
-.hero__email .tile__label {
+.hero__email .tm-kpi__label {
   display: none;
 }
 
-.hero__email .tile__value {
-  font-size: 0.85rem;
-  font-weight: 500;
+.hero__email .tm-kpi__num {
+  font: 500 13px/20px var(--font-sans);
   color: var(--ink-muted);
 }
 
@@ -764,9 +689,10 @@ input[type="radio"] {
 
 .card-block {
   background: var(--bg-surface);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  padding: 1rem 1.1rem 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  padding: 18px 20px;
 }
 
 .card-block--records {
@@ -792,11 +718,18 @@ input[type="radio"] {
 .card-block__title {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 1.1rem;
-  font-weight: 700;
+  gap: var(--space-2);
+  font-size: 19px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--ink);
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--space-4);
+}
+
+.card-block__title svg {
+  color: var(--forest);
+  flex: none;
 }
 
 
@@ -819,145 +752,112 @@ input[type="radio"] {
   margin: -0.5rem 0 0.75rem;
 }
 
-/* --- Stat tiles ----------------------------------------------------------- */
+/* --- KPI tiles (.tm-kpi, components.css) --------------------------------- */
 
-.tile-grid {
+.kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
-  gap: 0.6rem;
+  gap: var(--space-3);
 }
 
-.tile-grid--two {
+.kpi-grid--two,
+.kpi-grid--records {
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
 }
 
 /* Fixed 4 columns rather than auto-fit — Athlete History's 8 tiles land as
    two even rows regardless of the card's width, matching Athlete Health
-   Metrics' two rows at the same per-tile height (`--tile-height`) so the two
-   cards come out the same overall length. */
-.tile-grid--four,
-.tile-grid--square {
+   Metrics' two rows at the same per-tile height (`--tile-height`, kept as is
+   per migration.md) so the two cards come out the same overall length. */
+.kpi-grid--four,
+.kpi-grid--square {
   --tile-height: 6.6rem;
 }
 
-.tile-grid--four {
+.kpi-grid--four {
   grid-template-columns: repeat(4, 1fr);
 }
 
-.tile-grid--four .tile {
-  height: var(--tile-height);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-/* Four equal cells, same height as Athlete History's — not square (that tied
-   each tile's height to its own column width, which differs between the two
-   cards), just fixed. */
-.tile-grid--square {
+.kpi-grid--square {
   grid-template-columns: repeat(2, 1fr);
 }
 
-.tile-grid--square .tile {
-  height: var(--tile-height);
-  display: flex;
-  flex-direction: column;
+.kpi-grid--four .tm-kpi,
+.kpi-grid--square .tm-kpi {
+  min-height: var(--tile-height);
   justify-content: center;
 }
 
-/* Space between a card's stacked tile-grids, matching the gap used elsewhere
-   between a card's own sections. */
-.tile-grid+.tile-grid {
+/* Space between a card's stacked KPI grids. */
+.kpi-grid+.kpi-grid {
   margin-top: var(--space-4);
 }
 
-.tile {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.6rem 0.7rem;
-  border-radius: var(--radius-md);
-  background: var(--bg-surface-alt);
-  min-width: 0;
+/* Inside a panel a tile is a bordered card without its own shadow (KpiTile.md). */
+.card-block .tm-kpi,
+.tm-panel .tm-kpi,
+.tm-modal .tm-kpi {
+  box-shadow: none;
 }
 
-.tile__label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--ink-muted);
-}
-
-/* "Z1max"/"HRmax" read as one word with a meaningful lowercase "max" —
-   uppercasing it like every other label would flatten that to "Z1MAX". */
-.tile__label--mixed-case {
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-/* Values stay in ink: hue is the tile's accent, never the number itself. */
-.tile__value {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--ink);
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
+.tm-kpi__num {
   overflow-wrap: anywhere;
 }
 
-.tile__unit {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--ink-muted);
-  margin-left: 0.2rem;
+/* A session's metrics in its detail view: the same tile, a denser row. */
+.kpi-grid--compact {
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
 }
 
-.tile__footnote {
-  font-size: 0.7rem;
-  color: var(--ink-muted);
-  margin-top: 0.15rem;
+.kpi-grid--compact .tm-kpi {
+  padding: 10px 12px;
+  gap: 4px;
 }
 
-.tile__saving {
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
+.kpi-grid--compact .tm-kpi__num {
+  font-size: 17px;
+  line-height: 24px;
 }
 
-.tile__unset {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--ink-muted);
+.kpi-grid--compact dd {
+  margin: 0;
 }
 
-.tile--editable {
+.kpi--editable {
   cursor: text;
 }
 
-.tile__value--button {
+/* Signals "editable" without a permanent input box in every tile. */
+.kpi__button {
   border: none;
+  border-bottom: 1px dashed var(--line-strong);
   background: none;
   padding: 0;
-  font: inherit;
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--ink);
+  color: inherit;
   text-align: left;
   cursor: pointer;
-  /* Signals "editable" without a permanent input box in every tile. */
-  border-bottom: 1px dashed var(--line-strong);
   align-self: flex-start;
 }
 
-.tile__value--button:hover {
+.kpi__button:hover {
   border-bottom-color: var(--forest);
 }
 
-.tile__input {
-  width: 100%;
-  margin-top: 0.15rem;
-  font-weight: 700;
+.kpi__unset {
+  font: 600 15px/22px var(--font-sans);
+  color: var(--ink-muted);
+}
+
+/* A tile's footnote is prose, not a delta: sans, muted (KpiTile.md keeps mono for numbers). */
+.kpi__note {
+  font: 400 12px/16px var(--font-sans);
+  color: var(--ink-muted);
+}
+
+.kpi__error {
+  color: var(--danger);
 }
 
 /* --- Heart-rate zone map ---------------------------------------------------
@@ -1061,45 +961,6 @@ input[type="radio"] {
   font-weight: 800;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
-}
-
-/* --- Records -------------------------------------------------------------- */
-
-/* One tile per distance, across the full width — the numbers people look for. */
-.record-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 0.6rem;
-}
-
-.record {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: var(--radius-md);
-  background: var(--bg-surface-alt);
-}
-
-.record__distance {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--ink-muted);
-}
-
-.record__time {
-  font-size: 1.5rem;
-  font-weight: 800;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-}
-
-.record__date {
-  font-size: 0.7rem;
-  color: var(--ink-muted);
 }
 
 /* --- "Your data": import, latest activity, recent history (stacked) -------- */
@@ -1231,35 +1092,6 @@ input[type="radio"] {
 .last-activity__date {
   font-size: 0.8rem;
   color: var(--ink-muted);
-}
-
-.metric-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
-  gap: 0.6rem;
-  margin: 0;
-}
-
-.metric {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  min-width: 0;
-}
-
-.metric__label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--ink-muted);
-}
-
-.metric__value {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
 }
 
 /* --- Session comments ------------------------------------------------------- */
@@ -1475,13 +1307,11 @@ input[type="radio"] {
   flex-direction: column;
   gap: 0.15rem;
   background: var(--bg-surface);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
   text-decoration: none;
   color: var(--ink);
-  /* A hint of the same tactile inset as a stat tile — plain ink, since an
-     athlete's own page can be about anything and has no fixed accent. */
   box-shadow: var(--shadow-card);
 }
 
@@ -1715,18 +1545,14 @@ input[type="radio"] {
   padding: 0.5rem 0.6rem;
 }
 
-.tile__footnote--error {
-  color: var(--danger);
-  font-weight: 600;
-}
-
 /* --- My Pages: the explainer ---------------------------------------------- */
 
 .explainer {
   background: var(--bg-surface);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-md);
-  padding: 1rem 1.1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  padding: 18px 20px;
   margin: 1.25rem 0 2rem;
   overflow: hidden;
 }
@@ -2594,7 +2420,8 @@ a.new-page {
 }
 
 /* A curve name or a D+/D- pair is longer than Home's single numbers. */
-.race-plan__tile-value {
-  font-size: 1.05rem;
+.race-plan__kpi-num {
+  font-size: 19px;
+  line-height: 26px;
 }
 

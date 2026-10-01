@@ -82,7 +82,7 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
 
   return (
     <main className="container">
-      <PageHeader kicker={t("nav.analysis")} title={t("pages.title")} />
+      <PageHeader kicker="TAGG" title={t("pages.title")} />
 
       <section className="explainer">
         <h2 className="explainer__title">{t("pages.how.title")}</h2>

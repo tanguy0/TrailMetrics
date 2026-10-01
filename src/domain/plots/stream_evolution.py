@@ -366,7 +366,7 @@ def _signal_traces(
             color=unify_color or series_color(index),
             axis=axis,
             dash=_ACTIVITY_DASHES[index % len(_ACTIVITY_DASHES)] if unify_color else "-",
-            width=6.16,
+            width=2.0,
             hover_text=_hover_texts(y, value_kind, as_speed, decimals),
             hover_template=(
                 f"%{{x:.2f}} {x_unit}<br>%{{customdata}}"

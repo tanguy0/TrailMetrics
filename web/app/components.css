@@ -95,6 +95,7 @@
 .tm-table th.is-num,.tm-table td.is-num{text-align:right;font-family:var(--font-mono);font-size:13px}
 .tm-table td.is-date{font:400 12px/20px var(--font-mono);color:var(--ink-muted)}
 .tm-table tr.is-best td.is-num{color:var(--forest);font-weight:500}
+.tm-table td.is-num.is-best{color:var(--forest);font-weight:500}
 
 .tm-session{background:var(--bg-surface);border:1px solid var(--line);border-left:3px solid var(--sport-other);border-radius:var(--radius-md);padding:9px 10px;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow-card);font-family:var(--font-sans);min-width:0}
 .tm-session[data-sport=run]{border-left-color:var(--sport-run)}.tm-session[data-sport=bike]{border-left-color:var(--sport-bike)}.tm-session[data-sport=hike]{border-left-color:var(--sport-hike)}.tm-session[data-sport=swim]{border-left-color:var(--sport-swim)}
@@ -163,6 +164,8 @@
 .tm-week-summary__icon svg{width:12px;height:12px}
 
 .tm-rail__footer .tm-btn{width:100%;justify-content:center}
+.tm-btn,.tm-chip{white-space:nowrap}
+.tm-panel__actions{flex-wrap:wrap;justify-content:flex-end}
 button.tm-chip{cursor:pointer}
 button.tm-chip:hover{border-color:var(--line-strong)}
 button.tm-chip:focus-visible{outline:none;box-shadow:var(--focus-ring)}

@@ -1,6 +1,6 @@
 """The one renderer: chart IR → styled Plotly figure.
 
-Every figure in the app comes through here, so the Trail / Earthy look, the
+Every figure in the app comes through here, so the TAGG chart chrome, the
 palette cycle, duration-axis handling and hover styling are defined exactly once.
 Plot definitions never touch Plotly — they describe data (see
 :mod:`src.domain.charts.ir`) and get all of this for free.
@@ -15,9 +15,11 @@ import numpy as np
 import plotly.graph_objects as go
 
 from src.domain.charts.ir import Axis, AxisKind, ChartData, Trace, TraceKind
+from src.domain.gap import theme
 from src.domain.plotting_common import (
     CURVE_PALETTE,
     DASH_BY_LINESTYLE,
+    axis_style,
     base_figure,
     durations_to_datetimes,
     rgba,
@@ -25,6 +27,15 @@ from src.domain.plotting_common import (
 
 # Opacity of the ±band ribbon drawn around a line (GAP ±1σ).
 _BAND_ALPHA = 0.16
+
+# A reference series (balanced runner, Kilian, a target) is the reference grey,
+# thinner than the athlete's own lines and drawn behind them (charts.md § Séries).
+_REF_WIDTH = 1.5
+
+
+def _is_reference(color: str) -> bool:
+    return color.upper() == theme.CHART_REF.upper()
+
 
 # Plotly line shape per trace kind; only STEP differs from a plain line.
 _LINE_SHAPE = {TraceKind.STEP: "hv"}
@@ -54,34 +65,35 @@ def render_chart(chart: ChartData) -> go.Figure:
     )
 
     _add_bands(fig, chart)
-    for index, trace in enumerate(chart.traces):
-        color = trace.color or CURVE_PALETTE[index % len(CURVE_PALETTE)]
+    colored = [
+        (index, trace, trace.color or CURVE_PALETTE[index % len(CURVE_PALETTE)])
+        for index, trace in enumerate(chart.traces)
+    ]
+    # References first so they sit underneath; `legendrank` keeps the legend in
+    # the chart's own order regardless.
+    colored.sort(key=lambda item: not _is_reference(item[2]))
+    for index, trace, color in colored:
         _add_band(fig, trace, chart, color)
-        _add_trace(fig, trace, chart, color)
+        _add_trace(fig, trace, chart, color, rank=index + 1)
     _add_badges(fig, chart)
 
     _apply_axis(fig.update_xaxes, chart.x_axis)
     _apply_axis(fig.update_yaxes, chart.y_axis)
     if chart.y2_axis is not None:
-        # Overlaid on the left axis and drawn on the right. `showgrid=False` is not
-        # cosmetic: two sets of gridlines at different intervals produce a mesh that
-        # makes both scales harder to read than either alone.
+        # Overlaid on the left axis and drawn on the right. No grid of its own is
+        # not cosmetic: two sets of gridlines at different intervals produce a mesh
+        # that makes both scales harder to read than either alone. No line either —
+        # only the x-axis draws one (charts.md).
         secondary = {
+            **axis_style(grid=False),
+            "showline": False,
             "title": {"text": _axis_title(chart.y2_axis)},
             "overlaying": "y",
             "side": "right",
-            "showgrid": False,
-            "zeroline": False,
         }
         # Axis kwargs win: they carry the coloured title when one is set.
         secondary.update(_axis_kwargs(chart.y2_axis))
-        # The default legend sits just right of the plot — exactly where the right
-        # axis's ticks are — so a dual-axis figure moves it underneath instead.
-        fig.update_layout(
-            yaxis2=secondary,
-            legend={"orientation": "h", "x": 0, "y": -0.2, "yanchor": "top"},
-            margin={"b": 100},
-        )
+        fig.update_layout(yaxis2=secondary)
     if chart.hover_mode:
         fig.update_layout(hovermode=chart.hover_mode)
     if any(t.kind is TraceKind.BAR for t in chart.traces):
@@ -121,7 +133,7 @@ def _add_badges(fig: go.Figure, chart: ChartData) -> None:
             x=x, xref="x",
             y=_BADGE_ROW_Y, yref="y domain", yanchor="top",
             text=text, showarrow=False,
-            font=dict(color=badge.color, size=_BADGE_FONT_SIZE),
+            font=dict(family=theme.FONT_MONO, color=badge.color, size=_BADGE_FONT_SIZE),
             bgcolor=badge.fill,
             bordercolor=badge.color, borderwidth=1, borderpad=_BADGE_PADDING,
         )
@@ -167,8 +179,10 @@ def _axis_kwargs(axis: Axis) -> dict:
     if axis.dtick is not None:
         kwargs["dtick"] = axis.dtick
     if axis.color:
-        kwargs["title"] = dict(text=axis.title or "", font=dict(color=axis.color))
-        kwargs["tickfont"] = dict(color=axis.color)
+        kwargs["title"] = dict(
+            text=axis.title or "", font=dict(family=theme.FONT_MONO, size=11, color=axis.color)
+        )
+        kwargs["tickfont"] = dict(family=theme.FONT_MONO, size=11, color=axis.color)
     return kwargs
 
 
@@ -186,7 +200,7 @@ def _float_or_nan(value: Any) -> float:
         return float("nan")
 
 
-def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> None:
+def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str, rank: int) -> None:
     y_axis = _y_axis_for(trace, chart)
     x = _encode(trace.x, chart.x_axis)
     y = _encode(trace.y, y_axis)
@@ -197,6 +211,7 @@ def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> No
         name=trace.name,
         legendgroup=trace.legend_group or trace.name,
         showlegend=trace.show_legend,
+        legendrank=rank,
         opacity=trace.opacity,
     )
     if trace.axis == "y2" and chart.y2_axis is not None:
@@ -210,7 +225,8 @@ def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> No
         fig.add_trace(go.Bar(marker=dict(color=color), **common))
         return
 
-    line = dict(color=color, width=trace.width)
+    width = min(trace.width, _REF_WIDTH) if _is_reference(color) else trace.width
+    line = dict(color=color, width=width)
     dash = DASH_BY_LINESTYLE.get(trace.dash, "solid")
     if dash != "solid":
         line["dash"] = dash

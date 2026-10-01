@@ -42,6 +42,10 @@ CHART_YOU_4 = "#3A6EA5"
 CHART_YOU_5 = "#7A4E9E"
 STRAVA = "#FC4C02"
 
+# --- Type (tokens.json § type.families) -------------------------------------
+FONT_SANS = "Manrope, Helvetica Neue, Arial, sans-serif"
+FONT_MONO = "DM Mono, ui-monospace, SF Mono, Menlo, monospace"
+
 # --- Plotly roles -----------------------------------------------------------
 FIGURE_FACE = BG_CHART
 AXES_FACE = BG_CHART

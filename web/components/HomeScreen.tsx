@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 
 import { ChartView } from "@/components/ChartView";
 import { EmailForm } from "@/components/EmailForm";
+import { Icon, type IconName } from "@/components/Icon";
 import { ProgressBar } from "@/components/ProgressBar";
 import { SessionDetail } from "@/components/SessionDetail";
 import {
@@ -252,7 +253,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
           an account created before it existed, or a skipped `/welcome`. */}
       {athlete.needs_email && (
         <section className="card-block card-block--welcome">
-          <SectionTitle icon="✉️">{t("email.missing")}</SectionTitle>
+          <SectionTitle icon="mail">{t("email.missing")}</SectionTitle>
           <p className="muted">{t("email.body")}</p>
           <EmailForm
             strings={strings}
@@ -282,7 +283,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
 
       {/* Last Run: the import controls, then the most recent activity itself. */}
       <section className="card-block card-block--sync">
-        <SectionTitle icon="🔄">{t("home.last.title")}</SectionTitle>
+        <SectionTitle icon="refresh">{t("home.last.title")}</SectionTitle>
 
         <SyncControls
           athlete={athlete}
@@ -302,7 +303,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
 
       {/* Recent Progress: volume, efficiency and form over the trailing window. */}
       <section className="card-block card-block--progress">
-        <SectionTitle icon="📊">{t("home.progress.title")}</SectionTitle>
+        <SectionTitle icon="chart">{t("home.progress.title")}</SectionTitle>
 
         <div className="data-stack">
           <RecentHistoryBlock
@@ -497,10 +498,10 @@ function isoDate(date: Date): string {
 // --- Profile ---------------------------------------------------------------
 
 /** The heading of a Home section (History, Health, Performance, Records). */
-function SectionTitle({ icon, children }: { icon: string; children: ReactNode }) {
+function SectionTitle({ icon, children }: { icon: IconName; children: ReactNode }) {
   return (
     <h2 className="card-block__title">
-      <span aria-hidden="true">{icon}</span>
+      <Icon name={icon} size={18} />
       <span className="card-block__title-text">{children}</span>
     </h2>
   );
@@ -510,9 +511,9 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
   const { profile, records } = summary;
   return (
     <section className="card-block card-block--profile">
-      <SectionTitle icon="🏃">{t("home.profile.title")}</SectionTitle>
+      <SectionTitle icon="run">{t("home.profile.title")}</SectionTitle>
 
-      <div className="tile-grid tile-grid--four">
+      <div className="kpi-grid kpi-grid--four">
         <Tile
           label={t("home.profile.activities")}
           value={String(profile.activity_count)}
@@ -571,14 +572,16 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
 function RecordsCard({ records, t }: { records: HomeRecord[]; t: T }) {
   return (
     <section className="card-block card-block--records">
-      <SectionTitle icon="🏅">{t("home.profile.records")}</SectionTitle>
+      <SectionTitle icon="award">{t("home.profile.records")}</SectionTitle>
       {records.length ? (
-        <div className="record-grid">
+        <div className="kpi-grid kpi-grid--records">
           {records.map((record) => (
-            <div className="record" key={record.label}>
-              <span className="record__distance">{record.label}</span>
-              <span className="record__time">{formatHms(record.seconds)}</span>
-              <span className="record__date">{formatDate(record.set_on)}</span>
+            <div className="tm-kpi" key={record.label}>
+              <span className="tm-kpi__label">{record.label}</span>
+              <span className="tm-kpi__value">
+                <span className="tm-kpi__num">{formatHms(record.seconds)}</span>
+              </span>
+              <span className="tm-kpi__delta">{formatDate(record.set_on)}</span>
             </div>
           ))}
         </div>
@@ -606,9 +609,9 @@ function HealthCard({
 
   return (
     <section className="card-block card-block--health">
-      <SectionTitle icon="❤️">{t("home.health.title")}</SectionTitle>
+      <SectionTitle icon="heart">{t("home.health.title")}</SectionTitle>
 
-      <div className="tile-grid tile-grid--two tile-grid--square">
+      <div className="kpi-grid kpi-grid--square">
         <EditableTile
           label={t("home.health.age")}
           value={athlete.age != null ? String(athlete.age) : null}
@@ -722,10 +725,10 @@ function ZonesCard({
 
   return (
     <section className="card-block card-block--zones">
-      <SectionTitle icon="🎯">{t("home.zones.title")}</SectionTitle>
+      <SectionTitle icon="target">{t("home.zones.title")}</SectionTitle>
       <p className="data-block__lede">{t("home.zones.subtitle")}</p>
 
-      <div className="tile-grid">
+      <div className="kpi-grid">
         <EditableTile
           label={t("home.zones.vma")}
           value={vma != null ? formatPaceInput(vma) : null}
@@ -754,11 +757,10 @@ function ZonesCard({
         ))}
       </div>
 
-      <div className="tile-grid tile-grid--two">
+      <div className="kpi-grid kpi-grid--two">
         {HR_ZONE_MAX_PCT.map((zone) => (
           <Tile
             key={zone.key}
-            mixedCase
             label={t(`home.zones.${zone.key}`)}
             value={hrMax != null ? String(bpmAtPct(hrMax, zone.pct)) : "—"}
             unit={hrMax != null ? "bpm" : undefined}
@@ -766,7 +768,6 @@ function ZonesCard({
           />
         ))}
         <EditableTile
-          mixedCase
           label={t("home.zones.hr_max")}
           value={hrMax != null ? String(hrMax) : null}
           unit={hrMax != null ? "bpm" : undefined}
@@ -807,7 +808,7 @@ const HR_MAP_BANDS: { key: string; label: string; endPct: number }[] = [
 
 /**
  * Where each named pace zone's effort falls in heart rate — a picture, not
- * another table, so the relationship between the two tile-grids above reads
+ * another table, so the relationship between the two KPI grids above reads
  * at a glance instead of being cross-referenced by hand.
  */
 function HrZoneMap({ hrMax, t }: { hrMax: number | null; t: T }) {
@@ -894,7 +895,7 @@ function RecentHistoryBlock({
   return (
     <div className="data-block">
       <h3 className="data-block__title">
-        <span aria-hidden="true">📈</span> {t("home.recent.title")}
+        <Icon name="trending" /> {t("home.recent.title")}
       </h3>
       <p className="data-block__lede">{t("home.recent.subtitle")}</p>
 
@@ -934,7 +935,7 @@ function RecentEfficiencyBlock({
     <div className="data-block">
       <div className="data-block__heading">
         <h3 className="data-block__title">
-          <span aria-hidden="true">⚡</span> {t("home.efficiency.title")}
+          <Icon name="zap" /> {t("home.efficiency.title")}
         </h3>
         {/* Weekly points already — 4 and 12 of them are 4 and 12 weeks. */}
         <TrendBadgePair
@@ -987,7 +988,7 @@ function RecentFormBlock({
     <div className="data-block">
       <div className="data-block__heading">
         <h3 className="data-block__title">
-          <span aria-hidden="true">🔥</span> {t("home.form.title")}
+          <Icon name="flame" /> {t("home.form.title")}
         </h3>
         {/* Fitness (the model's first, slow-moving trace) is the one that
             answers "is training working?" — fatigue reacts to the last few
@@ -1053,7 +1054,7 @@ function RecentFeelBlock({
     <div className="data-block">
       <div className="data-block__heading">
         <h3 className="data-block__title">
-          <span aria-hidden="true">🫀</span> {t("home.feel.title")}
+          <Icon name="heart" /> {t("home.feel.title")}
         </h3>
       </div>
       <p className="data-block__lede">{t("home.feel.subtitle")}</p>
@@ -1279,28 +1280,20 @@ function Tile({
   value,
   unit,
   footnote,
-  // "Z1max"/"HRmax" read as one word with a meaningful lowercase "max"; the
-  // label's default uppercasing would flatten that to "Z1MAX"/"HRMAX".
-  mixedCase,
 }: {
   label: string;
   value: string;
   unit?: string;
   footnote?: string | null;
-  mixedCase?: boolean;
 }) {
   return (
-    <div className="tile">
-      <span className={`tile__label${mixedCase ? " tile__label--mixed-case" : ""}`}>
-        {label}
+    <div className="tm-kpi">
+      <span className="tm-kpi__label">{label}</span>
+      <span className="tm-kpi__value">
+        <span className="tm-kpi__num">{value}</span>
+        {unit && <span className="tm-kpi__unit">{unit}</span>}
       </span>
-      <span className="tile__value">
-        {value}
-        {unit && <span className="tile__unit">{unit}</span>}
-      </span>
-      {footnote && footnote !== "—" && (
-        <span className="tile__footnote">{footnote}</span>
-      )}
+      {footnote && footnote !== "—" && <span className="kpi__note">{footnote}</span>}
     </div>
   );
 }
@@ -1319,7 +1312,6 @@ function EditableTile({
   input,
   onCommit,
   t,
-  mixedCase,
 }: {
   label: string;
   value: string | null;
@@ -1335,7 +1327,6 @@ function EditableTile({
   };
   onCommit: (raw: string) => Promise<void>;
   t: T;
-  mixedCase?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(input.value);
@@ -1363,15 +1354,15 @@ function EditableTile({
   };
 
   return (
-    <div className="tile tile--editable">
-      <span className={`tile__label${mixedCase ? " tile__label--mixed-case" : ""}`}>
+    <div className="tm-kpi kpi--editable">
+      <span className="tm-kpi__label">
         {label}
-        {saving && <span className="tile__saving"> · {t("common.saving")}</span>}
+        {saving && <span> · {t("common.saving")}</span>}
       </span>
 
       {editing ? (
         <input
-          className="tm-input tile__input"
+          className="tm-input"
           autoFocus
           type={input.type}
           value={draft}
@@ -1392,18 +1383,20 @@ function EditableTile({
       ) : (
         <button
           type="button"
-          className="tile__value tile__value--button"
+          className="tm-kpi__value kpi__button"
           onClick={() => setEditing(true)}
         >
-          {value ?? <span className="tile__unset">{t("common.not_set")}</span>}
-          {unit && <span className="tile__unit">{unit}</span>}
+          {value != null ? (
+            <span className="tm-kpi__num">{value}</span>
+          ) : (
+            <span className="kpi__unset">{t("common.not_set")}</span>
+          )}
+          {unit && <span className="tm-kpi__unit">{unit}</span>}
         </button>
       )}
 
-      {failed && <span className="tile__footnote tile__footnote--error">
-        {t("common.not_saved")}
-      </span>}
-      {help && <span className="tile__footnote">{help}</span>}
+      {failed && <span className="kpi__note kpi__error">{t("common.not_saved")}</span>}
+      {help && <span className="kpi__note">{help}</span>}
     </div>
   );
 }

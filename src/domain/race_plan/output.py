@@ -48,7 +48,7 @@ from src.translations import translate
 
 ELEVATION_COLOR = theme.BALANCED_RUNNER
 PACE_COLOR = theme.PRIMARY
-SECTION_COLORS = {CLIMB: theme.TERRACOTTA, DESCENT: "#3A6EA5", FLAT: theme.MOSS}
+SECTION_COLORS = {CLIMB: theme.TERRACOTTA, DESCENT: theme.CHART_YOU_4, FLAT: theme.MOSS}
 LEG_COLORS = [theme.SUNRISE, theme.MOSS]
 
 # Points drawn on the detailed chart. The plan itself runs on a 10 m grid; a
@@ -64,7 +64,7 @@ DURABILITY_COLOR = theme.TERRACOTTA
 COMPONENT_COLORS = {
     DURATION: theme.SUNRISE,
     SEVERE_INTENSITY: theme.DANGER,
-    DOWNHILL: "#3A6EA5",
+    DOWNHILL: theme.CHART_YOU_4,
     THERMAL: theme.TERRACOTTA,
     PRE_RACE_LOAD: theme.KILIAN,
 }
@@ -172,7 +172,7 @@ def _step_trace(stretches: List[Stretch], name: str, lang: str) -> Trace:
         kind=TraceKind.STEP,
         color=PACE_COLOR,
         axis="y2",
-        width=3.0,
+        width=2.0,
         hover_text=[fmt_pace(v) for v in y],
         hover_template="%{customdata}<extra>%{fullData.name}</extra>",
     )
@@ -214,7 +214,7 @@ def _profile_output(plan: RacePlan, lang: str) -> PlotOutput:
         kind=TraceKind.LINE,
         color=PACE_COLOR,
         axis="y2",
-        width=2.2,
+        width=2.0,
         hover_text=[
             f"{fmt_pace(p)} · {translate('race_plan.hover.elapsed', lang)} {fmt_hms(t)}"
             for p, t in zip(pace, elapsed)
@@ -503,7 +503,7 @@ def _durability_output(plan: RacePlan, model: AthleteDurabilityModel, lang: str)
         kind=TraceKind.LINE,
         color=DURABILITY_COLOR,
         axis="y2",
-        width=2.5,
+        width=2.0,
         hover_text=[
             f"+{v:.1f} % · {translate('race_plan.hover.elapsed', lang)} {fmt_hms(t)}"
             for v, t in zip(total, elapsed)

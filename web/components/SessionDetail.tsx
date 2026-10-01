@@ -150,7 +150,7 @@ export function SessionDetail({
 
       <CommentsSection activityId={activityId} t={t} />
 
-      <dl className="metric-row">
+      <dl className="kpi-grid kpi-grid--compact">
         <Metric
           label={t("home.last.distance")}
           value={km != null ? `${formatNumber(km, 2)} ${t("common.km")}` : "—"}
@@ -216,9 +216,11 @@ export function SessionDetail({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="metric">
-      <dt className="metric__label">{label}</dt>
-      <dd className="metric__value">{value}</dd>
+    <div className="tm-kpi">
+      <dt className="tm-kpi__label">{label}</dt>
+      <dd className="tm-kpi__value">
+        <span className="tm-kpi__num">{value}</span>
+      </dd>
     </div>
   );
 }

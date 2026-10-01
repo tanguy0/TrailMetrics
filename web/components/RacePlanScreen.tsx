@@ -329,7 +329,7 @@ export function RacePlanScreen({
         </div>
       )}
 
-      <form className="panel race-plan__form" onSubmit={submit}>
+      <form className="tm-panel panel race-plan__form" onSubmit={submit}>
         <div className="race-plan__fields">
           <label className="race-plan__field">
             <span>{t("race_plan.gpx")}</span>
@@ -527,11 +527,13 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
 
   return (
     <div className="race-plan__result">
-      <div className="tile-grid race-plan__summary">
+      <div className="kpi-grid race-plan__summary">
         {tiles.map(([label, value]) => (
-          <div className="tile" key={label}>
-            <span className="tile__label">{label}</span>
-            <span className="tile__value race-plan__tile-value">{value}</span>
+          <div className="tm-kpi" key={label}>
+            <span className="tm-kpi__label">{label}</span>
+            <span className="tm-kpi__value">
+              <span className="tm-kpi__num race-plan__kpi-num">{value}</span>
+            </span>
           </div>
         ))}
       </div>
@@ -559,7 +561,7 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
 
 function OutputSection({ title, output }: { title: string; output: PlotOutput }) {
   return (
-    <section className="panel">
+    <section className="tm-panel panel">
       <div className="panel__header">
         <h2 className="panel__title">{title}</h2>
       </div>

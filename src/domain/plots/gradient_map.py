@@ -26,18 +26,20 @@ from src.domain.charts.ir import (
 from src.domain.dataset.binning import bin_start, to_date
 from src.domain.dataset.features import band_column
 from src.domain.dataset.resolved import DataLevel, ResolvedGroup, ResolvedPanelData
+from src.domain.gap import theme
 from src.domain.plots.base import PlotDefinition, register
 from src.domain.progress.models import GRADIENT_BAND_KEYS, GRADIENT_BANDS
 from src.domain.spec.params import ParamSpec, choice, multichoice
 from src.translations import translate
 
-# Green (descent) → red (ascent). Kept here, next to the only plot that uses it.
+# Green (descent) → red (ascent), every step a theme token. Kept here, next to
+# the only plot that uses it.
 BAND_COLORS = {
-    "steep_descent": "#1B7A3D",
-    "gentle_descent": "#7FB069",
-    "flat": "#E8A33D",
-    "gentle_ascent": "#C65D3B",
-    "steep_ascent": "#8E2C18",
+    "steep_descent": theme.FOREST,
+    "gentle_descent": theme.MOSS,
+    "flat": theme.SUN,
+    "gentle_ascent": theme.TERRA,
+    "steep_ascent": theme.DANGER,
 }
 
 PARAMS: List[ParamSpec] = [

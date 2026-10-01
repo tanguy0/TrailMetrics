@@ -72,6 +72,10 @@ export const theme = {
   forestTint: tokens["forest-tint"],
   terraTint: tokens["terra-tint"],
   sunTint: tokens["sun-tint"],
+
+  // tokens.json § type.families — Plotly takes a plain family list.
+  fontSans: "Manrope, Helvetica Neue, Arial, sans-serif",
+  fontMono: "DM Mono, ui-monospace, SF Mono, Menlo, monospace",
 };
 
 /** Fallback cycle for traces with no explicit colour; matches CURVE_CYCLE. */
@@ -84,13 +88,21 @@ export const curvePalette = [
   tokens["chart-ref"],
 ];
 
-/** matplotlib-style line codes → Plotly dash names. */
+/**
+ * matplotlib-style line codes → Plotly dashes; matches DASH_BY_LINESTYLE. The two
+ * dashed styles are the reference patterns of charts.md: "--" is 5-4, ":" is 2-4.
+ */
 export const dashByCode: Record<string, string> = {
   "-": "solid",
-  "--": "dash",
+  "--": "5px,4px",
   "-.": "dashdot",
-  ":": "dot",
+  ":": "2px,4px",
 };
+
+/** A reference series is drawn in the reference grey (charts.md § Séries). */
+export function isReference(color: string): boolean {
+  return color.toLowerCase() === tokens["chart-ref"];
+}
 
 /** `#RRGGBB` → `rgba(...)`, for the translucent ±band ribbons. */
 export function rgba(color: string, alpha: number): string {

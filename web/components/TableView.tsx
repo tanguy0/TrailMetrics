@@ -11,7 +11,15 @@
 import { useMemo } from "react";
 
 import { downloadCsv, formatCell, toCsv } from "@/lib/format";
-import type { Column, TableData } from "@/lib/types";
+import type { CellFormat, Column, TableData } from "@/lib/types";
+
+const NUMERIC_FORMATS = new Set(["duration", "pace", "integer", "percent", "number"]);
+
+/** Numbers right-aligned in mono, dates in muted mono (DataTable.md). */
+function cellClass(format: CellFormat): string | undefined {
+  if (format.kind === "date") return "is-date";
+  return NUMERIC_FORMATS.has(format.kind) ? "is-num" : undefined;
+}
 
 /** Row indices holding the best value in each highlighted column. */
 function bestRows(table: TableData): Map<string, Set<number>> {
@@ -50,11 +58,13 @@ export function TableView({ table }: { table: TableData }) {
     <div className="table-block">
       {table.title && <h4 className="table-block__title">{table.title}</h4>}
       <div className="table-scroll">
-        <table className="table">
+        <table className="tm-table">
           <thead>
             <tr>
               {table.columns.map((column) => (
-                <th key={column.key}>{column.label}</th>
+                <th key={column.key} className={cellClass(column.format)}>
+                  {column.label}
+                </th>
               ))}
             </tr>
           </thead>
@@ -62,9 +72,15 @@ export function TableView({ table }: { table: TableData }) {
             {table.rows.map((row, rowIndex) => (
               <tr key={rowIndex}>
                 {table.columns.map((column) => (
+                  // Best per *column*, not per row: a table can highlight several
+                  // columns whose winners differ, so the cell carries `is-best`.
                   <td
                     key={column.key}
-                    className={best.get(column.key)?.has(rowIndex) ? "cell--best" : undefined}
+                    className={
+                      [cellClass(column.format), best.get(column.key)?.has(rowIndex) && "is-best"]
+                        .filter(Boolean)
+                        .join(" ") || undefined
+                    }
                   >
                     {formatCell(row[column.key], column.format)}
                   </td>
@@ -74,7 +90,7 @@ export function TableView({ table }: { table: TableData }) {
           </tbody>
         </table>
       </div>
-      {table.caption && <p className="muted">{table.caption}</p>}
+      {table.caption && <p className="tm-plot__sub">{table.caption}</p>}
       <button type="button" className="tm-btn tm-btn--secondary tm-btn--sm" onClick={exportCsv}>
         Download table (CSV)
       </button>
