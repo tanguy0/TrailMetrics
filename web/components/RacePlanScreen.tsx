@@ -17,6 +17,7 @@
  * as chart IR, drawn by the same `ChartView`/`TableView` as every analysis panel.
  */
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { ChartView } from "@/components/ChartView";
@@ -278,9 +279,9 @@ export function RacePlanScreen({
   return (
     <main className="container race-plan">
       {signedIn && (
-        <a className="race-plan__back" href="/race-plan">
+        <Link className="race-plan__back" href="/race-plan">
           {t("race_plan.back")}
-        </a>
+        </Link>
       )}
       <div className="page-header">
         <div className="page-header__title">
@@ -512,9 +513,9 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
 
   return (
     <div className="race-plan__result">
-      <div className="tile-grid race-plan__summary scale-1">
+      <div className="tile-grid race-plan__summary">
         {tiles.map(([label, value]) => (
-          <div className="tile tile--dot" key={label}>
+          <div className="tile" key={label}>
             <span className="tile__label">{label}</span>
             <span className="tile__value race-plan__tile-value">{value}</span>
           </div>

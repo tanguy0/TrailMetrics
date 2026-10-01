@@ -28,7 +28,7 @@ export default function TermsPage() {
       <p>
         You connect via Strava OAuth and grant the app read access to your activities.
         You are responsible for the accuracy of anything you type in yourself (weight,
-        heart-rate zones, and similar). You can revoke access from Strava's own
+        heart-rate zones, and similar). You can revoke access from Strava’s own
         settings at any time, and can ask for your account and data to be deleted — see
         the <a href="/privacy">Privacy Policy</a> for how.
       </p>
@@ -43,7 +43,7 @@ export default function TermsPage() {
 
       <h2>Fair use</h2>
       <p>
-        Don't use the app to access data that isn't yours, attempt to disrupt it, or
+        Don’t use the app to access data that isn’t yours, attempt to disrupt it, or
         automate requests against it outside of normal use.
       </p>
 

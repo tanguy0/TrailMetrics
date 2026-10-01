@@ -280,7 +280,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
       <RecordsCard records={summary.records} t={t} />
 
       {/* Last Run: the import controls, then the most recent activity itself. */}
-      <section className="card-block card-block--sync scale-5">
+      <section className="card-block card-block--sync">
         <SectionTitle icon="🔄">{t("home.last.title")}</SectionTitle>
 
         <SyncControls
@@ -300,7 +300,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
       </section>
 
       {/* Recent Progress: volume, efficiency and form over the trailing window. */}
-      <section className="card-block card-block--progress scale-6">
+      <section className="card-block card-block--progress">
         <SectionTitle icon="📊">{t("home.progress.title")}</SectionTitle>
 
         <div className="data-stack">
@@ -495,17 +495,12 @@ function isoDate(date: Date): string {
 
 // --- Profile ---------------------------------------------------------------
 
-/**
- * The colored header bar for a Race-Print accent section (History, Health,
- * Performance, Records) — an icon, the title, and a small print-registration
- * mark pinned to the far right by the title text growing to fill the middle.
- */
+/** The heading of a Home section (History, Health, Performance, Records). */
 function SectionTitle({ icon, children }: { icon: string; children: ReactNode }) {
   return (
     <h2 className="card-block__title">
       <span aria-hidden="true">{icon}</span>
       <span className="card-block__title-text">{children}</span>
-      <span className="card-block__title-mark" aria-hidden="true" />
     </h2>
   );
 }
@@ -513,7 +508,7 @@ function SectionTitle({ icon, children }: { icon: string; children: ReactNode })
 function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
   const { profile, records } = summary;
   return (
-    <section className="card-block card-block--profile scale-1">
+    <section className="card-block card-block--profile">
       <SectionTitle icon="🏃">{t("home.profile.title")}</SectionTitle>
 
       <div className="tile-grid tile-grid--four">
@@ -574,7 +569,7 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
  */
 function RecordsCard({ records, t }: { records: HomeRecord[]; t: T }) {
   return (
-    <section className="card-block card-block--records scale-4">
+    <section className="card-block card-block--records">
       <SectionTitle icon="🏅">{t("home.profile.records")}</SectionTitle>
       {records.length ? (
         <div className="record-grid">
@@ -609,7 +604,7 @@ function HealthCard({
   const experience = summary.health.experience_years;
 
   return (
-    <section className="card-block card-block--health scale-2">
+    <section className="card-block card-block--health">
       <SectionTitle icon="❤️">{t("home.health.title")}</SectionTitle>
 
       <div className="tile-grid tile-grid--two tile-grid--square">
@@ -725,7 +720,7 @@ function ZonesCard({
   const hrMax = athlete.hr_max;
 
   return (
-    <section className="card-block card-block--zones scale-3">
+    <section className="card-block card-block--zones">
       <SectionTitle icon="🎯">{t("home.zones.title")}</SectionTitle>
       <p className="data-block__lede">{t("home.zones.subtitle")}</p>
 
@@ -1294,10 +1289,7 @@ function Tile({
   mixedCase?: boolean;
 }) {
   return (
-    // Every Home tile uses the same dot-stipple print texture — see
-    // `.tile--dot`. Its accent color comes from `--section-accent`, set by
-    // whichever `.scale-N` class is on the enclosing section (see globals.css).
-    <div className="tile tile--dot">
+    <div className="tile">
       <span className={`tile__label${mixedCase ? " tile__label--mixed-case" : ""}`}>
         {label}
       </span>
@@ -1370,7 +1362,7 @@ function EditableTile({
   };
 
   return (
-    <div className="tile tile--dot tile--editable">
+    <div className="tile tile--editable">
       <span className={`tile__label${mixedCase ? " tile__label--mixed-case" : ""}`}>
         {label}
         {saving && <span className="tile__saving"> · {t("common.saving")}</span>}

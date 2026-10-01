@@ -89,7 +89,7 @@ export function RouteMap({
         }).addTo(map);
 
         const line = L.polyline(points, {
-          color: theme.terracotta,
+          color: theme.terra,
           weight: 4,
           opacity: 0.9,
           lineJoin: "round",
@@ -99,14 +99,14 @@ export function RouteMap({
         const dot = (at: [number, number], color: string, label: string) =>
           L.circleMarker(at, {
             radius: 5,
-            color: "#fff",
+            color: theme.bgSurface,
             weight: 2,
             fillColor: color,
             fillOpacity: 1,
           })
             .addTo(map!)
             .bindTooltip(label);
-        dot(points[0], theme.primary, "Start");
+        dot(points[0], theme.forest, "Start");
         if (points.length > 1) dot(points[points.length - 1], theme.danger, "Finish");
 
         map.fitBounds(line.getBounds(), { padding: [16, 16] });

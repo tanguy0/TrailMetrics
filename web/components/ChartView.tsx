@@ -18,9 +18,10 @@ import { curvePalette, dashByCode, rgba, theme } from "@/lib/theme";
 import type { Axis, ChartData, Trace } from "@/lib/types";
 
 // Resolved once per session; `plotly.js-dist-min` has no types of its own.
-let plotlyPromise: Promise<any> | null = null;
-function loadPlotly(): Promise<any> {
-  plotlyPromise ??= import("plotly.js-dist-min").then((m: any) => m.default ?? m);
+type Plotly = typeof import("plotly.js-dist-min").default;
+let plotlyPromise: Promise<Plotly> | null = null;
+function loadPlotly(): Promise<Plotly> {
+  plotlyPromise ??= import("plotly.js-dist-min").then((m) => m.default ?? m);
   return plotlyPromise;
 }
 
@@ -49,10 +50,10 @@ function encode(values: (number | string | null)[], axis: Axis): unknown[] {
 function axisLayout(axis: Axis): Record<string, unknown> {
   const layout: Record<string, unknown> = {
     title: { text: axis.title },
-    gridcolor: theme.grid,
-    linecolor: theme.spine,
+    gridcolor: theme.chartGrid,
+    linecolor: theme.line,
     zeroline: false,
-    color: theme.text,
+    color: theme.ink,
     automargin: true,
   };
   if (axis.kind === "duration") {
@@ -202,15 +203,15 @@ function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
   const stacked = chart.traces.some((t) => t.stack_group);
   const hasBars = chart.traces.some((t) => t.kind === "bar");
   return {
-    title: { text: chart.title, font: { color: theme.text, size: 16 } },
-    paper_bgcolor: theme.figureFace,
-    plot_bgcolor: theme.axesFace,
-    font: { color: theme.text, size: 12 },
+    title: { text: chart.title, font: { color: theme.ink, size: 16 } },
+    paper_bgcolor: theme.bgChart,
+    plot_bgcolor: theme.bgChart,
+    font: { color: theme.ink, size: 12 },
     legend: {
-      bgcolor: theme.axesFace,
-      bordercolor: theme.spine,
+      bgcolor: theme.bgChart,
+      bordercolor: theme.line,
       borderwidth: 1,
-      font: { color: theme.text },
+      font: { color: theme.ink },
       // The default spot, just right of the plot, is where a right-hand axis puts
       // its ticks — so a dual-axis figure carries its legend underneath instead.
       ...(chart.y2_axis ? { orientation: "h", x: 0, y: -0.2, yanchor: "top" } : {}),
@@ -222,7 +223,7 @@ function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
     // On a dual-axis chart the shared x-value is the only thing the two series
     // genuinely have in common, so read them together rather than one at a time.
     hovermode: chart.y2_axis ? "x unified" : chart.hover_mode || "closest",
-    hoverlabel: { bgcolor: theme.axesFace, font: { color: theme.text } },
+    hoverlabel: { bgcolor: theme.bgChart, font: { color: theme.ink } },
     xaxis: axisLayout(chart.x_axis),
     yaxis: axisLayout(chart.y_axis),
     ...(chart.y2_axis

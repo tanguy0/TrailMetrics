@@ -1,31 +1,87 @@
 /**
- * Trail / Earthy palette — the TypeScript mirror of `src/domain/gap/theme.py`.
+ * TAGG colour theme — the TypeScript mirror of `design/tagg/tokens.json`
+ * (couleurs) and of `src/domain/gap/theme.py`. CSS reads the same values from
+ * `app/tokens.css`; `tests/test_theme_tokens.py` keeps the three in sync.
  *
  * Only the values the *renderer* needs live here. Trace colours themselves come
  * down in the chart IR, decided server-side, so a series keeps the same colour in
  * the web app, in an exported figure and in a notebook.
  */
 
-export const theme = {
-  primary: "#2E6F40", // forest green
-  terracotta: "#C65D3B",
-  sunrise: "#E8A33D",
-  moss: "#5E9C4E",
+/** Every colour token, by its `tokens.json` name, aliases resolved. */
+export const tokens = {
+  "bg-page": "#f4f1ea",
+  "bg-surface": "#ffffff",
+  "bg-surface-alt": "#f8f6f1",
+  "bg-rail": "#1f4b2c",
+  "bg-chart": "#ffffff",
+  line: "#e8e2d6",
+  "line-strong": "#d5cdbe",
+  ink: "#241f19",
+  "ink-muted": "#6b6157",
+  "ink-faint": "#7d7366",
+  "on-forest": "#ffffff",
+  "on-rail-muted": "rgba(255,255,255,0.72)",
+  forest: "#2e6f40",
+  "forest-hover": "#26603a",
+  "forest-tint": "#eaefe7",
+  terra: "#c65d3b",
+  "terra-ink": "#a84a2c",
+  "terra-tint": "#f9ede6",
+  sun: "#e8a33d",
+  "sun-ink": "#9a6516",
+  "sun-tint": "#fdf4e3",
+  moss: "#5e9c4e",
+  "moss-ink": "#3f7a32",
+  "moss-tint": "#eff3e8",
+  danger: "#8e2c18",
+  "danger-tint": "#f4e8e2",
+  "sport-run": "#2e6f40",
+  "sport-bike": "#3a6ea5",
+  "sport-hike": "#b8781f",
+  "sport-swim": "#7a4e9e",
+  "sport-other": "#7d7366",
+  "chart-grid": "#ece7dd",
+  "chart-axis": "#7d7366",
+  "chart-ref": "#a69a87",
+  "chart-you-1": "#2e6f40",
+  "chart-you-2": "#c65d3b",
+  "chart-you-3": "#e8a33d",
+  "chart-you-4": "#3a6ea5",
+  "chart-you-5": "#7a4e9e",
+  strava: "#fc4c02",
+} as const;
 
-  figureFace: "#FBF8F3", // warm off-white
-  axesFace: "#FFFDF9",
-  grid: "#CFC3AE",
-  text: "#241F19",
-  spine: "#B8AC97",
-  muted: "#6B6157",
-  danger: "#8E2C18",
+/** The roles a renderer asks for (Plotly chrome, map markers). */
+export const theme = {
+  forest: tokens.forest,
+  terra: tokens.terra,
+  sun: tokens.sun,
+  moss: tokens.moss,
+  danger: tokens.danger,
+
+  bgChart: tokens["bg-chart"],
+  bgSurface: tokens["bg-surface"],
+  chartGrid: tokens["chart-grid"],
+  chartAxis: tokens["chart-axis"],
+  chartRef: tokens["chart-ref"],
+  line: tokens.line,
+  ink: tokens.ink,
+  inkMuted: tokens["ink-muted"],
+  sunInk: tokens["sun-ink"],
+  forestTint: tokens["forest-tint"],
+  terraTint: tokens["terra-tint"],
+  sunTint: tokens["sun-tint"],
 };
 
-/** Fallback cycle for traces with no explicit colour; matches CURVE_PALETTE. */
+/** Fallback cycle for traces with no explicit colour; matches CURVE_CYCLE. */
 export const curvePalette = [
-  "#2E6F40", "#C65D3B", "#E8A33D", "#3A6EA5", "#7A4E9E",
-  "#5E9C4E", "#A6843E", "#14532B", "#B5651D", "#6B4226",
-  "#2A7E8C", "#9E4E6E",
+  tokens["chart-you-1"],
+  tokens["chart-you-2"],
+  tokens["chart-you-3"],
+  tokens["chart-you-4"],
+  tokens["chart-you-5"],
+  tokens["chart-ref"],
 ];
 
 /** matplotlib-style line codes → Plotly dash names. */

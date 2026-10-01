@@ -73,21 +73,21 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
   }
 
   const steps = [
-    { key: "step1", scale: "scale-1", icon: "🎯" },
-    { key: "step2", scale: "scale-4", icon: "📈" },
-    { key: "step3", scale: "scale-6", icon: "💾" },
+    { key: "step1", icon: "🎯" },
+    { key: "step2", icon: "📈" },
+    { key: "step3", icon: "💾" },
   ] as const;
 
   return (
     <main className="container">
       <h1>{t("pages.title")}</h1>
 
-      <section className="explainer scale-1">
+      <section className="explainer">
         <h2 className="explainer__title">{t("pages.how.title")}</h2>
         <p className="explainer__lede">{t("pages.how.body")}</p>
         <div className="step-grid">
           {steps.map((step) => (
-            <div className={`step ${step.scale}`} key={step.key}>
+            <div className="step" key={step.key}>
               <span className="step__icon" aria-hidden="true">{step.icon}</span>
               <h3 className="step__title">{t(`pages.how.${step.key}.title`)}</h3>
               <p className="step__body">{t(`pages.how.${step.key}.body`)}</p>

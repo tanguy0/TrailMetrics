@@ -1,0 +1,82 @@
+/* TAGG · tokens.css — généré depuis design/tagg/tokens.json. Source de vérité : tokens.json. */
+:root {
+  /* couleurs */
+  --bg-page: #f4f1ea;
+  --bg-surface: #ffffff;
+  --bg-surface-alt: #f8f6f1;
+  --bg-rail: #1f4b2c;
+  --bg-chart: #ffffff;
+  --line: #e8e2d6;
+  --line-strong: #d5cdbe;
+  --ink: #241f19;
+  --ink-muted: #6b6157;
+  --ink-faint: #7d7366;
+  --on-forest: #ffffff;
+  --on-rail-muted: rgba(255,255,255,0.72);
+  --forest: #2e6f40;
+  --forest-hover: #26603a;
+  --forest-tint: #eaefe7;
+  --terra: #c65d3b;
+  --terra-ink: #a84a2c;
+  --terra-tint: #f9ede6;
+  --sun: #e8a33d;
+  --sun-ink: #9a6516;
+  --sun-tint: #fdf4e3;
+  --moss: #5e9c4e;
+  --moss-ink: #3f7a32;
+  --moss-tint: #eff3e8;
+  --danger: #8e2c18;
+  --danger-tint: #f4e8e2;
+  --sport-run: var(--forest);
+  --sport-bike: #3a6ea5;
+  --sport-hike: #b8781f;
+  --sport-swim: #7a4e9e;
+  --sport-other: #7d7366;
+  --chart-grid: #ece7dd;
+  --chart-axis: #7d7366;
+  --chart-ref: #a69a87;
+  --chart-you-1: var(--forest);
+  --chart-you-2: var(--terra);
+  --chart-you-3: var(--sun);
+  --chart-you-4: var(--sport-bike);
+  --chart-you-5: var(--sport-swim);
+  --strava: #fc4c02;
+  /* ombres */
+  --shadow-card: 0 1px 2px rgba(36,31,25,0.05), 0 8px 24px -8px rgba(36,31,25,0.10);
+  --shadow-pop: 0 2px 6px rgba(36,31,25,0.08), 0 16px 40px -12px rgba(36,31,25,0.18);
+  --shadow-primary: inset 0 1px 0 rgba(255,255,255,0.18), 0 2px 6px -2px rgba(46,111,64,0.45);
+  --focus-ring: 0 0 0 3px rgba(46,111,64,0.28);
+  /* espacements */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  /* rayons */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+  /* polices */
+  --font-sans: "Manrope", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* styles de texte */
+.display-xl { font-family: var(--font-sans); font-size: 48px; line-height: 48px; font-weight: 800; letter-spacing: -0.035em; }
+.display-lg { font-family: var(--font-sans); font-size: 30px; line-height: 34px; font-weight: 700; letter-spacing: -0.025em; }
+.title { font-family: var(--font-sans); font-size: 19px; line-height: 26px; font-weight: 600; letter-spacing: -0.02em; }
+.title-sm { font-family: var(--font-sans); font-size: 15px; line-height: 22px; font-weight: 600; }
+.body { font-family: var(--font-sans); font-size: 14px; line-height: 22px; font-weight: 400; }
+.body-sm { font-family: var(--font-sans); font-size: 13px; line-height: 20px; font-weight: 400; }
+.caption { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 500; }
+.label { font-family: var(--font-sans); font-size: 11px; line-height: 16px; font-weight: 600; letter-spacing: 0.04em; }
+.num-xl { font-family: var(--font-mono); font-size: 30px; line-height: 34px; font-weight: 500; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.num-lg { font-family: var(--font-mono); font-size: 22px; line-height: 28px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.num { font-family: var(--font-mono); font-size: 13px; line-height: 20px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.kicker { font-family: var(--font-mono); font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: 0.1em; font-variant-numeric: tabular-nums; }
+.axis { font-family: var(--font-mono); font-size: 11px; line-height: 14px; font-weight: 400; font-variant-numeric: tabular-nums; }

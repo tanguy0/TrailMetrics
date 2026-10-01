@@ -7,6 +7,7 @@
  * requires a TrailMetrics account.
  */
 
+import Link from "next/link";
 import type { Metadata } from "next";
 
 import { apiBaseUrl, lang, readSession } from "@/lib/session";
@@ -46,9 +47,9 @@ export default async function BlogIndexPage() {
       <div className="blog-index__header">
         <h1>Blog</h1>
         {isMaster && (
-          <a className="button" href="/blog/new">
+          <Link className="button" href="/blog/new">
             + Nouvel article
-          </a>
+          </Link>
         )}
       </div>
 
