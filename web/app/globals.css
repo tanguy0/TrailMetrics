@@ -1055,40 +1055,6 @@ input[type="radio"] {
   margin: 0 0 0.6rem;
 }
 
-.last-activity__sport {
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 0.1rem 0.6rem;
-  font-size: 0.85rem;
-}
-
-/* One colour per sport family, shared with the calendar's session chips —
-   see `--sport-*` (tokens.css) and `.training-session--*`. */
-.last-activity__sport--running {
-  background: color-mix(in srgb, var(--sport-run) 10%, var(--bg-surface));
-  color: var(--sport-run);
-}
-
-.last-activity__sport--hiking {
-  background: color-mix(in srgb, var(--sport-hike) 10%, var(--bg-surface));
-  color: var(--sport-hike);
-}
-
-.last-activity__sport--cycling {
-  background: color-mix(in srgb, var(--sport-bike) 10%, var(--bg-surface));
-  color: var(--sport-bike);
-}
-
-.last-activity__sport--swimming {
-  background: color-mix(in srgb, var(--sport-swim) 10%, var(--bg-surface));
-  color: var(--sport-swim);
-}
-
-.last-activity__sport--neutral {
-  background: var(--bg-surface-alt);
-  color: var(--ink-muted);
-}
-
 .last-activity__date {
   font-size: 0.8rem;
   color: var(--ink-muted);
@@ -1680,8 +1646,9 @@ input[type="radio"] {
   margin-top: 1rem;
   height: calc(100vh - 12rem);
   overflow-y: auto;
-  border: 1px solid var(--bg-surface-alt);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
   background: var(--bg-surface);
 }
 
@@ -1762,20 +1729,8 @@ input[type="radio"] {
      instead, and the extra height goes to plain card background below. */
   align-content: start;
   column-gap: var(--week-summary-gap-x);
-  /* Roughly twice the card's previous total height — the extra title row
-     helps, but most of it is this taller line-height plus the doubled
-     row-gap and padding below, since the numbers themselves stay the same
-     font-size (see `.week-summary__value`/`__tag`) rather than growing to
-     fill the space. */
-  line-height: 1.6;
   row-gap: 0.35rem;
   padding: 0.65rem var(--week-summary-pad-x);
-  border-radius: 4.5px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  background: var(--bg-surface-alt);
-  color: var(--ink);
 }
 
 /* The title and, on the current week only, its fitness-trend badge — a flex
@@ -1789,34 +1744,41 @@ input[type="radio"] {
   min-width: 0;
 }
 
-.week-summary__title-text {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.week-summary__icon {
-  grid-column: 1;
-  font-size: 0.72rem;
-  color: var(--ink-muted);
-}
-
 .week-summary__tag {
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Chips in this narrow card take the card's own scale. */
+.week-summary .tm-chip {
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+/* The sport's colour is a dot beside its label (SessionCard.md: colour never
+   travels without its label). */
+.tm-week-summary__label::before,
+.sport-chip::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--sport-other);
+  vertical-align: 1px;
+}
+
+.sport-chip::before {
+  margin-right: 0;
+}
+
+[data-sport="run"]::before { background: var(--sport-run); }
+[data-sport="bike"]::before { background: var(--sport-bike); }
+[data-sport="hike"]::before { background: var(--sport-hike); }
+[data-sport="swim"]::before { background: var(--sport-swim); }
 
 .week-summary__value {
   white-space: nowrap;
@@ -1824,39 +1786,12 @@ input[type="radio"] {
   text-overflow: ellipsis;
 }
 
-/* One colour per sport family, matching `.training-session--*` and
-   `--sport-*` — "running" here covers every running sport type as one
-   merged total (see `RUNNING_SPORT_TYPES`), same as the calendar's session
-   chip. Set once on the column's wrapper (`display: contents`, so its tag
-   and value spans are the actual grid items) and inherited by both, rather
-   than repeated per element. */
-.week-summary__col--running {
-  color: var(--sport-run);
-}
-
-.week-summary__col--cycling {
-  color: var(--sport-bike);
-}
-
-/* Hiking and swimming merged into one grey "Other" column — neither is common
-   enough on its own to keep a dedicated slot, and merging the two is what frees
-   column 5 for the fitness/RPE/feeling block below. Not one sport's hue, so it
-   doesn't get one — same neutral ink column 5 (`--detail`) uses either. */
-.week-summary__col--other {
-  color: var(--ink-muted);
-}
-
-/* Column 5 — fitness trend / week-avg RPE / week-avg feeling. Not a sport, so
-   it gets no sport-scale hue either. */
-.week-summary__col--detail {
-  color: var(--ink-muted);
-}
-
 .training-day {
   min-width: 0;
   min-height: 7rem;
   padding: 0.5rem;
-  border-right: 1px solid var(--bg-surface-alt);
+  border-radius: 0;
+  border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -1866,32 +1801,8 @@ input[type="radio"] {
   border-right: none;
 }
 
-.training-day--today {
-  background: var(--forest-tint);
-}
-
 .training-day--drag-over {
   background: var(--terra-tint);
-}
-
-.training-day__header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.3rem;
-}
-
-.training-day__weekday {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--ink-muted);
-}
-
-.training-day__number {
-  font-size: 0.95rem;
-  font-weight: 800;
 }
 
 .training-day__items {
@@ -1901,130 +1812,14 @@ input[type="radio"] {
   flex: 1;
 }
 
-.training-pill {
-  position: relative;
-  border-radius: 6px;
-  padding: 0.3rem 0.5rem;
-  font-size: 0.78rem;
-  font-weight: 600;
+.training-item {
   cursor: grab;
-  border: 1px solid transparent;
-}
-
-/* Blue, now that gold belongs to the sport-colour scale instead — a tint
-   rather than a solid fill, keeping the same lighter weight a workout has
-   always had next to a goal's solid one. */
-.training-pill--workout {
-  background: color-mix(in srgb, var(--sport-bike) 10%, var(--bg-surface));
-  border-color: var(--sport-bike);
-  color: var(--sport-bike);
-}
-
-/* Forest — the app's one button/brand colour. */
-.training-pill--goal {
-  background: var(--forest);
-  border-color: var(--forest);
-  color: var(--on-forest);
-  font-weight: 700;
-}
-
-/* Lighter than a workout on purpose — a note is background information, not
-   something to train for. */
-.training-pill--note {
-  background: var(--bg-surface-alt);
-  border-color: var(--bg-surface-alt);
-  color: var(--ink-muted);
-  font-weight: 600;
-}
-
-/* Secondary keeps the goal's hue but shaded — a lighter fill of the same
-   colour rather than the solid, brighter fill a primary goal gets. */
-.training-pill--goal.training-pill--secondary {
-  background: color-mix(in srgb, var(--forest) 18%, transparent);
-  border-color: var(--forest);
-  color: var(--ink);
-  font-weight: 600;
 }
 
 .training-session {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
-  border-radius: 6px;
-  padding: 0.3rem 0.5rem;
   font: inherit;
   text-align: left;
-  border: 1px solid transparent;
   cursor: pointer;
-}
-
-/* One colour per sport family, from the fixed `--sport-*` tokens — shared with the
-   session-detail sport tag and a training week's totals, so a sport reads
-   the same colour everywhere it appears. */
-.training-session--running {
-  background: color-mix(in srgb, var(--sport-run) 10%, var(--bg-surface));
-  border-color: var(--sport-run);
-}
-
-.training-session--hiking {
-  background: color-mix(in srgb, var(--sport-hike) 10%, var(--bg-surface));
-  border-color: var(--sport-hike);
-}
-
-.training-session--cycling {
-  background: color-mix(in srgb, var(--sport-bike) 10%, var(--bg-surface));
-  border-color: var(--sport-bike);
-}
-
-.training-session--swimming {
-  background: color-mix(in srgb, var(--sport-swim) 10%, var(--bg-surface));
-  border-color: var(--sport-swim);
-}
-
-.training-session--neutral {
-  background: var(--bg-surface-alt);
-  border-color: var(--line-strong);
-}
-
-.training-session__sport {
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.training-session--running .training-session__sport {
-  color: var(--sport-run);
-}
-
-.training-session--hiking .training-session__sport {
-  color: var(--sport-hike);
-}
-
-.training-session--cycling .training-session__sport {
-  color: var(--sport-bike);
-}
-
-.training-session--swimming .training-session__sport {
-  color: var(--sport-swim);
-}
-
-.training-session--neutral .training-session__sport {
-  color: var(--ink-muted);
-}
-
-.training-session__stats {
-  font-size: 0.7rem;
-  color: var(--ink-muted);
-}
-
-/* RPE/feeling tags, bottom-right — unlike `.training-badge` these sit inside the
-   card's own flow rather than overlapping its corner, since there are two of
-   them and both need to stay individually clickable. */
-.training-session__tags {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.25rem;
-  margin-top: 0.15rem;
 }
 
 /* RPE's 1-10 grid and feeling's 3-option row, both inside the shared Modal —
@@ -2074,16 +1869,6 @@ input[type="radio"] {
 .feeling-picker__value:hover {
   border-color: var(--forest);
   color: var(--forest);
-}
-
-/* A tiny "PLANNED" / "COMPLETED" sticker, overlapping the card's top-right corner. */
-.training-badge {
-  position: absolute;
-  top: -0.55rem;
-  right: -0.35rem;
-  padding: 2px 6px;
-  font-size: 9.5px;
-  text-transform: uppercase;
 }
 
 .training-day__add {

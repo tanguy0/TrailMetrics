@@ -30,7 +30,9 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
+import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
+import { PageHeader } from "@/components/PageHeader";
 import { SessionDetail } from "@/components/SessionDetail";
 import {
   ApiError,
@@ -42,17 +44,20 @@ import {
   updatePlannedItem,
 } from "@/lib/api";
 import {
-  formatDistanceAdaptive, formatHms, formatHoursMinutes, formatNumber, formatPace, formatSpeed,
+  formatDate, formatDistanceAdaptive, formatHms, formatHoursMinutes, formatNumber, formatPace,
+  formatSpeed,
 } from "@/lib/format";
 import {
   CYCLING_SPORT_TYPES,
   HIKING_SPORT_TYPES,
   RUNNING_SPORT_TYPES,
+  SPORT_ICON,
   SWIMMING_SPORT_TYPES,
-  sportTone,
+  sportKey,
+  type SportKey,
 } from "@/lib/sport";
 import { translator, type Strings, type Translate } from "@/lib/strings";
-import { TREND_TONE, chipClass } from "@/lib/tone";
+import { FEELING_TONE, TREND_TONE, chipClass, rpeTone } from "@/lib/tone";
 import type {
   ActivityCard,
   PanelSpec,
@@ -468,11 +473,7 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
 
   return (
     <main className="container">
-      <header className="hero">
-        <div>
-          <h1 className="hero__name">{t("nav.training")}</h1>
-        </div>
-      </header>
+      <PageHeader kicker={formatDate(todayIso)} title={t("nav.training")} />
 
       {error && <p className="note note--error">{error}</p>}
 
@@ -650,26 +651,6 @@ function WeekRow({
 const FEELING_SCORE = { faible: 1, ok: 2, fort: 3 } as const;
 const FEELING_BY_SCORE = ["faible", "ok", "fort"] as const;
 
-/** Green at 1 up to red at `max` (RPE: 1-10; feeling: 1-3, via FEELING_SCORE) —
- * same hue ramp for both, just a different ceiling, so a 6/10 RPE and an "ok"
- * feeling (2/3) don't have to agree on what "medium" looks like in isolation,
- * only on the same green-to-red direction. */
-function ratingColor(value: number, max: number): string {
-  const clamped = Math.max(1, Math.min(max, value));
-  const hue = 120 * (1 - (clamped - 1) / (max - 1));
-  return `hsl(${hue}, 70%, 42%)`;
-}
-
-/** Feeling gets 3 fixed brand colours rather than RPE's continuous ramp — only
- * 3 values exist, so there's no "between" shade to interpolate. "Fort" is the
- * good outcome (green), "faible" the one to flag (red) — the reverse of RPE,
- * where a high number is the demanding one. */
-const FEELING_COLOR: Record<"faible" | "ok" | "fort", string> = {
-  fort: "var(--primary)",
-  ok: "var(--sunrise)",
-  faible: "var(--danger)",
-};
-
 /**
  * Totals for the week: one card, one set of icons shared by every sport
  * (running, cycling, "other" — hiking and swimming merged, in that order) —
@@ -736,32 +717,32 @@ function WeekSummary({
   // Always all 3 — a quiet week reads as zeros in its sport's own colour, not as
   // a column disappearing, so the card's shape never shifts week to week.
   const columns = [
-    { tone: "running", totals: totals.run, label: t("training.week.running") },
-    { tone: "cycling", totals: totals.ride, label: t("training.week.cycling") },
-    { tone: "other", totals: totals.other, label: t("training.week.other") },
+    { sport: "run", totals: totals.run, label: t("training.week.running") },
+    { sport: "bike", totals: totals.ride, label: t("training.week.cycling") },
+    { sport: "other", totals: totals.other, label: t("training.week.other") },
   ] as const;
 
   return (
     <div className="training-week__summary">
-      <div className="week-summary">
-        <div className="week-summary__title" style={{ gridColumn: "1 / -1", gridRow: 1 }}>
-          <span className="week-summary__title-text">{t("training.week.summary_title")}</span>
+      <div className="tm-week-summary week-summary">
+        <div className="tm-week-summary__title week-summary__title" style={{ gridColumn: "1 / -1", gridRow: 1 }}>
+          {t("training.week.summary_title")}
         </div>
 
-        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 3 }} aria-hidden="true">
-          📏
+        <span className="tm-week-summary__icon" style={{ gridColumn: 1, gridRow: 3 }}>
+          <Icon name="ruler" />
         </span>
-        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 4 }} aria-hidden="true">
-          ⛰️
+        <span className="tm-week-summary__icon" style={{ gridColumn: 1, gridRow: 4 }}>
+          <Icon name="mountain" />
         </span>
-        <span className="week-summary__icon" style={{ gridColumn: 1, gridRow: 5 }} aria-hidden="true">
-          ⏱️
+        <span className="tm-week-summary__icon" style={{ gridColumn: 1, gridRow: 5 }}>
+          <Icon name="timer" />
         </span>
 
         {columns.map((column, index) => (
           <SportColumn
-            key={column.tone}
-            tone={column.tone}
+            key={column.sport}
+            sport={column.sport}
             totals={column.totals}
             label={column.label}
             gridColumn={index + 2}
@@ -809,24 +790,28 @@ function weekFitnessTrend(
   return delta > 1 ? "increasing" : delta < -1 ? "decreasing" : "stable";
 }
 
-/** One sport's tag and three values, placed into the shared grid's `gridColumn`.
- * `display: contents` on the wrapper so the tag/value spans become the actual
- * grid items (each still needs its own `gridRow`) while still letting one
- * `week-summary__col--{tone}` class color all four through inheritance. */
+/** One sport's label and three values, placed into the shared grid's
+ * `gridColumn`. `display: contents` on the wrapper so the label/value spans become
+ * the actual grid items (each still needs its own `gridRow`). The sport's colour is
+ * a dot beside its label, not the numbers' ink. */
 function SportColumn({
-  tone,
+  sport,
   totals,
   label,
   gridColumn,
 }: {
-  tone: "running" | "cycling" | "other";
+  sport: SportKey;
   totals: { distance_m: number; elevation_gain_m: number; moving_s: number };
   label: string;
   gridColumn: number;
 }) {
   return (
-    <div className={`week-summary__col week-summary__col--${tone}`} style={{ display: "contents" }}>
-      <span className="week-summary__tag" style={{ gridColumn, gridRow: 2 }}>
+    <div style={{ display: "contents" }}>
+      <span
+        className="tm-week-summary__label week-summary__tag"
+        data-sport={sport}
+        style={{ gridColumn, gridRow: 2 }}
+      >
         {label}
       </span>
       <span className="week-summary__value" style={{ gridColumn, gridRow: 3 }}>
@@ -846,10 +831,10 @@ function SportColumn({
  * it isn't a sport total, so it doesn't compete for the same slots. Reuses the
  * same three rows (3-5) a sport column's stat block occupies, so the card's
  * total size never changes: the fitness trend (an arrow now, not a word — the
- * word is still there as a tooltip), the week's average RPE (coloured via
- * `ratingColor`), and its average feeling (see FEELING_SCORE/FEELING_BY_SCORE
- * — averaged as a number, rounded, then mapped back to a tag, coloured via
- * `FEELING_COLOR`), each shown as "—" when the week has nothing yet. */
+ * word is still there as a tooltip), the week's average RPE (a chip toned by
+ * `rpeTone`), and its average feeling (see FEELING_SCORE/FEELING_BY_SCORE —
+ * averaged as a number, rounded, then mapped back to a tag, toned by
+ * `FEELING_TONE`), each shown as "—" when the week has nothing yet. */
 function WeekDetailColumn({
   gridColumn,
   fitnessTrend,
@@ -865,7 +850,7 @@ function WeekDetailColumn({
 }) {
   const arrow = fitnessTrend === "increasing" ? "↑" : fitnessTrend === "decreasing" ? "↓" : fitnessTrend === "stable" ? "→" : null;
   return (
-    <div className="week-summary__col week-summary__col--detail" style={{ display: "contents" }}>
+    <div style={{ display: "contents" }}>
       <span className="week-summary__value" style={{ gridColumn, gridRow: 3 }}>
         {arrow ? (
           <span
@@ -876,17 +861,17 @@ function WeekDetailColumn({
           </span>
         ) : "—"}
       </span>
-      <span
-        className="week-summary__value"
-        style={{ gridColumn, gridRow: 4, ...(avgRpe != null ? { color: ratingColor(avgRpe, 10) } : {}) }}
-      >
-        {avgRpe != null ? avgRpe.toFixed(1) : "—"}
+      <span className="week-summary__value" style={{ gridColumn, gridRow: 4 }}>
+        {avgRpe != null ? (
+          <span className={chipClass(rpeTone(Math.round(avgRpe)))}>{avgRpe.toFixed(1)}</span>
+        ) : "—"}
       </span>
-      <span
-        className="week-summary__value"
-        style={{ gridColumn, gridRow: 5, ...(avgFeeling != null ? { color: FEELING_COLOR[avgFeeling] } : {}) }}
-      >
-        {avgFeeling != null ? t(`training.session.feeling_${avgFeeling}`) : "—"}
+      <span className="week-summary__value" style={{ gridColumn, gridRow: 5 }}>
+        {avgFeeling != null ? (
+          <span className={chipClass(FEELING_TONE[avgFeeling])}>
+            {t(`training.session.feeling_${avgFeeling}`)}
+          </span>
+        ) : "—"}
       </span>
     </div>
   );
@@ -922,8 +907,8 @@ function DayCell({
   return (
     <div
       className={
-        "training-day" +
-        (isToday ? " training-day--today" : "") +
+        "tm-day training-day" +
+        (isToday ? " tm-day--today" : "") +
         (dragOver ? " training-day--drag-over" : "")
       }
       onDragOver={(event) => {
@@ -938,9 +923,9 @@ function DayCell({
         if (id) onDrop(id);
       }}
     >
-      <div className="training-day__header">
-        <span className="training-day__weekday">{WEEKDAY_LABELS[weekdayIndex]}</span>
-        <span className="training-day__number">{day.getDate()}</span>
+      <div className="tm-day__head">
+        <span>{WEEKDAY_LABELS[weekdayIndex]}</span>
+        <span className="tm-day__num">{day.getDate()}</span>
       </div>
 
       <div className="training-day__items">
@@ -950,8 +935,9 @@ function DayCell({
             <div
               key={item.id}
               className={
-                `training-pill training-pill--${item.kind}` +
-                (item.kind === "goal" ? ` training-pill--${item.importance}` : "")
+                item.kind === "goal"
+                  ? `tm-session tm-session--goal training-item${item.importance === "secondary" ? " is-secondary" : ""}`
+                  : "tm-session tm-session--planned training-item"
               }
               title={spansDays ? `${item.date} → ${item.end_date}` : undefined}
               // A multi-day note moves as a block or not at all — dragging one day
@@ -965,10 +951,17 @@ function DayCell({
               }}
               onClick={() => onOpenItem(item)}
             >
-              <span className="tm-chip training-badge">
-                {t(item.kind === "note" ? "training.badge.note" : "training.badge.planned")}
-              </span>
-              {item.title || t(`training.kind.${item.kind}`)}
+              {item.kind === "goal" ? (
+                <>
+                  <Icon name="flag" size={14} />
+                  {item.title || t(`training.kind.${item.kind}`)}
+                </>
+              ) : (
+                <span className="tm-session__title">
+                  <Icon name={item.kind === "note" ? "note" : "calendar"} size={14} />
+                  {item.title || t(`training.kind.${item.kind}`)}
+                </span>
+              )}
             </div>
           );
         })}
@@ -985,26 +978,26 @@ function DayCell({
               key={activity.activity_id}
               role="button"
               tabIndex={0}
-              className={`training-session training-session--${sportTone(activity.sport_type)}`}
+              className="tm-session training-session"
+              data-sport={sportKey(activity.sport_type)}
               onClick={() => onOpenSession(activity)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") onOpenSession(activity);
               }}
             >
-              <span className="tm-chip training-badge">{t("training.badge.completed")}</span>
-              <span className="training-session__sport">{activity.sport_type}</span>
-              <span className="training-session__stats">
-                {formatHms(activity.moving_s)} ·{" "}
-                {km != null ? `${formatNumber(km, 1)} km` : "—"} ·{" "}
-                {isCycling ? formatSpeed(speedKmh) : formatPace(pace)}
+              <span className="tm-session__title">
+                <Icon name={SPORT_ICON[sportKey(activity.sport_type)]} size={14} />
+                {activity.sport_type}
               </span>
-              <span className="training-session__tags">
+              <span className="tm-session__stats">
+                <b>{km != null ? `${formatNumber(km, 1)} km` : "—"}</b>
+                <span>{formatHms(activity.moving_s)}</span>
+                <span>{isCycling ? formatSpeed(speedKmh) : formatPace(pace)}</span>
+              </span>
+              <span className="tm-session__tags">
                 <button
                   type="button"
-                  className="tm-chip"
-                  style={activity.rpe != null
-                    ? { background: ratingColor(activity.rpe, 10), borderColor: ratingColor(activity.rpe, 10) }
-                    : undefined}
+                  className={chipClass(activity.rpe != null ? rpeTone(activity.rpe) : "neutral")}
                   onClick={(event) => {
                     event.stopPropagation();
                     onOpenRating(activity, "rpe");
@@ -1014,13 +1007,9 @@ function DayCell({
                 </button>
                 <button
                   type="button"
-                  className="tm-chip"
-                  style={activity.feeling != null
-                    ? {
-                      background: FEELING_COLOR[activity.feeling],
-                      borderColor: FEELING_COLOR[activity.feeling],
-                    }
-                    : undefined}
+                  className={chipClass(
+                    activity.feeling != null ? FEELING_TONE[activity.feeling] : "neutral",
+                  )}
                   onClick={(event) => {
                     event.stopPropagation();
                     onOpenRating(activity, "feeling");

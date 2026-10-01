@@ -28,7 +28,7 @@ import {
   updateComment,
 } from "@/lib/api";
 import { formatDate, formatHms, formatNumber, formatPace, formatSpeed } from "@/lib/format";
-import { CYCLING_SPORT_TYPES, HIKING_SPORT_TYPES, SWIMMING_SPORT_TYPES, sportTone } from "@/lib/sport";
+import { CYCLING_SPORT_TYPES, HIKING_SPORT_TYPES, SWIMMING_SPORT_TYPES, sportKey } from "@/lib/sport";
 import type { Translate } from "@/lib/strings";
 import type {
   ActivityCard,
@@ -142,7 +142,7 @@ export function SessionDetail({
   return (
     <div className="session-detail">
       <p className="last-activity__head">
-        <span className={`last-activity__sport last-activity__sport--${sportTone(activity.sport_type)}`}>
+        <span className="tm-chip tm-chip--dot sport-chip" data-sport={sportKey(activity.sport_type)}>
           {activity.sport_type}
         </span>
         <span className="last-activity__date">{formatDate(activity.date)}</span>
