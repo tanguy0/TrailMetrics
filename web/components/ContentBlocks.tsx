@@ -19,6 +19,17 @@ import type { ImageBlock, TextBlock } from "@/lib/types";
  * CSS (`white-space: pre-wrap`) instead, which is what someone typing a paragraph
  * expects anyway.
  */
+/**
+ * A block's tone → its class. The stored values ("terracotta", "sunrise") are in
+ * saved page specs and stay as they are; the classes follow the TAGG token names.
+ */
+const TONE_CLASS: Record<Exclude<TextBlock["tone"], "none">, string> = {
+  forest: "text-block--forest",
+  terracotta: "text-block--terra",
+  sunrise: "text-block--sun",
+  plum: "text-block--plum",
+};
+
 export function TextBlockView({ block }: { block: TextBlock }) {
   if (!block.text.trim()) return null;
 
@@ -26,7 +37,7 @@ export function TextBlockView({ block }: { block: TextBlock }) {
     "text-block",
     `text-block--${block.variant}`,
     block.align === "center" ? "text-block--center" : "",
-    block.tone !== "none" ? `text-block--${block.tone}` : "",
+    block.tone !== "none" ? TONE_CLASS[block.tone] : "",
   ]
     .filter(Boolean)
     .join(" ");

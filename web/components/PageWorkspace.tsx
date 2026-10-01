@@ -366,7 +366,7 @@ function PrecomputeNotice({
   return (
     <div className="page-precompute">
       <ProgressBar
-        tone="sunrise"
+        tone="sun"
         value={status.done}
         total={status.total}
         label={t("precompute.running")}

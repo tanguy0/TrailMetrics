@@ -1264,9 +1264,6 @@ TRANSLATIONS = {
     "ui.training.form.importance_primary": {"en": "Primary", "fr": "Principal"},
     "ui.training.form.importance_secondary": {"en": "Secondary", "fr": "Secondaire"},
     "ui.training.form.end_date_label": {"en": "Until", "fr": "Jusqu'au"},
-    "ui.training.badge.planned": {"en": "Planned", "fr": "Prévu"},
-    "ui.training.badge.note": {"en": "Note", "fr": "Note"},
-    "ui.training.badge.completed": {"en": "Completed", "fr": "Terminé"},
     "ui.training.week.running": {"en": "Run", "fr": "Course"},
     "ui.training.week.cycling": {"en": "Ride", "fr": "Vélo"},
     "ui.training.week.hiking": {"en": "Hike", "fr": "Rando"},
@@ -1732,15 +1729,6 @@ TRANSLATIONS = {
     "ui.race_plan.error.start_time": {
         "en": "Enter the start time as hh:mm.", "fr": "Indiquez l'heure de départ au format hh:mm.",
     },
-    "ui.race_plan.public_warning": {
-        "en": "You are not signed in, so this plan uses a reference GAP curve (an average "
-              "runner). Sign in with Strava and the simulation is fine-tuned to your own "
-              "data — how you actually climb and descend — and is much more precise.",
-        "fr": "Vous n'êtes pas connecté : ce plan utilise une courbe GAP de référence (un "
-              "coureur moyen). Connectez-vous avec Strava et la simulation sera ajustée à "
-              "vos propres données — votre façon réelle de monter et de descendre — et "
-              "beaucoup plus précise.",
-    },
     "ui.race_plan.new.button": {"en": "New race plan", "fr": "Nouveau plan de course"},
     "ui.race_plan.new.hint": {
         "en": "A GPX, the aid stations, a target time",
@@ -1768,12 +1756,7 @@ TRANSLATIONS = {
         "en": "Choose another file to replace it.",
         "fr": "Choisissez un autre fichier pour le remplacer.",
     },
-    "ui.race_plan.sign_in_to_save": {
-        "en": "Sign in to save your plans and come back to them later.",
-        "fr": "Connectez-vous pour enregistrer vos plans et les retrouver plus tard.",
-    },
     "ui.race_plan.updated": {"en": "Updated {date}", "fr": "Modifié le {date}"},
-    "ui.race_plan.sign_in": {"en": "Sign in with Strava", "fr": "Se connecter avec Strava"},
     "ui.race_plan.summary.distance": {"en": "Distance", "fr": "Distance"},
     "ui.race_plan.summary.elevation": {"en": "Elevation", "fr": "Dénivelé"},
     "ui.race_plan.summary.target": {"en": "Target time", "fr": "Temps visé"},

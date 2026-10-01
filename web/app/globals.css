@@ -352,8 +352,9 @@ input[type="radio"] {
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
-  border-left: 3px solid var(--bg-surface-alt);
-  padding-left: 0.6rem;
+  /* Field.md: conditional sub-parameters indent `space-4` behind a `line` rule. */
+  border-left: 1px solid var(--line);
+  padding-left: var(--space-4);
 }
 
 .window-row .tm-input,
@@ -761,12 +762,6 @@ input[type="radio"] {
   font-size: 0.95rem;
   color: var(--ink);
   margin: 1.1rem 0 0.5rem;
-}
-
-.card-block__lede {
-  color: var(--ink-muted);
-  font-size: 0.85rem;
-  margin: -0.5rem 0 0.75rem;
 }
 
 /* --- KPI tiles (.tm-kpi, components.css) --------------------------------- */
@@ -1233,11 +1228,11 @@ input[type="radio"] {
   position: relative;
 }
 
-.progress-bar--sunrise .progress-bar__fill {
+.progress-bar--sun .progress-bar__fill {
   background: var(--sun);
 }
 
-.progress-bar--sunrise .progress-bar__percent {
+.progress-bar--sun .progress-bar__percent {
   color: var(--sun-ink);
 }
 
@@ -1374,45 +1369,31 @@ input[type="radio"] {
   color: var(--ink-muted);
 }
 
-/* A tone turns the block into a highlighted note, in the same tints the tiles and
-   the "how pages work" steps use — so a called-out paragraph looks like the rest of
-   the product rather than like a new component. */
+/* A tone turns the block into a highlighted note: a tinted box, never a coloured
+   left rule (README § Principes) — the same tints as the chips. */
 .text-block--forest,
-.text-block--terracotta,
-.text-block--sunrise,
+.text-block--terra,
+.text-block--sun,
 .text-block--plum {
   padding: 0.7rem 0.85rem;
-  border-radius: 8px;
-  border-left: 4px solid var(--line-strong);
+  border-radius: var(--radius-md);
   max-width: none;
 }
 
 .text-block--forest {
   background: var(--forest-tint);
-  border-left-color: var(--forest);
 }
 
-.text-block--terracotta {
+.text-block--terra {
   background: var(--terra-tint);
-  border-left-color: var(--terra);
 }
 
-.text-block--sunrise {
-  background: var(--terra-tint);
-  border-left-color: var(--sun);
+.text-block--sun {
+  background: var(--sun-tint);
 }
 
 .text-block--plum {
   background: color-mix(in srgb, var(--sport-swim) 10%, var(--bg-surface));
-  border-left-color: var(--sport-swim);
-}
-
-/* A quote already has a left rule; a tone would draw a second one beside it. */
-.text-block--quote.text-block--forest,
-.text-block--quote.text-block--terracotta,
-.text-block--quote.text-block--sunrise,
-.text-block--quote.text-block--plum {
-  padding-left: 0.85rem;
 }
 
 .image-block {
@@ -2117,18 +2098,6 @@ a.new-page {
 
 .race-plan__back:hover {
   color: var(--forest);
-}
-
-.race-plan__warning {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.4rem;
-  font-size: 0.9rem;
-}
-
-.race-plan__warning p {
-  margin: 0;
 }
 
 .race-plan__form {
