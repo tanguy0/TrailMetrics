@@ -1,1 +1,1 @@
-"""HTTP API for TrailMetrics."""
+"""HTTP API for TAGG."""

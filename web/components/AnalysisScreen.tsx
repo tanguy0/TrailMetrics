@@ -20,6 +20,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Icon } from "@/components/Icon";
+import { PageHeader } from "@/components/PageHeader";
 import { ApiError, createPage, listPages } from "@/lib/api";
 import { plural, translator, type Strings, type Translate } from "@/lib/strings";
 import type { PageSummary } from "@/lib/types";
@@ -73,22 +75,24 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
   }
 
   const steps = [
-    { key: "step1", scale: "scale-1", icon: "🎯" },
-    { key: "step2", scale: "scale-4", icon: "📈" },
-    { key: "step3", scale: "scale-6", icon: "💾" },
+    { key: "step1", icon: "target" },
+    { key: "step2", icon: "trending" },
+    { key: "step3", icon: "save" },
   ] as const;
 
   return (
     <main className="container">
-      <h1>{t("pages.title")}</h1>
+      <PageHeader kicker="TAGG" title={t("pages.title")} />
 
-      <section className="explainer scale-1">
+      <section className="explainer">
         <h2 className="explainer__title">{t("pages.how.title")}</h2>
         <p className="explainer__lede">{t("pages.how.body")}</p>
         <div className="step-grid">
           {steps.map((step) => (
-            <div className={`step ${step.scale}`} key={step.key}>
-              <span className="step__icon" aria-hidden="true">{step.icon}</span>
+            <div className="step" key={step.key}>
+              <span className="step__icon">
+                <Icon name={step.icon} size={18} />
+              </span>
               <h3 className="step__title">{t(`pages.how.${step.key}.title`)}</h3>
               <p className="step__body">{t(`pages.how.${step.key}.body`)}</p>
             </div>
@@ -125,7 +129,6 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
 function AnalysisCard({ page, t }: { page: PageSummary; t: Translate }) {
   return (
     <a className="card" href={`/pages/${page.id}`}>
-      <span className="card__icon">{page.icon}</span>
       <span className="card__title">{page.name}</span>
       <span className="card__meta">
         {plural(t, "pages.panel_count", page.panel_count)} ·{" "}

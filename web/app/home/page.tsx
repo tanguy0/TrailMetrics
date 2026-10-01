@@ -5,13 +5,16 @@
  * translated strings are in the first paint rather than fetched afterwards.
  */
 
-import { redirect } from "next/navigation";
-
 import { HomeScreen } from "@/components/HomeScreen";
+import { Teaser } from "@/components/Teaser";
 import { readSession } from "@/lib/session";
+import { translator } from "@/lib/strings";
 import { loadStrings } from "@/lib/strings.server";
 
 export default async function HomePage() {
-  if (!(await readSession())) redirect("/");
-  return <HomeScreen strings={await loadStrings()} />;
+  const strings = await loadStrings();
+  // A visitor stays here: the page's empty structure, and what Strava would put
+  // in it (design/tagg/visitor.md) — no redirect to the landing.
+  if (!(await readSession())) return <Teaser page="home" t={translator(strings)} />;
+  return <HomeScreen strings={strings} />;
 }

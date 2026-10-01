@@ -17,9 +17,12 @@
  * as chart IR, drawn by the same `ChartView`/`TableView` as every analysis panel.
  */
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { ChartView } from "@/components/ChartView";
+import { PageHeader } from "@/components/PageHeader";
+import { StravaMore } from "@/components/Teaser";
 import { TableView } from "@/components/TableView";
 import {
   deleteRacePlan,
@@ -79,8 +82,6 @@ function parseOptional(text: string, min: number, max: number): number | null | 
 }
 
 const numberText = (value: number | null | undefined) => (value == null ? "" : String(value));
-
-const SIGN_IN_HREF = "/api/auth/strava/start?next=/race-plan";
 
 export function RacePlanScreen({
   strings,
@@ -278,49 +279,46 @@ export function RacePlanScreen({
   return (
     <main className="container race-plan">
       {signedIn && (
-        <a className="race-plan__back" href="/race-plan">
+        <Link className="race-plan__back" href="/race-plan">
           {t("race_plan.back")}
-        </a>
+        </Link>
       )}
-      <div className="page-header">
-        <div className="page-header__title">
-          <span className="page-header__icon" aria-hidden="true">🏁</span>
+      <PageHeader
+        kicker={t("nav.race_plan")}
+        title={
           <input
-            className="page-header__name"
+            className="page-title-input"
             aria-label={t("race_plan.plan_title")}
             placeholder={t("race_plan.title_placeholder")}
             value={title}
             maxLength={200}
             onChange={(e) => setTitle(e.target.value)}
           />
-        </div>
-        {signedIn && (
-          <div className="page-header__actions">
-            {savedAt != null && <span className="muted">{t("race_plan.saved")}</span>}
-            <button type="button" className="button" onClick={save} disabled={saving}>
-              {saving ? t("race_plan.saving") : t("race_plan.save")}
-            </button>
-            {planId && (
-              <button type="button" className="button button--danger" onClick={remove}>
-                {t("race_plan.delete")}
+        }
+        sub={t("race_plan.intro")}
+        actions={
+          signedIn && (
+            <>
+              {savedAt != null && <span className="muted">{t("race_plan.saved")}</span>}
+              <button
+                type="button"
+                className="tm-btn tm-btn--secondary tm-btn--sm"
+                onClick={save}
+                disabled={saving}
+              >
+                {saving ? t("race_plan.saving") : t("race_plan.save")}
               </button>
-            )}
-          </div>
-        )}
-      </div>
-      <p className="page-description">{t("race_plan.intro")}</p>
+              {planId && (
+                <button type="button" className="tm-btn tm-btn--danger tm-btn--sm" onClick={remove}>
+                  {t("race_plan.delete")}
+                </button>
+              )}
+            </>
+          )
+        }
+      />
 
-      {!signedIn && (
-        <div className="note race-plan__warning">
-          <p>{t("race_plan.public_warning")}</p>
-          <p>{t("race_plan.sign_in_to_save")}</p>
-          <a className="button button--strava button--small" href={SIGN_IN_HREF}>
-            {t("race_plan.sign_in")}
-          </a>
-        </div>
-      )}
-
-      <form className="panel race-plan__form" onSubmit={submit}>
+      <form className="tm-panel panel race-plan__form" onSubmit={submit}>
         <div className="race-plan__fields">
           <label className="race-plan__field">
             <span>{t("race_plan.gpx")}</span>
@@ -340,6 +338,7 @@ export function RacePlanScreen({
           <label className="race-plan__field">
             <span>{t("race_plan.target_time")}</span>
             <input
+              className="tm-input"
               type="text"
               inputMode="numeric"
               placeholder="4:30:00"
@@ -352,6 +351,7 @@ export function RacePlanScreen({
           <label className="race-plan__field">
             <span>{t("race_plan.start_time")}</span>
             <input
+              className="tm-input"
               type="text"
               inputMode="numeric"
               placeholder="07:00"
@@ -363,7 +363,7 @@ export function RacePlanScreen({
 
           <label className="race-plan__field">
             <span>{t("race_plan.curve")}</span>
-            <select value={selectedCurve} onChange={(e) => setCurve(e.target.value)}>
+            <select className="tm-select" value={selectedCurve} onChange={(e) => setCurve(e.target.value)}>
               {curves.map((option) => (
                 <option key={option.key} value={option.key} disabled={!option.available}>
                   {option.label}
@@ -381,7 +381,7 @@ export function RacePlanScreen({
               <input
                 type="text"
                 inputMode="decimal"
-                className="race-plan__aid-km"
+                className="tm-input race-plan__aid-km"
                 aria-label={t("race_plan.aid_station_km")}
                 placeholder={t("race_plan.aid_station_km")}
                 value={row.km}
@@ -389,7 +389,7 @@ export function RacePlanScreen({
               />
               <input
                 type="text"
-                className="race-plan__aid-name"
+                className="tm-input race-plan__aid-name"
                 aria-label={t("race_plan.aid_station_name")}
                 placeholder={t("race_plan.aid_station_name")}
                 value={row.name}
@@ -398,7 +398,7 @@ export function RacePlanScreen({
               />
               <button
                 type="button"
-                className="button button--ghost button--small"
+                className="tm-btn tm-btn--secondary tm-btn--sm"
                 onClick={() => setAidRows((rows) => rows.filter((_, i) => i !== index))}
               >
                 {t("race_plan.remove")}
@@ -407,7 +407,7 @@ export function RacePlanScreen({
           ))}
           <button
             type="button"
-            className="button button--ghost button--small"
+            className="tm-btn tm-btn--secondary tm-btn--sm"
             onClick={() => setAidRows((rows) => [...rows, { km: "", name: "" }])}
           >
             {t("race_plan.add_aid_station")}
@@ -416,18 +416,20 @@ export function RacePlanScreen({
 
         <fieldset className="race-plan__aid">
           <legend>{t("race_plan.conditions")}</legend>
-          <label className="race-plan__check">
+          <label className="tm-toggle">
             <input
               type="checkbox"
               checked={durability}
               onChange={(e) => setDurability(e.target.checked)}
             />
+            <span className="tm-toggle__track" aria-hidden="true" />
             <span>{t("race_plan.durability")}</span>
           </label>
           <div className="race-plan__fields">
             <label className="race-plan__field">
               <span>{t("race_plan.temperature_start")}</span>
               <input
+                className="tm-input"
                 type="text"
                 inputMode="decimal"
                 placeholder="12"
@@ -439,6 +441,7 @@ export function RacePlanScreen({
             <label className="race-plan__field">
               <span>{t("race_plan.temperature_end")}</span>
               <input
+                className="tm-input"
                 type="text"
                 inputMode="decimal"
                 placeholder="22"
@@ -450,6 +453,7 @@ export function RacePlanScreen({
             <label className="race-plan__field">
               <span>{t("race_plan.humidity")}</span>
               <input
+                className="tm-input"
                 type="text"
                 inputMode="decimal"
                 placeholder="60"
@@ -463,7 +467,7 @@ export function RacePlanScreen({
         </fieldset>
 
         <div className="race-plan__actions">
-          <button type="submit" className="button" disabled={computing}>
+          <button type="submit" className="tm-btn" disabled={computing}>
             {computing ? t("race_plan.computing") : t("race_plan.submit")}
           </button>
           {computing && (
@@ -479,6 +483,11 @@ export function RacePlanScreen({
       </form>
 
       {result && <RacePlanResultView result={result} t={t} />}
+      {/* Open page: say what Strava adds in one quiet line, never a banner
+          (visitor.md § Pages ouvertes). */}
+      {!signedIn && (
+        <StravaMore message={t("visitor.more.race_plan")} next="/race-plan" t={t} />
+      )}
     </main>
   );
 }
@@ -512,11 +521,13 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
 
   return (
     <div className="race-plan__result">
-      <div className="tile-grid race-plan__summary scale-1">
+      <div className="kpi-grid race-plan__summary">
         {tiles.map(([label, value]) => (
-          <div className="tile tile--dot" key={label}>
-            <span className="tile__label">{label}</span>
-            <span className="tile__value race-plan__tile-value">{value}</span>
+          <div className="tm-kpi" key={label}>
+            <span className="tm-kpi__label">{label}</span>
+            <span className="tm-kpi__value">
+              <span className="tm-kpi__num race-plan__kpi-num">{value}</span>
+            </span>
           </div>
         ))}
       </div>
@@ -544,7 +555,7 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
 
 function OutputSection({ title, output }: { title: string; output: PlotOutput }) {
   return (
-    <section className="panel">
+    <section className="tm-panel panel">
       <div className="panel__header">
         <h2 className="panel__title">{title}</h2>
       </div>

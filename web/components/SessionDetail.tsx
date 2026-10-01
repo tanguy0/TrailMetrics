@@ -28,7 +28,7 @@ import {
   updateComment,
 } from "@/lib/api";
 import { formatDate, formatHms, formatNumber, formatPace, formatSpeed } from "@/lib/format";
-import { CYCLING_SPORT_TYPES, HIKING_SPORT_TYPES, SWIMMING_SPORT_TYPES, sportTone } from "@/lib/sport";
+import { CYCLING_SPORT_TYPES, HIKING_SPORT_TYPES, SWIMMING_SPORT_TYPES, sportKey } from "@/lib/sport";
 import type { Translate } from "@/lib/strings";
 import type {
   ActivityCard,
@@ -142,7 +142,7 @@ export function SessionDetail({
   return (
     <div className="session-detail">
       <p className="last-activity__head">
-        <span className={`last-activity__sport last-activity__sport--${sportTone(activity.sport_type)}`}>
+        <span className="tm-chip tm-chip--dot sport-chip" data-sport={sportKey(activity.sport_type)}>
           {activity.sport_type}
         </span>
         <span className="last-activity__date">{formatDate(activity.date)}</span>
@@ -150,7 +150,7 @@ export function SessionDetail({
 
       <CommentsSection activityId={activityId} t={t} />
 
-      <dl className="metric-row">
+      <dl className="kpi-grid kpi-grid--compact">
         <Metric
           label={t("home.last.distance")}
           value={km != null ? `${formatNumber(km, 2)} ${t("common.km")}` : "—"}
@@ -216,9 +216,11 @@ export function SessionDetail({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="metric">
-      <dt className="metric__label">{label}</dt>
-      <dd className="metric__value">{value}</dd>
+    <div className="tm-kpi">
+      <dt className="tm-kpi__label">{label}</dt>
+      <dd className="tm-kpi__value">
+        <span className="tm-kpi__num">{value}</span>
+      </dd>
     </div>
   );
 }
@@ -272,7 +274,7 @@ function CommentsSection({ activityId, t }: { activityId: number; t: Translate }
       ))}
       <div className="session-comments__form">
         <textarea
-          className="session-comments__input"
+          className="tm-textarea session-comments__input"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder={t("session.comments.placeholder")}
@@ -280,7 +282,7 @@ function CommentsSection({ activityId, t }: { activityId: number; t: Translate }
         />
         <button
           type="button"
-          className="button button--ghost button--small"
+          className="tm-btn tm-btn--secondary tm-btn--sm"
           disabled={posting || !draft.trim()}
           onClick={handleAdd}
         >
@@ -312,7 +314,7 @@ function CommentRow({
     return (
       <div className="session-comments__form">
         <textarea
-          className="session-comments__input"
+          className="tm-textarea session-comments__input"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           rows={2}
@@ -321,7 +323,7 @@ function CommentRow({
         <div className="session-comments__actions">
           <button
             type="button"
-            className="button button--ghost button--small"
+            className="tm-btn tm-btn--secondary tm-btn--sm"
             disabled={busy}
             onClick={() => {
               setDraft(comment.body);
@@ -332,7 +334,7 @@ function CommentRow({
           </button>
           <button
             type="button"
-            className="button button--ghost button--small"
+            className="tm-btn tm-btn--secondary tm-btn--sm"
             disabled={busy || !draft.trim()}
             onClick={async () => {
               setBusy(true);
@@ -357,14 +359,14 @@ function CommentRow({
       <div className="session-comments__actions">
         <button
           type="button"
-          className="button button--ghost button--small"
+          className="tm-btn tm-btn--secondary tm-btn--sm"
           onClick={() => setEditing(true)}
         >
           {t("session.comments.edit")}
         </button>
         <button
           type="button"
-          className="button button--danger button--small"
+          className="tm-btn tm-btn--danger tm-btn--sm"
           onClick={() => deleteComment(activityId, comment.id).then(onDelete)}
         >
           {t("session.comments.delete")}

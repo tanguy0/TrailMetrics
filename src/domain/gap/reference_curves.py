@@ -32,5 +32,5 @@ def kilian_jornet() -> GapCurve:
         stds=np.zeros(15),
         counts=np.ones(15, dtype=int),
         color=theme.KILIAN,
-        linestyle="--",
+        linestyle=":",
     )

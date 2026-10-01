@@ -32,9 +32,11 @@ export function middleware(request: NextRequest) {
     // Inline `style={{...}}` attributes have no nonce mechanism in the CSP spec
     // — only <style> *elements* can be nonce'd — so `unsafe-inline` is the only
     // way to allow the handful of components that set one directly.
-    "style-src 'self' 'unsafe-inline'",
+    // The Google Fonts stylesheet (Manrope + DM Mono, design/tagg/README.md) and
+    // the font files it points at are the only third-party style origins.
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: https:",
-    "font-src 'self' data:",
+    "font-src 'self' data: https://fonts.gstatic.com",
     "connect-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",

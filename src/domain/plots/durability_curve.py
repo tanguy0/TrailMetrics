@@ -155,14 +155,14 @@ def _drift_chart(fitted, config: DurabilityConfig, params: Dict[str, Any], lang:
         traces.append(Trace(
             name=_name(label, translate("durability.series.population", lang)),
             x=[round(float(c), 3) for c in centers], y=[round(v, 2) for v in pop_mean],
-            kind=TraceKind.LINE, color=theme.BALANCED_RUNNER, dash="--", width=2.0,
+            kind=TraceKind.LINE, color=theme.BALANCED_RUNNER, dash="--", width=1.5,
             hover_template="%{x:.2f} h<br>%{y:+.1f} %<extra>%{fullData.name}</extra>",
         ))
         if model.confidence != POPULATION_ONLY:
             traces.append(Trace(
                 name=_name(label, translate("durability.series.personal", lang)),
                 x=[round(float(c), 3) for c in centers], y=[round(v, 2) for v in ind_mean],
-                kind=TraceKind.LINE, color=color, width=3.0,
+                kind=TraceKind.LINE, color=color, width=2.0,
                 hover_template="%{x:.2f} h<br>%{y:+.1f} %<extra>%{fullData.name}</extra>",
             ))
     if not traces:
@@ -220,7 +220,7 @@ def _projection_chart(fitted, config: DurabilityConfig, lang: str):
         traces.append(Trace(
             name=_name(label, translate("durability.series.population", lang)),
             x=hours.round(3).tolist(), y=curve(model.population).round(2).tolist(),
-            kind=TraceKind.LINE, color=theme.BALANCED_RUNNER, dash="--", width=2.0,
+            kind=TraceKind.LINE, color=theme.BALANCED_RUNNER, dash="--", width=1.5,
             hover_template="%{x:.1f} h<br>+%{y:.1f} %<extra>%{fullData.name}</extra>",
         ))
         if model.confidence != POPULATION_ONLY:
@@ -231,7 +231,7 @@ def _projection_chart(fitted, config: DurabilityConfig, lang: str):
             traces.append(Trace(
                 name=_name(label, translate("durability.series.personal", lang)),
                 x=hours.round(3).tolist(), y=curve(model.coefficients).round(2).tolist(),
-                kind=TraceKind.LINE, color=color, width=3.0,
+                kind=TraceKind.LINE, color=color, width=2.0,
                 band_upper=upper.round(2).tolist(), band_lower=lower.round(2).tolist(),
                 hover_template="%{x:.1f} h<br>+%{y:.1f} %<extra>%{fullData.name}</extra>",
             ))

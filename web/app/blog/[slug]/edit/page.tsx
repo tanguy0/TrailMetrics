@@ -13,7 +13,7 @@ import { BlogPostForm } from "@/components/BlogPostForm";
 import { apiBaseUrl, lang, readSession } from "@/lib/session";
 import type { Athlete, BlogPost } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Modifier l'article — TrailMetrics Blog" };
+export const metadata: Metadata = { title: "Modifier l'article — TAGG Blog" };
 
 export default async function EditBlogPostPage({
   params,

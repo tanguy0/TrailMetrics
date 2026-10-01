@@ -23,7 +23,7 @@ interface Props {
   label?: string;
   /** Short line beside the count: extra detail from the server. */
   detail?: string;
-  tone?: "forest" | "sunrise";
+  tone?: "forest" | "sun";
 }
 
 export function ProgressBar({ value, total, label, detail, tone = "forest" }: Props) {

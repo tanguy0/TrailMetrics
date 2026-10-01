@@ -1,162 +1,3 @@
-/*
- * Trail / Earthy — the same palette as the Python theme, so a figure looks the same
- * wherever it is drawn. Hand-written CSS rather than a framework: the UI is mostly
- * forms and charts, and it keeps the dependency list to Next, React and Plotly.
- */
-
-:root {
-  --primary: #2e6f40;
-  --terracotta: #c65d3b;
-  --sunrise: #e8a33d;
-  --moss: #5e9c4e;
-  --danger: #8e2c18;
-
-  --bg: #fbf8f3;
-  --surface: #fffdf9;
-  --surface-alt: #f0eadf;
-  --grid: #cfc3ae;
-  --spine: #b8ac97;
-  --text: #241f19;
-  --muted: #6b6157;
-
-  --radius: 10px;
-  --gap: 1rem;
-  /* Shared by Athlete History's and Athlete Health Metrics' tiles so both
-     cards' two rows come out to the same height regardless of column count. */
-  --tile-height: 6.6rem;
-
-  /*
-   * Widget accents. Four hues drawn from the chart palette above, so a tile and a
-   * trace of the same colour mean the same thing across the product.
-   *
-   * They are decoration, not an encoding: every tile carries a text label, so no
-   * meaning is lost when hue is unavailable. That label is also what licenses the
-   * one pair the palette validator flags — forest against terracotta separates
-   * poorly for protanopia, but they are the app's two brand colours and nothing
-   * here has to be decoded from hue alone.
-   *
-   * The `-tint` values are the accent at 10% over `--surface`, precomputed rather
-   * than composited so contrast is a fixed, checked number: body ink lands at
-   * ~14:1 on every tint and the muted labels at ~5.2:1.
-   */
-  --tone-forest: #2e6f40;
-  --tone-forest-tint: #eaefe7;
-  --tone-forest-rgb: 46, 111, 64;
-  --tone-terracotta: #c65d3b;
-  --tone-terracotta-tint: #f9ede6;
-  --tone-terracotta-rgb: 198, 93, 59;
-  --tone-blue: #3a6ea5;
-  --tone-blue-tint: #ebeff1;
-  --tone-blue-rgb: 58, 110, 165;
-  --tone-plum: #8b3e8f;
-  --tone-plum-tint: #f3eaee;
-  --tone-plum-rgb: 139, 62, 143;
-  --sunrise-tint: #fdf4e3;
-  --sunrise-rgb: 232, 163, 61;
-  --moss-tint: #eff3e8;
-  --moss-rgb: 94, 156, 78;
-  --danger-tint: #f4e8e2;
-  --danger-rgb: 142, 44, 24;
-
-  /*
-   * The app's one progressive scale, gold (`--sunrise`) to red (`--danger`),
-   * six evenly-spaced steps. Used wherever a page has an ordered sequence of
-   * sections — Home's cards top to bottom, an Analysis page's panels — so
-   * position in the sequence reads as position on the scale, rather than
-   * each section carrying an unrelated brand hue. A panel count that isn't
-   * one of these six steps is interpolated the same way in JS, see
-   * `web/lib/colorScale.ts` — same two endpoints, same formula.
-   */
-  --scale-1: var(--sunrise);
-  /* #e8a33d */
-  --scale-1-rgb: var(--sunrise-rgb);
-  --scale-1-tint: var(--sunrise-tint);
-  --scale-2: #d68b36;
-  --scale-2-rgb: 214, 139, 54;
-  --scale-2-tint: #fbf2e6;
-  --scale-3: #c4732e;
-  --scale-3-rgb: 196, 115, 46;
-  --scale-3-tint: #f9efe5;
-  --scale-4: #b25c27;
-  --scale-4-rgb: 178, 92, 39;
-  --scale-4-tint: #f7ede4;
-  --scale-5: #a0441f;
-  --scale-5-rgb: 160, 68, 31;
-  --scale-5-tint: #f6ebe3;
-  --scale-6: var(--danger);
-  /* #8e2c18 */
-  --scale-6-rgb: var(--danger-rgb);
-  --scale-6-tint: var(--danger-tint);
-
-  /*
-   * The same gold-to-red scale, spaced across the four sport families
-   * instead of six sections — running, hiking, cycling, swimming, in that
-   * fixed order, wherever a sport reads as a colour (`.training-session--*`,
-   * `.last-activity__sport--*`, `.week-summary__col--*`). Its own four evenly-
-   * spaced steps, not a subset of `--scale-1..6` above — four points split
-   * the same 0–1 range differently than six do.
-   */
-  --sport-scale-1: var(--sunrise);
-  /* running · #e8a33d */
-  --sport-scale-1-rgb: var(--sunrise-rgb);
-  --sport-scale-1-tint: var(--sunrise-tint);
-  --sport-scale-2: #ca7b31;
-  /* hiking */
-  --sport-scale-2-rgb: 202, 123, 49;
-  --sport-scale-2-tint: #faf0e5;
-  --sport-scale-3: #ac5424;
-  /* cycling */
-  --sport-scale-3-rgb: 172, 84, 36;
-  --sport-scale-3-tint: #f7ece4;
-  --sport-scale-4: var(--danger);
-  /* swimming · #8e2c18 */
-  --sport-scale-4-rgb: var(--danger-rgb);
-  --sport-scale-4-tint: var(--danger-tint);
-}
-
-/*
- * The automatic link: apply one `.scale-N` class to a section's wrapper
- * element, and every descendant that reads `--section-accent`/`-rgb`/`-tint`
- * (`.card-block__title`, `.tile`, `.record`, `.hr-map__*`, `.step`,
- * `.panel__title`, `.plot-card`, ...) picks it up through ordinary CSS
- * inheritance — no per-element, per-section modifier class to keep in sync.
- */
-.scale-1 {
-  --section-accent: var(--scale-1);
-  --section-accent-rgb: var(--scale-1-rgb);
-  --section-accent-tint: var(--scale-1-tint);
-}
-
-.scale-2 {
-  --section-accent: var(--scale-2);
-  --section-accent-rgb: var(--scale-2-rgb);
-  --section-accent-tint: var(--scale-2-tint);
-}
-
-.scale-3 {
-  --section-accent: var(--scale-3);
-  --section-accent-rgb: var(--scale-3-rgb);
-  --section-accent-tint: var(--scale-3-tint);
-}
-
-.scale-4 {
-  --section-accent: var(--scale-4);
-  --section-accent-rgb: var(--scale-4-rgb);
-  --section-accent-tint: var(--scale-4-tint);
-}
-
-.scale-5 {
-  --section-accent: var(--scale-5);
-  --section-accent-rgb: var(--scale-5-rgb);
-  --section-accent-tint: var(--scale-5-tint);
-}
-
-.scale-6 {
-  --section-accent: var(--scale-6);
-  --section-accent-rgb: var(--scale-6-rgb);
-  --section-accent-tint: var(--scale-6-tint);
-}
-
 * {
   box-sizing: border-box;
 }
@@ -165,47 +6,39 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
+  background: var(--bg-page);
+  color: var(--ink);
+  font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.5;
 }
 
-/* App-wide backdrop. The tint keeps the paper-cream palette dominant so text and
-   cards read exactly as they do without it; the image only shows as soft form at
-   the margins. `fixed` means it does not scroll with long pages. */
-body {
-  /* html carries the flat --bg, so body's backdrop is painted over body's own box
-     rather than the canvas — it must fill the viewport even on short pages. */
-  min-height: 100vh;
-  background:
-    linear-gradient(rgba(251, 248, 243, 0.72), rgba(251, 248, 243, 0.72)),
-    url("/background.webp") center / cover no-repeat fixed var(--bg);
-}
-
 a {
-  color: var(--primary);
+  color: var(--forest);
 }
 
 h1 {
-  font-size: 1.75rem;
+  font-size: 30px;
+  line-height: 34px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
   margin: 0;
-  border-bottom: 4px solid var(--sunrise);
-  padding-bottom: 0.2rem;
-  display: inline-block;
 }
 
 h2 {
-  font-size: 1.25rem;
-  color: var(--primary);
+  font-size: 19px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
   margin: 2rem 0 0.5rem;
 }
 
 h3 {
-  font-size: 1rem;
-  color: var(--primary);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--ink);
   margin: 0;
 }
 
@@ -215,7 +48,7 @@ h4 {
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.875rem;
   margin: 0.25rem 0;
 }
@@ -225,11 +58,13 @@ h4 {
   max-width: 60ch;
 }
 
-/* --- Shell & sidebar ------------------------------------------------------ */
+/* --- Shell & rail ---------------------------------------------------------- */
 
 .shell {
   display: flex;
+  gap: var(--space-8);
   min-height: 100vh;
+  padding-left: var(--space-8);
 }
 
 .shell__content {
@@ -250,8 +85,8 @@ h4 {
   display: inline-flex;
   gap: 0.15rem;
   padding: 0.2rem;
-  background: var(--surface);
-  border: 1px solid var(--spine);
+  background: var(--bg-surface);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
 }
 
@@ -260,7 +95,7 @@ h4 {
   border: none;
   border-radius: 999px;
   background: none;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -268,16 +103,16 @@ h4 {
 }
 
 .lang-switch__option:hover:not(:disabled) {
-  background: var(--surface-alt);
+  background: var(--bg-surface-alt);
 }
 
 .lang-switch__option--active {
-  background: var(--primary);
-  color: #fff;
+  background: var(--forest);
+  color: var(--on-forest);
 }
 
 .lang-switch__option--active:hover {
-  background: var(--primary);
+  background: var(--forest);
 }
 
 .lang-switch__option:disabled {
@@ -285,190 +120,110 @@ h4 {
   opacity: 0.6;
 }
 
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  width: 15rem;
+/* The rail (`.tm-rail`, components.css) floats `space-8` off the window edge
+   and stays put while a long page scrolls beside it (NavRail.md). */
+.shell__rail {
   flex-shrink: 0;
-  padding: 1.1rem 0.9rem;
-  background: var(--surface);
-  border-right: 1px solid var(--spine);
-  /* The rail stays put while a long page scrolls beside it. */
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: var(--space-8);
+  align-self: flex-start;
+  height: calc(100vh - 2 * var(--space-8));
+  margin: var(--space-8) 0;
+  overflow-y: auto;
 }
 
-.sidebar__brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-decoration: none;
-  color: var(--text);
-  font-weight: 800;
-  font-size: 1.05rem;
+.shell__signout {
+  margin-top: auto;
 }
 
-.sidebar__brand-logo {
-  width: 100%;
-  height: auto;
-}
-
-.coach-switcher {
-  position: relative;
-}
-
-.coach-switcher__toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--spine);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  text-align: left;
-}
-
-.coach-switcher__toggle:hover {
-  background: var(--surface-alt);
-}
-
-.coach-switcher__toggle--active {
-  background: var(--tone-terracotta-tint);
-  border-color: var(--terracotta);
-  color: var(--terracotta);
-}
-
-.coach-switcher__list {
+/* The coach's roster opens under the switcher, still on the rail. */
+.shell__switcher-list {
   list-style: none;
-  margin: 0.3rem 0 0;
-  padding: 0.3rem;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-1);
   display: grid;
-  gap: 0.15rem;
-  background: var(--surface);
-  border: 1px solid var(--spine);
-  border-radius: 8px;
+  gap: 2px;
+  background: color-mix(in srgb, var(--on-forest) 8%, transparent);
+  border-radius: var(--radius-md);
   max-height: 16rem;
   overflow-y: auto;
 }
 
-.coach-switcher__list button {
+.shell__switcher-list button {
   display: block;
   width: 100%;
-  padding: 0.4rem 0.5rem;
+  padding: 6px 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
-  color: var(--text);
-  font-size: 0.85rem;
+  color: var(--on-forest);
+  font: 500 12.5px/18px var(--font-sans);
   text-align: left;
   cursor: pointer;
 }
 
-.coach-switcher__list button:hover {
-  background: var(--surface-alt);
+.shell__switcher-list button:hover {
+  background: color-mix(in srgb, var(--on-forest) 8%, transparent);
 }
 
-.coach-switcher__hint {
-  padding: 0.4rem 0.5rem;
-  font-size: 0.85rem;
-  color: var(--muted);
+.shell__switcher-hint {
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: var(--on-rail-muted);
 }
 
-.sidebar__nav {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.3rem;
-}
-
-/*
- * Green is the app's one button color (see "--- Buttons ---" below) — these
- * four are the most-pressed buttons in the product, so they get it as a
- * solid fill, not just an accent.
- */
-.sidebar__link {
+/* A visitor's two groups, "Open" and "With Strava" (visitor.md § Rail). */
+.shell__groups {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 0.7rem;
-  border-radius: var(--radius);
-  text-decoration: none;
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.95rem;
-  background: var(--primary);
-  border: 1px solid var(--primary);
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
-.sidebar__link:not(.sidebar__link--disabled):hover {
-  filter: brightness(1.06);
-}
-
-/* Gold, not another shade of the link's own green, so "you are here" reads
-   as a distinct signal rather than disappearing into the fill. */
-.sidebar__link--active {
-  outline: 2px solid var(--sunrise);
-  outline-offset: -2px;
-}
-
-/* Shown in place of a link for a section that needs an athlete's own data — the
-   rail stays fully visible before sign-in, but these four are inert until then. */
-.sidebar__link--disabled {
-  background: var(--surface-alt);
-  border-color: var(--spine);
-  color: var(--muted);
-  cursor: not-allowed;
-  opacity: 0.75;
-  filter: none;
-}
-
-.sidebar__icon {
-  font-size: 1.05rem;
-}
-
-.sidebar__signout {
-  margin-top: auto;
-  font-size: 0.85rem;
-  color: var(--muted);
-  text-decoration: none;
-  padding: 0 0.6rem;
-}
-
-.sidebar__signout:hover {
-  color: var(--danger);
-}
-
+/* Mobile: the rail becomes a bottom bar of icons (NavRail.md). */
 @media (max-width: 720px) {
   .shell {
-    flex-direction: column;
+    padding-left: 0;
+    padding-bottom: 4.5rem;
   }
 
-  .sidebar {
+  .shell__rail {
+    position: fixed;
+    inset: auto var(--space-2) var(--space-2);
+    top: auto;
     width: auto;
     height: auto;
-    position: static;
+    margin: 0;
     flex-direction: row;
     align-items: center;
-    gap: 0.75rem;
-    border-right: none;
-    border-bottom: 1px solid var(--spine);
+    padding: var(--space-2);
+    z-index: 50;
+    overflow: visible;
   }
 
-  .sidebar__nav {
-    display: flex;
+  .shell__rail .tm-rail__brand,
+  .shell__rail .shell__switcher,
+  .shell__rail .shell__signout {
+    display: none;
   }
 
-  .sidebar__signout {
-    margin-top: 0;
-    margin-left: auto;
+  .shell__rail .tm-rail__group,
+  .shell__rail .tm-lock {
+    display: none;
+  }
+
+  .shell__rail .shell__groups {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .shell__rail .tm-rail__nav {
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+  }
+
+  .shell__rail .tm-rail__link span {
+    display: none;
   }
 }
 
@@ -485,122 +240,58 @@ h4 {
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--gap);
-  flex-wrap: wrap;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-6);
 }
 
-.page-header__title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.page-header__lead {
+  min-width: 0;
 }
 
-.page-header__icon {
-  font-size: 1.5rem;
-}
-
-.page-header__name {
-  font-size: 1.6rem;
-  font-weight: 700;
+.page-title-input {
+  /* The editable name of a page or plan, in the title's own type: no box until
+     it is hovered or focused. */
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background: transparent;
   border: none;
-  border-bottom: 4px solid var(--sunrise);
-  background: transparent;
-  color: var(--text);
-  padding: 0 0 0.2rem;
-  min-width: 16rem;
+  border-bottom: 1px dashed transparent;
+  border-radius: 0;
+  padding: 0;
+  width: min(36rem, 100%);
 }
 
-.page-header__actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.page-title-input:hover,
+.page-title-input:focus {
+  border-bottom-color: var(--line-strong);
+  outline: none;
 }
 
-.page-description {
-  color: var(--muted);
-  max-width: 80ch;
+/* A file picker's button, dressed as a secondary `sm` button (Button.md). */
+input[type="file"] {
+  font: 400 13px/20px var(--font-sans);
+  color: var(--ink-muted);
 }
 
-/* --- Buttons -------------------------------------------------------------- */
-
-.button {
-  display: inline-block;
-  padding: 0.5rem 0.95rem;
-  border: 1px solid var(--primary);
-  border-radius: var(--radius);
-  background: var(--primary);
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
+input[type="file"]::file-selector-button {
+  margin-right: var(--space-3);
+  padding: 6px 12px;
+  font: 600 13px/18px var(--font-sans);
+  color: var(--ink);
+  background: var(--bg-surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  text-decoration: none;
 }
 
-.button:hover {
-  filter: brightness(1.08);
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  filter: none;
-}
-
-.button--ghost {
-  background: transparent;
-  color: var(--primary);
-}
-
-.button--danger {
-  background: transparent;
-  color: var(--danger);
-  border-color: var(--danger);
-}
-
-.button--small {
-  padding: 0.25rem 0.55rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.button--wide {
-  width: 100%;
-  margin-top: 1rem;
-}
-
-.button--strava {
-  background: #fc4c02;
-  border-color: #fc4c02;
-  font-size: 1.05rem;
-}
-
-/* --- Forms ---------------------------------------------------------------- */
-
-input,
-select,
-textarea {
-  font: inherit;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--spine);
-  border-radius: 6px;
-  padding: 0.35rem 0.5rem;
+input[type="file"]::file-selector-button:hover {
+  background: var(--bg-surface-alt);
 }
 
 input[type="checkbox"],
 input[type="radio"] {
   width: auto;
-  accent-color: var(--primary);
-}
-
-.select--small {
-  padding: 0.25rem 0.4rem;
-  font-size: 0.8rem;
+  accent-color: var(--forest);
 }
 
 .param-form {
@@ -619,14 +310,15 @@ input[type="radio"] {
 }
 
 .param__label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--ink-muted);
 }
 
 .param__help {
   font-size: 0.75rem;
-  color: var(--muted);
+  color: var(--ink-muted);
   margin: 0;
   max-width: 26rem;
 }
@@ -640,7 +332,7 @@ input[type="radio"] {
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--forest);
 }
 
 .multichoice {
@@ -660,8 +352,15 @@ input[type="radio"] {
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
-  border-left: 3px solid var(--surface-alt);
-  padding-left: 0.6rem;
+  /* Field.md: conditional sub-parameters indent `space-4` behind a `line` rule. */
+  border-left: 1px solid var(--line);
+  padding-left: var(--space-4);
+}
+
+.window-row .tm-input,
+.row-item .tm-input,
+.race-plan__aid-row .tm-input {
+  width: auto;
 }
 
 .row-actions {
@@ -673,127 +372,51 @@ input[type="radio"] {
 /* --- Panels --------------------------------------------------------------- */
 
 .panel {
-  /* A faint paper grain behind the document, matching the tactile texture on
-     Home's stat tiles — neutral ink, not an accent, since a panel isn't tied
-     to any one section colour. */
-  background:
-    repeating-linear-gradient(90deg,
-      rgba(36, 31, 25, 0.025) 0,
-      rgba(36, 31, 25, 0.025) 1px,
-      transparent 1px,
-      transparent 5px),
-    var(--surface);
-  border: 1px solid var(--spine);
-  border-radius: var(--radius);
-  padding: 1rem;
-  margin: 1.25rem 0;
+  /* Two panels sit `space-6` apart (Panel.md). */
+  margin: var(--space-6) 0;
 }
 
-.panel__header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  border-bottom: 1px solid var(--surface-alt);
-  padding-bottom: 0.6rem;
+.panel__heading {
+  flex: 1;
+  min-width: 0;
 }
 
-/* `--section-accent` here comes from the inline `scaleStepStyle(...)` on the
-   panel's own root element (`PanelEditor.tsx`, since a page's panel count is
-   dynamic — see `lib/colorScale.ts`), not from a `.scale-N` class, but the
-   same inherited-variable contract as `.tile`/`.step` either way. */
-.panel__title {
-  font-size: 1.1rem;
-  color: var(--section-accent, var(--primary));
-  margin: 0;
+.panel__title-input:hover,
+.panel__title-input:focus {
+  border-bottom-color: var(--line-strong);
+  outline: none;
 }
 
 .panel__title-input {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--section-accent, var(--primary));
-  border: none;
+  /* The editable panel title keeps `.tm-panel__title`'s type. */
+  display: block;
+  width: min(32rem, 100%);
   background: transparent;
+  border: none;
+  border-bottom: 1px dashed transparent;
   padding: 0;
-  min-width: 14rem;
 }
 
-.panel__meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: auto;
-}
-
-.panel__actions {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
-
-.panel__description {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.plot-grid {
-  display: grid;
-  gap: var(--gap);
-  margin-top: 0.75rem;
-}
-
-.plot-grid--one {
-  grid-template-columns: 1fr;
-}
-
-/* `auto-fit` rather than a flat `repeat(2, ...)`: an empty track collapses to
-   0 width and the remaining track's `1fr` max takes the freed space, so two
-   plots still sit side by side when there's room for both, but a single
-   leftover plot (the other one was removed, or is a `plot-card--wide` table
-   living in its own row) stretches to the panel's full width instead of
-   being stuck at half with a blank gap beside it. The `minmax` floor is
-   sized so exactly two columns fit a panel at the page's max width — any
-   narrower and it falls back to one, no separate breakpoint needed. */
-.plot-grid--two {
-  grid-template-columns: repeat(auto-fit, minmax(28rem, 1fr));
-}
-
-/* Tables are unreadable in a half-width column, so they span. */
-.plot-card--wide {
-  grid-column: 1 / -1;
-}
-
-.plot-card {
-  border: 1px solid var(--surface-alt);
-  border-left: 3px solid var(--section-accent, var(--primary));
-  border-radius: var(--radius);
-  padding: 0.75rem;
-  min-width: 0;
-  /* let charts shrink inside the grid instead of overflowing */
-  /* Same soft bottom-right inset as a stat tile, in the panel's own accent. */
-  box-shadow: inset -8px -8px 11px -6px rgba(var(--section-accent-rgb, 36, 31, 25), 0.1);
-}
-
-.plot-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.tm-plot:hover .plot-card__actions,
+.tm-plot:focus-within .plot-card__actions {
+  opacity: 1;
 }
 
 .plot-card__actions {
   display: flex;
-  gap: 0.3rem;
+  gap: var(--space-1);
   flex-wrap: wrap;
+  margin-left: auto;
+  /* Card actions show on hover or focus (PlotCard.md). */
+  opacity: 0;
+  transition: opacity 0.12s;
 }
 
 /* A text or image block is page content, not a figure: no frame around it, so a
    page reads as a document rather than as a stack of cards. The editor keeps its
    own affordances (see `plot-card--content` handling in PanelEditor). */
-.plot-card--content {
+.tm-plot.plot-card--content {
   border-color: transparent;
-  box-shadow: none;
   padding: 0.25rem 0.75rem;
 }
 
@@ -805,10 +428,10 @@ input[type="radio"] {
 
 .plot-picker-list__group h4 {
   margin: 0 0 0.4rem;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
-.plot-picker-list__group .button {
+.plot-picker-list__group .tm-btn {
   text-align: left;
   margin-top: 0.3rem;
 }
@@ -816,7 +439,12 @@ input[type="radio"] {
 /* --- Charts & tables ------------------------------------------------------ */
 
 .chart {
-  margin: 0.5rem 0 0;
+  margin: 0;
+}
+
+.chart__title {
+  display: block;
+  margin-bottom: var(--space-2);
 }
 
 .chart__canvas {
@@ -825,63 +453,46 @@ input[type="radio"] {
 }
 
 .chart__caption {
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin: 0.2rem 0 0.4rem;
+  margin: var(--space-1) 0 var(--space-2);
 }
 
 .table-block {
   margin-top: 0.75rem;
 }
 
-.table-scroll {
-  overflow-x: auto;
+/* In a panel the table is not a card of its own (DataTable.md). */
+.table-block .tm-table {
+  box-shadow: none;
 }
 
-.table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.875rem;
-}
-
-.table th,
-.table td {
-  border-bottom: 1px solid var(--surface-alt);
-  padding: 0.35rem 0.6rem;
-  text-align: right;
+.table-block .tm-table td,
+.table-block .tm-table th {
   white-space: nowrap;
 }
 
-.table th {
-  color: var(--muted);
-  font-weight: 600;
-  text-align: right;
+.table-block > .tm-btn {
+  margin-top: var(--space-2);
 }
 
-.table th:first-child,
-.table td:first-child {
-  text-align: left;
-}
-
-.cell--best {
-  background: var(--moss);
-  color: #fff;
-  font-weight: 700;
+.table-scroll {
+  overflow-x: auto;
 }
 
 /* --- Notes & status ------------------------------------------------------- */
 
 .note {
-  background: var(--surface-alt);
-  border-left: 3px solid var(--sunrise);
-  padding: 0.5rem 0.7rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--line);
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 20px;
   margin: 0.5rem 0;
 }
 
 .note--error {
-  border-left-color: var(--danger);
+  background: var(--danger-tint);
+  border-color: transparent;
   color: var(--danger);
 }
 
@@ -896,8 +507,8 @@ input[type="radio"] {
 .spinner {
   width: 0.9rem;
   height: 0.9rem;
-  border: 2px solid var(--grid);
-  border-top-color: var(--primary);
+  border: 2px solid var(--line);
+  border-top-color: var(--forest);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   display: inline-block;
@@ -909,21 +520,11 @@ input[type="radio"] {
   }
 }
 
-.tag {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: var(--surface-alt);
-  color: var(--muted);
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-}
-
 /* --- Data source editor --------------------------------------------------- */
 
 .source-editor {
-  background: var(--surface-alt);
-  border-radius: var(--radius);
+  background: var(--bg-surface-alt);
+  border-radius: var(--radius-md);
   padding: 0.85rem;
   margin: 0.75rem 0;
 }
@@ -940,7 +541,7 @@ input[type="radio"] {
   gap: 0.5rem;
   padding-bottom: 0.85rem;
   margin-bottom: 0.85rem;
-  border-bottom: 1px solid var(--spine);
+  border-bottom: 1px solid var(--line-strong);
 }
 
 .sport-picker__family {
@@ -961,17 +562,17 @@ input[type="radio"] {
   grid-template-rows: auto auto;
   gap: 0 0.4rem;
   align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--spine);
-  border-radius: var(--radius);
+  background: var(--bg-surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
   padding: 0.5rem 0.7rem;
   cursor: pointer;
   flex: 1 1 14rem;
 }
 
 .mode--active {
-  border-color: var(--primary);
-  box-shadow: inset 0 0 0 1px var(--primary);
+  border-color: var(--forest);
+  box-shadow: inset 0 0 0 1px var(--forest);
 }
 
 .mode__label {
@@ -982,7 +583,7 @@ input[type="radio"] {
 .mode__hint {
   grid-column: 2;
   font-size: 0.75rem;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 .window-row {
@@ -1004,8 +605,8 @@ input[type="radio"] {
 .activity-list {
   max-height: 18rem;
   overflow-y: auto;
-  background: var(--surface);
-  border: 1px solid var(--spine);
+  background: var(--bg-surface);
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
   padding: 0.35rem 0.5rem;
 }
@@ -1026,7 +627,7 @@ input[type="radio"] {
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--forest);
 }
 
 .filters__body {
@@ -1041,36 +642,35 @@ input[type="radio"] {
 .hero {
   display: flex;
   align-items: center;
-  gap: var(--gap);
+  gap: var(--space-4);
   margin-bottom: 1.25rem;
 }
 
 .hero__name {
-  font-size: 1.9rem;
-  border-bottom-width: 5px;
+  font-size: 30px;
 }
 
 /* Plain text under the name, not a tile: strip the tile's chrome and caption,
    keep only the (still click-to-edit) value. */
-.hero__email .tile {
+.hero__email .tm-kpi {
   background: none;
   border: none;
   padding: 0;
   margin-top: 0.15rem;
+  box-shadow: none;
 }
 
-.hero__email .tile__label {
+.hero__email .tm-kpi__label {
   display: none;
 }
 
-.hero__email .tile__value {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--muted);
+.hero__email .tm-kpi__num {
+  font: 500 13px/20px var(--font-sans);
+  color: var(--ink-muted);
 }
 
 .hero__meta {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.9rem;
   margin: 0.4rem 0 0;
 }
@@ -1080,7 +680,7 @@ input[type="radio"] {
   height: 3.75rem;
   border-radius: 50%;
   margin-left: auto;
-  border: 3px solid var(--sunrise);
+  border: 3px solid var(--sun);
   object-fit: cover;
 }
 
@@ -1094,8 +694,8 @@ input[type="radio"] {
      Athlete History takes the extra space rather than the row stretching
      Health's tiles wide and shallow. */
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: var(--gap);
-  margin-bottom: var(--gap);
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
   align-items: stretch;
 }
 
@@ -1106,104 +706,53 @@ input[type="radio"] {
 }
 
 .card-block {
-  background: var(--surface);
-  border: 1px solid var(--spine);
-  border-radius: var(--radius);
-  padding: 1rem 1.1rem 1.15rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  padding: 18px 20px;
 }
 
 .card-block--records {
-  margin-bottom: var(--gap);
+  margin-bottom: var(--space-4);
 }
 
 .card-block--zones {
-  margin-bottom: var(--gap);
+  margin-bottom: var(--space-4);
 }
 
 .card-block--sync {
-  margin-bottom: var(--gap);
+  margin-bottom: var(--space-4);
 }
 
 .card-block--progress {
-  margin-bottom: var(--gap);
+  margin-bottom: var(--space-4);
 }
 
 .card-block--welcome {
   margin: 1.5rem 0;
-  /* A one-off onboarding banner, not one of the page's ordered sections —
-     no `.scale-N` class, so it sets its own accent rather than inheriting one. */
-  --section-accent: var(--tone-forest);
-  --section-accent-rgb: var(--tone-forest-rgb);
-  --section-accent-tint: var(--tone-forest-tint);
 }
 
 .card-block__title {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0 0 0.75rem;
+  gap: var(--space-2);
+  font-size: 19px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 var(--space-4);
 }
 
-/*
- * Race-Print section header: every named `card-block` on the site — not just
- * Home's four dashboard sections — gets one solid, full-width accent bar bled
- * to the card's own edges via negative margins matching its padding —
- * `overflow: hidden` on the card clips the bar's square corners to the card's
- * own radius, so no radius is needed on the bar itself. The title text grows
- * to fill the middle, pushing the small print-registration mark to the right.
- */
-.card-block--profile,
-.card-block--health,
-.card-block--zones,
-.card-block--records,
-.card-block--sync,
-.card-block--progress,
-.card-block--welcome {
-  overflow: hidden;
+.card-block__title svg {
+  color: var(--forest);
+  flex: none;
 }
 
-.card-block--profile>.card-block__title,
-.card-block--health>.card-block__title,
-.card-block--zones>.card-block__title,
-.card-block--records>.card-block__title,
-.card-block--sync>.card-block__title,
-.card-block--progress>.card-block__title,
-.card-block--welcome>.card-block__title {
-  margin: -1rem -1.1rem 1rem;
-  padding: 0.6rem 1rem;
-  /* Set by whichever `.scale-N` class is on the section wrapper (or, for
-     `--welcome`, its own explicit override above) — the link is automatic,
-     not a rule per section variant. */
-  background: var(--section-accent, var(--primary));
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 0.95rem;
-}
 
 .card-block__title-text {
   flex: 1 1 auto;
-}
-
-/* A tiny checkerboard, print-registration-style mark — restrained, not a new
-   icon language: just two rows of a diagonal check pattern at low opacity.
-   Shared by every accent-bar title, whether it names the mark as its own
-   element (`card-block__title-mark`) or generates it as a bar's `::after`
-   (`explainer__title`). */
-.card-block__title-mark,
-.explainer__title::after {
-  width: 0.55rem;
-  height: 0.55rem;
-  flex-shrink: 0;
-  opacity: 0.6;
-  background-image:
-    linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%),
-    linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%);
-  background-position: 0 0, 0.275rem 0.275rem;
-  background-size: 0.275rem 0.275rem;
 }
 
 .card-block__subtitle {
@@ -1211,183 +760,116 @@ input[type="radio"] {
   align-items: center;
   gap: 0.4rem;
   font-size: 0.95rem;
-  color: var(--text);
+  color: var(--ink);
   margin: 1.1rem 0 0.5rem;
 }
 
-.card-block__lede {
-  color: var(--muted);
-  font-size: 0.85rem;
-  margin: -0.5rem 0 0.75rem;
-}
+/* --- KPI tiles (.tm-kpi, components.css) --------------------------------- */
 
-/* --- Stat tiles ----------------------------------------------------------- */
-
-.tile-grid {
+.kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
-  gap: 0.6rem;
+  gap: var(--space-3);
 }
 
-.tile-grid--two {
+.kpi-grid--two,
+.kpi-grid--records {
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
 }
 
 /* Fixed 4 columns rather than auto-fit — Athlete History's 8 tiles land as
    two even rows regardless of the card's width, matching Athlete Health
-   Metrics' two rows at the same per-tile height (`--tile-height`) so the two
-   cards come out the same overall length. */
-.tile-grid--four {
+   Metrics' two rows at the same per-tile height (`--tile-height`, kept as is
+   per migration.md) so the two cards come out the same overall length. */
+.kpi-grid--four,
+.kpi-grid--square {
+  --tile-height: 6.6rem;
+}
+
+.kpi-grid--four {
   grid-template-columns: repeat(4, 1fr);
 }
 
-.tile-grid--four .tile {
-  height: var(--tile-height);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-/* Four equal cells, same height as Athlete History's — not square (that tied
-   each tile's height to its own column width, which differs between the two
-   cards), just fixed. */
-.tile-grid--square {
+.kpi-grid--square {
   grid-template-columns: repeat(2, 1fr);
 }
 
-.tile-grid--square .tile {
-  height: var(--tile-height);
-  display: flex;
-  flex-direction: column;
+.kpi-grid--four .tm-kpi,
+.kpi-grid--square .tm-kpi {
+  min-height: var(--tile-height);
   justify-content: center;
 }
 
-/* Space between a card's stacked tile-grids, matching the gap used elsewhere
-   between a card's own sections. */
-.tile-grid+.tile-grid {
-  margin-top: var(--gap);
+/* Space between a card's stacked KPI grids. */
+.kpi-grid+.kpi-grid {
+  margin-top: var(--space-4);
 }
 
-.tile {
-  position: relative;
-  z-index: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.6rem 0.7rem;
-  border-radius: 8px;
-  /* Accent on the left edge, from whichever `.scale-N` class is on an
-     ancestor section — the tint carries the hue without touching the text.
-     A tile with no scaled ancestor (there isn't one currently) falls back
-     to neutral chrome rather than an arbitrary colour. */
-  border-left: 4px solid var(--section-accent, var(--spine));
-  background: var(--section-accent-tint, var(--surface-alt));
-  min-width: 0;
-  /* A soft colour inset along the bottom-right inner edge, in the tile's own
-     accent — negative offsets put an inset shadow's dark band on the far
-     side from the offset, which is what puts it bottom-right here. Sits
-     behind the print texture and the tile's own content (see `.tile::before`
-     and `z-index: 0` above). */
-  box-shadow: inset -8px -8px 11px -6px rgba(var(--section-accent-rgb, 36, 31, 25), 0.28);
+/* Inside a panel a tile is a bordered card without its own shadow (KpiTile.md). */
+.card-block .tm-kpi,
+.tm-panel .tm-kpi,
+.tm-modal .tm-kpi {
+  box-shadow: none;
 }
 
-/* The print texture layer: a pseudo-element rather than a background image, so
-   it can sit between the tile's own fill and its text (negative z-index,
-   scoped to the tile's stacking context) without ever affecting layout. */
-.tile::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-
-/* Dot-stipple — the one print texture every Home tile uses, regardless of
-   section or tone, for a uniform look across the page. */
-.tile--dot::before {
-  background-image: radial-gradient(rgba(var(--section-accent-rgb, 36, 31, 25), 0.18) 1px,
-      transparent 1.4px);
-  background-size: 7px 7px;
-}
-
-.tile__label {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--muted);
-}
-
-/* "Z1max"/"HRmax" read as one word with a meaningful lowercase "max" —
-   uppercasing it like every other label would flatten that to "Z1MAX". */
-.tile__label--mixed-case {
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-/* Values stay in ink: hue is the tile's accent, never the number itself. */
-.tile__value {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--text);
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
+.tm-kpi__num {
   overflow-wrap: anywhere;
 }
 
-.tile__unit {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--muted);
-  margin-left: 0.2rem;
+/* A session's metrics in its detail view: the same tile, a denser row. */
+.kpi-grid--compact {
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
 }
 
-.tile__footnote {
-  font-size: 0.7rem;
-  color: var(--muted);
-  margin-top: 0.15rem;
+.kpi-grid--compact .tm-kpi {
+  padding: 10px 12px;
+  gap: 4px;
 }
 
-.tile__saving {
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
+.kpi-grid--compact .tm-kpi__num {
+  font-size: 17px;
+  line-height: 24px;
 }
 
-.tile__unset {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--muted);
+.kpi-grid--compact dd {
+  margin: 0;
 }
 
-.tile--editable {
+.kpi--editable {
   cursor: text;
 }
 
-.tile__value--button {
+/* Signals "editable" without a permanent input box in every tile. */
+.kpi__button {
   border: none;
+  border-bottom: 1px dashed var(--line-strong);
   background: none;
   padding: 0;
-  font: inherit;
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--text);
+  color: inherit;
   text-align: left;
   cursor: pointer;
-  /* Signals "editable" without a permanent input box in every tile. */
-  border-bottom: 1px dashed var(--spine);
   align-self: flex-start;
 }
 
-.tile__value--button:hover {
-  border-bottom-color: var(--primary);
+.kpi__button:hover {
+  border-bottom-color: var(--forest);
 }
 
-.tile__input {
-  width: 100%;
-  margin-top: 0.15rem;
-  font-weight: 700;
+.kpi__unset {
+  font: 600 15px/22px var(--font-sans);
+  color: var(--ink-muted);
+}
+
+/* A tile's footnote is prose, not a delta: sans, muted (KpiTile.md keeps mono for numbers). */
+.kpi__note {
+  font: 400 12px/16px var(--font-sans);
+  color: var(--ink-muted);
+}
+
+.kpi__error {
+  color: var(--danger);
 }
 
 /* --- Heart-rate zone map ---------------------------------------------------
@@ -1414,7 +896,7 @@ input[type="radio"] {
   height: 2.1rem;
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid var(--spine);
+  border: 1px solid var(--line-strong);
 }
 
 .hr-map__zone {
@@ -1423,34 +905,34 @@ input[type="radio"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(var(--section-accent-rgb), var(--hr-map-zone-alpha));
-  border-right: 1px solid var(--surface);
+  background: color-mix(in srgb, var(--forest) var(--hr-map-zone-alpha), transparent);
+  border-right: 1px solid var(--bg-surface);
 }
 
 .hr-map__zone--z1 {
-  --hr-map-zone-alpha: 0.12;
+  --hr-map-zone-alpha: 12%;
 }
 
 .hr-map__zone--z2 {
-  --hr-map-zone-alpha: 0.24;
+  --hr-map-zone-alpha: 24%;
 }
 
 .hr-map__zone--z3 {
-  --hr-map-zone-alpha: 0.36;
+  --hr-map-zone-alpha: 36%;
 }
 
 .hr-map__zone--z4 {
-  --hr-map-zone-alpha: 0.5;
+  --hr-map-zone-alpha: 50%;
 }
 
 .hr-map__zone--z5 {
-  --hr-map-zone-alpha: 0.66;
+  --hr-map-zone-alpha: 66%;
 }
 
 .hr-map__zone-label {
   font-size: 0.68rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--ink);
 }
 
 /* Room for the pace bars to sit clear below the zone row, not on top of it —
@@ -1471,8 +953,8 @@ input[type="radio"] {
   gap: 0.1rem;
   padding: 0.2rem 0.15rem;
   border-radius: 6px;
-  background: var(--section-accent-tint);
-  border: 1px solid var(--section-accent);
+  background: var(--forest-tint);
+  border: 1px solid var(--forest);
   overflow: hidden;
 }
 
@@ -1481,7 +963,7 @@ input[type="radio"] {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  color: var(--section-accent);
+  color: var(--forest);
   text-align: center;
   line-height: 1.1;
 }
@@ -1489,68 +971,8 @@ input[type="radio"] {
 .hr-map__pace-range {
   font-size: 0.68rem;
   font-weight: 800;
-  color: var(--text);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
-}
-
-/* --- Records -------------------------------------------------------------- */
-
-/* One tile per distance, across the full width — the numbers people look for. */
-.record-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 0.6rem;
-}
-
-/* Same dot-stipple texture as every other Home tile — see `.tile--dot` — and
-   the same inherited `--section-accent` as `.tile`, from `.card-block--records`'s
-   own `.scale-N` class. */
-.record {
-  position: relative;
-  z-index: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: 8px;
-  background: var(--section-accent-tint);
-  border-left: 4px solid var(--section-accent);
-  box-shadow: inset -8px -8px 11px -6px rgba(var(--section-accent-rgb), 0.28);
-}
-
-.record::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(45deg,
-      rgba(var(--section-accent-rgb), 0.09) 0,
-      rgba(var(--section-accent-rgb), 0.09) 1px,
-      transparent 1px,
-      transparent 6px);
-}
-
-.record__distance {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--muted);
-}
-
-.record__time {
-  font-size: 1.5rem;
-  font-weight: 800;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-}
-
-.record__date {
-  font-size: 0.7rem;
-  color: var(--muted);
 }
 
 /* --- "Your data": import, latest activity, recent history (stacked) -------- */
@@ -1562,7 +984,7 @@ input[type="radio"] {
 }
 
 .data-block {
-  border-top: 1px solid var(--surface-alt);
+  border-top: 1px solid var(--bg-surface-alt);
   padding-top: 0.9rem;
   min-width: 0;
 }
@@ -1573,7 +995,7 @@ input[type="radio"] {
   gap: 0.4rem;
   font-size: 1rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--ink);
   margin: 0 0 0.6rem;
 }
 
@@ -1592,42 +1014,10 @@ input[type="radio"] {
 }
 
 .data-block__lede {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.85rem;
   margin: -0.35rem 0 0.75rem;
   max-width: 80ch;
-}
-
-/* The "Increasing" / "Stable" / "Decreasing" tag between a chart's title and
-   its lede — large and colored on purpose, so the eight-week call is legible
-   without reading the chart itself. */
-.trend-badge {
-  display: inline-block;
-  font-size: 0.95rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.3rem 0.85rem;
-  border-radius: 999px;
-  margin: 0 0 0.6rem;
-}
-
-.trend-badge--increasing {
-  background: var(--moss-tint);
-  color: var(--moss);
-  border: 1.5px solid var(--moss);
-}
-
-.trend-badge--stable {
-  background: var(--sunrise-tint);
-  color: var(--sunrise);
-  border: 1.5px solid var(--sunrise);
-}
-
-.trend-badge--decreasing {
-  background: var(--danger-tint);
-  color: var(--danger);
-  border: 1.5px solid var(--danger);
 }
 
 /* A "Recent" / "Sustained" pair of trend badges, side by side. */
@@ -1638,16 +1028,12 @@ input[type="radio"] {
   margin: 0 0 0.6rem;
 }
 
-.trend-badges .trend-badge {
-  margin: 0;
-}
-
 /* --- Route map ------------------------------------------------------------ */
 
 .route-map {
   width: 100%;
   margin-top: 0.85rem;
-  border: 1px solid var(--spine);
+  border: 1px solid var(--line-strong);
   border-radius: 8px;
   /* Leaflet paints tiles to the panel edges; clip them to the rounded corners. */
   overflow: hidden;
@@ -1657,18 +1043,18 @@ input[type="radio"] {
 
 /* Leaflet's own chrome, brought into the app's palette. */
 .route-map .leaflet-container {
-  background: var(--surface-alt);
+  background: var(--bg-surface-alt);
   font: inherit;
 }
 
 .route-map .leaflet-control-attribution {
-  background: rgba(255, 253, 249, 0.82);
-  color: var(--muted);
+  background: color-mix(in srgb, var(--bg-surface) 82%, transparent);
+  color: var(--ink-muted);
   font-size: 0.68rem;
 }
 
 .route-map .leaflet-control-attribution a {
-  color: var(--primary);
+  color: var(--forest);
 }
 
 /* --- Last activity -------------------------------------------------------- */
@@ -1681,72 +1067,9 @@ input[type="radio"] {
   margin: 0 0 0.6rem;
 }
 
-.last-activity__sport {
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 0.1rem 0.6rem;
-  font-size: 0.85rem;
-}
-
-/* One colour per sport family, shared with the calendar's session chips —
-   see `--sport-scale-N` and `.training-session--*`. */
-.last-activity__sport--running {
-  background: var(--sport-scale-1-tint);
-  color: var(--sport-scale-1);
-}
-
-.last-activity__sport--hiking {
-  background: var(--sport-scale-2-tint);
-  color: var(--sport-scale-2);
-}
-
-.last-activity__sport--cycling {
-  background: var(--sport-scale-3-tint);
-  color: var(--sport-scale-3);
-}
-
-.last-activity__sport--swimming {
-  background: var(--sport-scale-4-tint);
-  color: var(--sport-scale-4);
-}
-
-.last-activity__sport--neutral {
-  background: var(--surface-alt);
-  color: var(--muted);
-}
-
 .last-activity__date {
   font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.metric-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
-  gap: 0.6rem;
-  margin: 0;
-}
-
-.metric {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  min-width: 0;
-}
-
-.metric__label {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--muted);
-}
-
-.metric__value {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
 }
 
 /* --- Session comments ------------------------------------------------------- */
@@ -1765,7 +1088,7 @@ input[type="radio"] {
   gap: 0.6rem;
   padding: 0.5rem 0.7rem;
   border-radius: 8px;
-  background: var(--surface-alt);
+  background: var(--bg-surface-alt);
 }
 
 .session-comments__body {
@@ -1788,9 +1111,9 @@ input[type="radio"] {
   font: inherit;
   padding: 0.4rem 0.6rem;
   border-radius: 8px;
-  border: 1px solid var(--surface-alt);
-  background: var(--bg);
-  color: var(--text);
+  border: 1px solid var(--bg-surface-alt);
+  background: var(--bg-page);
+  color: var(--ink);
 }
 
 .session-comments__actions {
@@ -1802,10 +1125,10 @@ input[type="radio"] {
 /* --- Chart frame ---------------------------------------------------------- */
 
 .chart-frame {
-  border: 1px solid var(--surface-alt);
+  border: 1px solid var(--bg-surface-alt);
   border-radius: 8px;
   padding: 0.5rem 0.6rem;
-  background: var(--bg);
+  background: var(--bg-page);
   min-width: 0;
 }
 
@@ -1830,7 +1153,7 @@ input[type="radio"] {
 
 /* The last-import date, in the same blue as the section it reports on. */
 .sync__last {
-  color: var(--tone-blue);
+  color: var(--sport-bike);
   font-weight: 600;
 }
 
@@ -1839,9 +1162,8 @@ input[type="radio"] {
  * Replaces `<progress>`, which renders as OS chrome and ignores almost every
  * property you set on it. Two divs instead, in the same palette as the charts.
  *
- * The fill runs the app's own gradient (forest -> moss -> terracotta -> amber, the
- * `theme.GRADIENT` the figures use) so a running import reads as part of the product.
- * The moving sheen is what says "still working" when the numbers change slowly. */
+ * The fill is flat forest — no gradient (README § Principes); an unknown total
+ * sweeps instead (see `--indeterminate`). */
 
 .progress-bar {
   width: 100%;
@@ -1859,19 +1181,19 @@ input[type="radio"] {
 .progress-bar__label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .progress-bar__count {
   font-size: 0.78rem;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .progress-bar__percent {
   font-weight: 700;
-  color: var(--primary);
+  color: var(--forest);
 }
 
 /* The model pass, announced on a page that has model fits on it. */
@@ -1883,17 +1205,17 @@ input[type="radio"] {
   display: block;
   margin-top: 0.3rem;
   font-size: 0.75rem;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 .progress-bar__track {
   position: relative;
   height: 0.7rem;
   border-radius: 999px;
-  background: var(--surface-alt);
+  background: var(--bg-surface-alt);
   /* Inset rather than a border: a 1px border on a 0.7rem pill eats the fill's
      rounding at low percentages and the bar looks square until it is half full. */
-  box-shadow: inset 0 0 0 1px var(--grid);
+  box-shadow: inset 0 0 0 1px var(--line);
   overflow: hidden;
 }
 
@@ -1901,38 +1223,17 @@ input[type="radio"] {
   height: 100%;
   width: 0;
   border-radius: 999px;
-  background: linear-gradient(90deg,
-      var(--primary) 0%,
-      var(--moss) 45%,
-      var(--terracotta) 80%,
-      var(--sunrise) 100%);
-  /* Sized in ems of the *track*, so the gradient reads as one sweep however wide
-     the bar is rather than being squashed into the filled part. */
-  background-size: 34rem 100%;
+  background: var(--forest);
   transition: width 0.35s ease-out;
   position: relative;
 }
 
-.progress-bar--sunrise .progress-bar__fill {
-  background: linear-gradient(90deg, var(--sunrise) 0%, var(--terracotta) 100%);
+.progress-bar--sun .progress-bar__fill {
+  background: var(--sun);
 }
 
-.progress-bar--sunrise .progress-bar__percent {
-  color: var(--terracotta);
-}
-
-/* A sheen travelling over the fill: progress you can see between two counts. */
-.progress-bar__fill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.45) 50%,
-      transparent 100%);
-  background-size: 8rem 100%;
-  background-repeat: repeat-x;
-  animation: progress-sheen 1.4s linear infinite;
+.progress-bar--sun .progress-bar__percent {
+  color: var(--sun-ink);
 }
 
 /* Unknown total: the bar sweeps instead of claiming a percentage. A bar frozen at
@@ -1942,12 +1243,6 @@ input[type="radio"] {
   width: 38%;
   transition: none;
   animation: progress-sweep 1.5s ease-in-out infinite;
-}
-
-@keyframes progress-sheen {
-  to {
-    background-position: 8rem 0;
-  }
 }
 
 @keyframes progress-sweep {
@@ -1964,7 +1259,6 @@ input[type="radio"] {
    just stops animating. */
 @media (prefers-reduced-motion: reduce) {
 
-  .progress-bar__fill::after,
   .progress-bar__track--indeterminate .progress-bar__fill {
     animation: none;
   }
@@ -1982,7 +1276,7 @@ input[type="radio"] {
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-  gap: var(--gap);
+  gap: var(--space-4);
   margin: 0.5rem 0 1.5rem;
 }
 
@@ -1990,33 +1284,27 @@ input[type="radio"] {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  background: var(--surface);
-  border: 1px solid var(--spine);
-  border-radius: var(--radius);
-  padding: 0.85rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
   text-decoration: none;
-  color: var(--text);
-  /* A hint of the same tactile inset as a stat tile — plain ink, since an
-     athlete's own page can be about anything and has no fixed accent. */
-  box-shadow: inset -8px -8px 11px -6px rgba(36, 31, 25, 0.1);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
 }
 
 .card:hover {
-  border-color: var(--primary);
-}
-
-.card__icon {
-  font-size: 1.4rem;
+  border-color: var(--forest);
 }
 
 .card__title {
   font-weight: 700;
-  color: var(--primary);
+  color: var(--forest);
 }
 
 .card__meta {
   font-size: 0.75rem;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 /* Marks an analysis that ships with the app. Deliberately quiet: the only thing it
@@ -2026,28 +1314,16 @@ input[type="radio"] {
   letter-spacing: 0.04em;
   font-weight: 700;
   font-size: 0.65rem;
-  color: var(--primary);
+  color: var(--forest);
 }
 
 .card__description {
   font-size: 0.8rem;
-  color: var(--muted);
+  color: var(--ink-muted);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.feature-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: var(--gap);
-  margin: 2rem 0;
-}
-
-.feature-list p {
-  font-size: 0.875rem;
-  color: var(--muted);
 }
 
 /* --- Content blocks: prose and images in a panel -------------------------- */
@@ -2060,7 +1336,7 @@ input[type="radio"] {
   overflow-wrap: anywhere;
   max-width: 80ch;
   margin: 0.5rem 0;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .text-block--center {
@@ -2075,63 +1351,49 @@ input[type="radio"] {
 
 .text-block--lede {
   font-size: 1.05rem;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 .text-block--heading {
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--forest);
   margin: 0.75rem 0 0.25rem;
 }
 
 .text-block--quote {
   font-size: 1rem;
   font-style: italic;
-  border-left: 3px solid var(--spine);
+  border-left: 3px solid var(--line-strong);
   padding-left: 0.85rem;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
-/* A tone turns the block into a highlighted note, in the same tints the tiles and
-   the "how pages work" steps use — so a called-out paragraph looks like the rest of
-   the product rather than like a new component. */
+/* A tone turns the block into a highlighted note: a tinted box, never a coloured
+   left rule (README § Principes) — the same tints as the chips. */
 .text-block--forest,
-.text-block--terracotta,
-.text-block--sunrise,
+.text-block--terra,
+.text-block--sun,
 .text-block--plum {
   padding: 0.7rem 0.85rem;
-  border-radius: 8px;
-  border-left: 4px solid var(--spine);
+  border-radius: var(--radius-md);
   max-width: none;
 }
 
 .text-block--forest {
-  background: var(--tone-forest-tint);
-  border-left-color: var(--tone-forest);
+  background: var(--forest-tint);
 }
 
-.text-block--terracotta {
-  background: var(--tone-terracotta-tint);
-  border-left-color: var(--tone-terracotta);
+.text-block--terra {
+  background: var(--terra-tint);
 }
 
-.text-block--sunrise {
-  background: var(--tone-terracotta-tint);
-  border-left-color: var(--sunrise);
+.text-block--sun {
+  background: var(--sun-tint);
 }
 
 .text-block--plum {
-  background: var(--tone-plum-tint);
-  border-left-color: var(--tone-plum);
-}
-
-/* A quote already has a left rule; a tone would draw a second one beside it. */
-.text-block--quote.text-block--forest,
-.text-block--quote.text-block--terracotta,
-.text-block--quote.text-block--sunrise,
-.text-block--quote.text-block--plum {
-  padding-left: 0.85rem;
+  background: color-mix(in srgb, var(--sport-swim) 10%, var(--bg-surface));
 }
 
 .image-block {
@@ -2149,13 +1411,13 @@ input[type="radio"] {
   max-width: 100%;
   height: auto;
   border-radius: 8px;
-  border: 1px solid var(--surface-alt);
-  background: var(--surface-alt);
+  border: 1px solid var(--bg-surface-alt);
+  background: var(--bg-surface-alt);
 }
 
 .image-block__caption {
   font-size: 0.8rem;
-  color: var(--muted);
+  color: var(--ink-muted);
   margin-top: 0.25rem;
 }
 
@@ -2188,9 +1450,9 @@ input[type="radio"] {
   max-height: 8rem;
   width: auto;
   border-radius: 6px;
-  border: 1px solid var(--spine);
+  border: 1px solid var(--line-strong);
   object-fit: contain;
-  background: var(--surface-alt);
+  background: var(--bg-surface-alt);
 }
 
 .param__textarea {
@@ -2205,8 +1467,6 @@ input[type="radio"] {
 
 .welcome__title {
   font-size: 1.5rem;
-  border-bottom: 4px solid var(--sunrise);
-  display: inline-block;
   margin: 0 0 0.75rem;
 }
 
@@ -2220,7 +1480,7 @@ input[type="radio"] {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--muted);
+  color: var(--ink-muted);
   margin-bottom: 0.25rem;
 }
 
@@ -2237,38 +1497,25 @@ input[type="radio"] {
   padding: 0.5rem 0.6rem;
 }
 
-.tile__footnote--error {
-  color: var(--danger);
-  font-weight: 600;
-}
-
 /* --- My Pages: the explainer ---------------------------------------------- */
 
 .explainer {
-  background: var(--surface);
-  border: 1px solid var(--spine);
-  border-radius: var(--radius);
-  padding: 1rem 1.1rem 1.2rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  padding: 18px 20px;
   margin: 1.25rem 0 2rem;
   overflow: hidden;
 }
 
-/* Same solid accent-bar treatment as a `card-block__title` (see the Home
-   screen), under this section's own class names — and the same
-   `--section-accent` contract, from the `.scale-1` class on `.explainer`
-   itself: it's the only section on this page, so it sits at the scale's
-   first step (gold), the same rule Home's sections follow. */
 .explainer__title {
-  display: flex;
-  align-items: center;
-  margin: -1rem -1.1rem 1rem;
-  padding: 0.6rem 1rem;
-  background: var(--section-accent, var(--primary));
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 0.95rem;
-  font-weight: 700;
+  margin: 0 0 0.75rem;
+  color: var(--ink);
+  font-size: 19px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .explainer__title::after {
@@ -2279,7 +1526,7 @@ input[type="radio"] {
 .explainer__lede {
   margin: 0 0 0.9rem;
   max-width: 70ch;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 .step-grid {
@@ -2288,48 +1535,27 @@ input[type="radio"] {
   gap: 0.7rem;
 }
 
-/* Same `--section-accent` contract as `.tile` (see globals.css's `.scale-N`
-   utilities) — each step carries its own `scale-N` class rather than a named
-   hue, so it reads as a position in the app's one gold-to-red scale. */
 .step {
-  position: relative;
-  z-index: 0;
-  overflow: hidden;
   padding: 0.75rem 0.85rem;
-  border-radius: 8px;
-  border-left: 4px solid var(--section-accent, var(--spine));
-  background: var(--section-accent-tint, var(--surface-alt));
-  /* Same texture + inset-shadow recipe as `.tile`, in this step's own accent. */
-  box-shadow: inset -8px -8px 11px -6px rgba(var(--section-accent-rgb, 36, 31, 25), 0.28);
-}
-
-.step::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(90deg,
-      rgba(var(--section-accent-rgb, 36, 31, 25), 0.05) 0,
-      rgba(var(--section-accent-rgb, 36, 31, 25), 0.05) 1px,
-      transparent 1px,
-      transparent 5px);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-alt);
 }
 
 .step__icon {
-  font-size: 1.3rem;
+  display: inline-flex;
+  color: var(--forest);
 }
 
 .step__title {
   font-size: 0.92rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--ink);
   margin: 0.2rem 0 0.25rem;
 }
 
 .step__body {
   font-size: 0.82rem;
-  color: var(--muted);
+  color: var(--ink-muted);
   margin: 0;
 }
 
@@ -2345,18 +1571,15 @@ input[type="radio"] {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  color: var(--text);
-  background: linear-gradient(100deg,
-      var(--tone-forest-tint) 0%,
-      var(--surface) 55%,
-      var(--tone-forest-tint) 100%);
-  border: 2px dashed var(--primary);
-  border-radius: var(--radius);
+  color: var(--ink);
+  background: var(--bg-surface);
+  border: 2px dashed var(--forest);
+  border-radius: var(--radius-md);
 }
 
 .new-page:hover {
   border-style: solid;
-  box-shadow: 0 2px 10px rgba(46, 111, 64, 0.16);
+  box-shadow: var(--shadow-card);
 }
 
 .new-page:disabled {
@@ -2372,8 +1595,8 @@ input[type="radio"] {
   height: 2.5rem;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
+  background: var(--forest);
+  color: var(--on-forest);
   font-size: 1.6rem;
   font-weight: 700;
   line-height: 1;
@@ -2388,7 +1611,7 @@ input[type="radio"] {
 .new-page__label {
   font-size: 1.1rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--forest);
 }
 
 /* --- Modal ------------------------------------------------------------------ */
@@ -2396,59 +1619,11 @@ input[type="radio"] {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(36, 31, 25, 0.45);
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
   display: grid;
   place-items: center;
   padding: 1.5rem;
   z-index: 100;
-}
-
-.modal-panel {
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: 0 12px 32px rgba(36, 31, 25, 0.28);
-  width: min(32rem, 100%);
-  max-height: 85vh;
-  overflow-y: auto;
-}
-
-.modal-panel--wide {
-  width: 100%;
-  max-width: none;
-}
-
-.modal-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.9rem 1.1rem;
-  border-bottom: 1px solid var(--surface-alt);
-}
-
-.modal-panel__title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0;
-}
-
-.modal-panel__close {
-  background: none;
-  border: none;
-  font-size: 1.4rem;
-  line-height: 1;
-  color: var(--muted);
-  cursor: pointer;
-  padding: 0 0.25rem;
-}
-
-.modal-panel__close:hover {
-  color: var(--text);
-}
-
-.modal-panel__body {
-  padding: 1rem 1.1rem 1.2rem;
 }
 
 /* --- Training calendar ------------------------------------------------------ */
@@ -2457,9 +1632,10 @@ input[type="radio"] {
   margin-top: 1rem;
   height: calc(100vh - 12rem);
   overflow-y: auto;
-  border: 1px solid var(--surface-alt);
-  border-radius: var(--radius);
-  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  background: var(--bg-surface);
 }
 
 .training-sentinel {
@@ -2469,7 +1645,7 @@ input[type="radio"] {
 .training-week {
   display: flex;
   align-items: stretch;
-  border-bottom: 1px solid var(--surface-alt);
+  border-bottom: 1px solid var(--bg-surface-alt);
 }
 
 .training-week__label {
@@ -2478,9 +1654,9 @@ input[type="radio"] {
   padding: 0.6rem 0.4rem;
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--muted);
+  color: var(--ink-muted);
   text-align: center;
-  border-right: 1px solid var(--surface-alt);
+  border-right: 1px solid var(--bg-surface-alt);
 }
 
 .training-week__days {
@@ -2514,7 +1690,7 @@ input[type="radio"] {
      `.week-summary` below also uses, so the two stay in lockstep instead of
      one silently overflowing the other. */
   width: calc(2 * var(--week-summary-pad-x) + var(--week-summary-icon-width) + 3 * var(--week-summary-col-width) + var(--week-summary-detail-col-width) + 4 * var(--week-summary-gap-x));
-  border-left: 1px solid var(--surface-alt);
+  border-left: 1px solid var(--bg-surface-alt);
   /* This wrapper stretches to the row's full height (inherited from
      `.training-week`'s `align-items: stretch`) — a busy week, where one day
      has several sessions, makes the whole row taller, and the card below
@@ -2539,24 +1715,8 @@ input[type="radio"] {
      instead, and the extra height goes to plain card background below. */
   align-content: start;
   column-gap: var(--week-summary-gap-x);
-  /* Roughly twice the card's previous total height — the extra title row
-     helps, but most of it is this taller line-height plus the doubled
-     row-gap and padding below, since the numbers themselves stay the same
-     font-size (see `.week-summary__value`/`__tag`) rather than growing to
-     fill the space. */
-  line-height: 1.6;
   row-gap: 0.35rem;
   padding: 0.65rem var(--week-summary-pad-x);
-  border-radius: 4.5px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  background: var(--surface-alt);
-  color: var(--text);
-  /* The same soft inner shadow as a stat tile, in plain ink — this card
-     holds every sport at once, so no single sport's hue belongs on its
-     background the way a lone tile's does. */
-  box-shadow: inset -6px -6px 8px -5px rgba(36, 31, 25, 0.14);
 }
 
 /* The title and, on the current week only, its fitness-trend badge — a flex
@@ -2570,47 +1730,41 @@ input[type="radio"] {
   min-width: 0;
 }
 
-.week-summary__title-text {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-/* `.trend-badge`/`.trend-badge--increasing/stable/decreasing` are Home's —
-   same colours, same meaning (a metric trending up/flat/down) — just too
-   large for this card's own scale, hence this size-only override. */
-.trend-badge--compact {
-  flex-shrink: 0;
-  font-size: 0.52rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 0.05rem 0.35rem;
-  border-width: 1px;
-  margin: 0;
-}
-
-.week-summary__icon {
-  grid-column: 1;
-  font-size: 0.72rem;
-  color: var(--muted);
-}
-
 .week-summary__tag {
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Chips in this narrow card take the card's own scale. */
+.week-summary .tm-chip {
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+/* The sport's colour is a dot beside its label (SessionCard.md: colour never
+   travels without its label). */
+.tm-week-summary__label::before,
+.sport-chip::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--sport-other);
+  vertical-align: 1px;
+}
+
+.sport-chip::before {
+  margin-right: 0;
+}
+
+[data-sport="run"]::before { background: var(--sport-run); }
+[data-sport="bike"]::before { background: var(--sport-bike); }
+[data-sport="hike"]::before { background: var(--sport-hike); }
+[data-sport="swim"]::before { background: var(--sport-swim); }
 
 .week-summary__value {
   white-space: nowrap;
@@ -2618,39 +1772,12 @@ input[type="radio"] {
   text-overflow: ellipsis;
 }
 
-/* One colour per sport family, matching `.training-session--*` and
-   `--sport-scale-N` — "running" here covers every running sport type as one
-   merged total (see `RUNNING_SPORT_TYPES`), same as the calendar's session
-   chip. Set once on the column's wrapper (`display: contents`, so its tag
-   and value spans are the actual grid items) and inherited by both, rather
-   than repeated per element. */
-.week-summary__col--running {
-  color: var(--sport-scale-1);
-}
-
-.week-summary__col--cycling {
-  color: var(--sport-scale-3);
-}
-
-/* Hiking and swimming merged into one grey "Other" column — neither is common
-   enough on its own to keep a dedicated slot, and merging the two is what frees
-   column 5 for the fitness/RPE/feeling block below. Not one sport's hue, so it
-   doesn't get one — same neutral ink column 5 (`--detail`) uses either. */
-.week-summary__col--other {
-  color: var(--muted);
-}
-
-/* Column 5 — fitness trend / week-avg RPE / week-avg feeling. Not a sport, so
-   it gets no sport-scale hue either. */
-.week-summary__col--detail {
-  color: var(--muted);
-}
-
 .training-day {
   min-width: 0;
   min-height: 7rem;
   padding: 0.5rem;
-  border-right: 1px solid var(--surface-alt);
+  border-radius: 0;
+  border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -2660,32 +1787,8 @@ input[type="radio"] {
   border-right: none;
 }
 
-.training-day--today {
-  background: var(--tone-forest-tint);
-}
-
 .training-day--drag-over {
-  background: var(--tone-terracotta-tint);
-}
-
-.training-day__header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.3rem;
-}
-
-.training-day__weekday {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--muted);
-}
-
-.training-day__number {
-  font-size: 0.95rem;
-  font-weight: 800;
+  background: var(--terra-tint);
 }
 
 .training-day__items {
@@ -2695,161 +1798,14 @@ input[type="radio"] {
   flex: 1;
 }
 
-.training-pill {
-  position: relative;
-  border-radius: 6px;
-  padding: 0.3rem 0.5rem;
-  font-size: 0.78rem;
-  font-weight: 600;
+.training-item {
   cursor: grab;
-  border: 1px solid transparent;
-}
-
-/* Blue, now that gold belongs to the sport-colour scale instead — a tint
-   rather than a solid fill, keeping the same lighter weight a workout has
-   always had next to a goal's solid one. */
-.training-pill--workout {
-  background: var(--tone-blue-tint);
-  border-color: var(--tone-blue);
-  color: var(--tone-blue);
-}
-
-/* Green — the app's one button/brand colour — rather than gold, which is
-   now `--sport-scale-1` (running) instead of a free-standing "action" hue. */
-.training-pill--goal {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-  font-weight: 700;
-}
-
-/* Lighter than a workout on purpose — a note is background information, not
-   something to train for. */
-.training-pill--note {
-  background: rgba(207, 195, 174, 0.18);
-  border-color: var(--surface-alt);
-  color: var(--muted);
-  font-weight: 600;
-}
-
-/* Secondary keeps the goal's hue but shaded — a lighter fill of the same
-   colour rather than the solid, brighter fill a primary goal gets.
-   `--tone-forest-rgb` rather than a `--primary-rgb`: the two are the same
-   hex, and the app doesn't carry both names for one triplet. */
-.training-pill--goal.training-pill--secondary {
-  background: rgba(var(--tone-forest-rgb), 0.18);
-  border-color: var(--primary);
-  color: var(--text);
-  font-weight: 600;
 }
 
 .training-session {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
-  border-radius: 6px;
-  padding: 0.3rem 0.5rem;
   font: inherit;
   text-align: left;
-  border: 1px solid transparent;
   cursor: pointer;
-}
-
-/* One colour per sport family, from the gold-to-red `--sport-scale-N`
-   (running, hiking, cycling, swimming, in that order) — shared with the
-   session-detail sport tag and a training week's totals, so a sport reads
-   the same colour everywhere it appears. */
-.training-session--running {
-  background: var(--sport-scale-1-tint);
-  border-color: var(--sport-scale-1);
-}
-
-.training-session--hiking {
-  background: var(--sport-scale-2-tint);
-  border-color: var(--sport-scale-2);
-}
-
-.training-session--cycling {
-  background: var(--sport-scale-3-tint);
-  border-color: var(--sport-scale-3);
-}
-
-.training-session--swimming {
-  background: var(--sport-scale-4-tint);
-  border-color: var(--sport-scale-4);
-}
-
-.training-session--neutral {
-  background: var(--surface-alt);
-  border-color: var(--spine);
-}
-
-.training-session__sport {
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.training-session--running .training-session__sport {
-  color: var(--sport-scale-1);
-}
-
-.training-session--hiking .training-session__sport {
-  color: var(--sport-scale-2);
-}
-
-.training-session--cycling .training-session__sport {
-  color: var(--sport-scale-3);
-}
-
-.training-session--swimming .training-session__sport {
-  color: var(--sport-scale-4);
-}
-
-.training-session--neutral .training-session__sport {
-  color: var(--muted);
-}
-
-.training-session__stats {
-  font-size: 0.7rem;
-  color: var(--muted);
-}
-
-/* RPE/feeling tags, bottom-right — unlike `.card-badge` these sit inside the
-   card's own flow rather than overlapping its corner, since there are two of
-   them and both need to stay individually clickable. */
-.training-session__tags {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.25rem;
-  margin-top: 0.15rem;
-}
-
-.session-tag {
-  font: inherit;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
-  border: 1px solid var(--spine);
-  cursor: pointer;
-  line-height: 1.4;
-}
-
-.session-tag:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-/* A value has been entered — filled rather than the empty outline, so a
-   glance at the card tells whether it still needs one. */
-.session-tag--set {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
 }
 
 /* RPE's 1-10 grid and feeling's 3-option row, both inside the shared Modal —
@@ -2867,15 +1823,15 @@ input[type="radio"] {
   font-weight: 700;
   padding: 0.5rem 0;
   border-radius: 6px;
-  background: var(--surface-alt);
-  border: 1px solid var(--spine);
-  color: var(--text);
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
   cursor: pointer;
 }
 
 .rpe-picker__value:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--forest);
+  color: var(--forest);
 }
 
 .feeling-picker {
@@ -2890,32 +1846,15 @@ input[type="radio"] {
   font-weight: 700;
   padding: 0.6rem 0;
   border-radius: 6px;
-  background: var(--surface-alt);
-  border: 1px solid var(--spine);
-  color: var(--text);
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
   cursor: pointer;
 }
 
 .feeling-picker__value:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-/* A tiny "PLANNED" / "COMPLETED" sticker, overlapping the card's top-right corner. */
-.card-badge {
-  position: absolute;
-  top: -0.45rem;
-  right: -0.35rem;
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
-  border: 1px solid var(--spine);
-  line-height: 1.4;
+  border-color: var(--forest);
+  color: var(--forest);
 }
 
 .training-day__add {
@@ -2926,17 +1865,17 @@ input[type="radio"] {
   display: block;
   width: 100%;
   background: none;
-  border: 1px dashed var(--spine);
+  border: 1px dashed var(--line-strong);
   border-radius: 6px;
   padding: 0.15rem 0.4rem;
   font-size: 0.68rem;
-  color: var(--muted);
+  color: var(--ink-muted);
   cursor: pointer;
 }
 
 .training-add-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  border-color: var(--forest);
+  color: var(--forest);
 }
 
 .training-form {
@@ -2952,20 +1891,20 @@ input[type="radio"] {
 
 .training-form__kind-btn {
   flex: 1;
-  background: var(--surface-alt);
-  border: 1px solid var(--surface-alt);
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--bg-surface-alt);
   border-radius: 6px;
   padding: 0.4rem 0.5rem;
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--ink-muted);
   cursor: pointer;
 }
 
 .training-form__kind-btn--active {
-  background: var(--tone-forest-tint);
-  border-color: var(--primary);
-  color: var(--primary);
+  background: var(--forest-tint);
+  border-color: var(--forest);
+  color: var(--forest);
 }
 
 .training-form__title {
@@ -2994,7 +1933,7 @@ input[type="radio"] {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 .training-form__actions {
@@ -3012,22 +1951,13 @@ input[type="radio"] {
 
 .new-page__hint {
   font-size: 0.82rem;
-  color: var(--muted);
-}
-
-/* --- Blog ------------------------------------------------------------------ */
-
-.blog-index__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  color: var(--ink-muted);
 }
 
 .blog-card {
   padding: 0;
   overflow: hidden;
-  box-shadow: inset -8px -8px 11px -6px rgba(36, 31, 25, 0.1);
+  box-shadow: var(--shadow-card);
 }
 
 .blog-card__link {
@@ -3036,23 +1966,23 @@ input[type="radio"] {
   gap: 0.15rem;
   padding: 0.85rem;
   text-decoration: none;
-  color: var(--text);
+  color: var(--ink);
 }
 
 .blog-card__cover {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  border-radius: calc(var(--radius) - 4px);
+  border-radius: calc(var(--radius-md) - 4px);
   margin-bottom: 0.4rem;
-  background: var(--surface-alt);
+  background: var(--bg-surface-alt);
 }
 
 .blog-card__edit {
   display: block;
   font-size: 0.75rem;
   padding: 0.4rem 0.85rem 0.7rem;
-  color: var(--primary);
+  color: var(--forest);
 }
 
 .blog-post h1 {
@@ -3065,9 +1995,9 @@ input[type="radio"] {
 
 .blog-carousel__viewport {
   position: relative;
-  background: var(--surface-alt);
-  border: 1px solid var(--spine);
-  border-radius: var(--radius);
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
   overflow: hidden;
   /* Keeps the frame stable while a slide of a different aspect ratio loads. */
   aspect-ratio: 4 / 3;
@@ -3083,8 +2013,8 @@ input[type="radio"] {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 253, 249, 0.85);
-  border: 1px solid var(--spine);
+  background: color-mix(in srgb, var(--bg-surface) 85%, transparent);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   width: 2.2rem;
   height: 2.2rem;
@@ -3114,20 +2044,20 @@ input[type="radio"] {
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: var(--spine);
+  background: var(--line-strong);
   cursor: pointer;
 }
 
 .blog-carousel__dot--active {
-  background: var(--primary);
+  background: var(--forest);
 }
 
 .blog-signature {
   margin-top: 2rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--spine);
+  border-top: 1px solid var(--line-strong);
   font-size: 0.85rem;
-  color: var(--muted);
+  color: var(--ink-muted);
 }
 
 .blog-form {
@@ -3143,13 +2073,7 @@ input[type="radio"] {
   gap: 0.25rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--muted);
-}
-
-.blog-form__checkbox {
-  flex-direction: row !important;
-  align-items: center;
-  gap: 0.5rem !important;
+  color: var(--ink-muted);
 }
 
 .blog-form__actions {
@@ -3167,25 +2091,13 @@ a.new-page {
 .race-plan__back {
   display: inline-block;
   margin-bottom: 0.5rem;
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.85rem;
   text-decoration: none;
 }
 
 .race-plan__back:hover {
-  color: var(--primary);
-}
-
-.race-plan__warning {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.4rem;
-  font-size: 0.9rem;
-}
-
-.race-plan__warning p {
-  margin: 0;
+  color: var(--forest);
 }
 
 .race-plan__form {
@@ -3206,7 +2118,7 @@ a.new-page {
   gap: 0.25rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--ink-muted);
   min-width: 0;
 }
 
@@ -3216,8 +2128,8 @@ a.new-page {
 }
 
 .race-plan__aid {
-  border: 1px solid var(--surface-alt);
-  border-radius: var(--radius);
+  border: 1px solid var(--bg-surface-alt);
+  border-radius: var(--radius-md);
   padding: 0.6rem 0.8rem 0.8rem;
   display: flex;
   flex-direction: column;
@@ -3228,7 +2140,7 @@ a.new-page {
 .race-plan__aid legend {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--ink-muted);
   padding: 0 0.3rem;
 }
 
@@ -3250,13 +2162,6 @@ a.new-page {
   width: 100%;
 }
 
-.race-plan__check {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-}
-
 .race-plan__aid-name {
   flex: 1 1 12rem;
   min-width: 0;
@@ -3273,18 +2178,71 @@ a.new-page {
   margin: 1.25rem 0 0.5rem;
 }
 
-.race-plan .page-header__name {
-  min-width: min(26rem, 100%);
-}
-
 /* A curve name or a D+/D- pair is longer than Home's single numbers. */
-.race-plan__tile-value {
-  font-size: 1.05rem;
+.race-plan__kpi-num {
+  font-size: 19px;
+  line-height: 26px;
 }
 
-@media (max-width: 720px) {
-  .race-plan .page-header__name {
-    min-width: 0;
-    width: 100%;
-  }
+/* --- Visitor (design/tagg/visitor.md) ------------------------------------- */
+
+.landing__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-4);
+}
+
+/* The motto under the wordmark, on editorial surfaces only (logo/README.md). */
+.landing__motto {
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.landing .tm-access {
+  margin: var(--space-6) 0;
+}
+
+.landing__connect {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.landing__trust {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--ink-muted);
+}
+
+/* A locked page's background: the page's own empty structure. */
+.tm-teaser {
+  min-height: 34rem;
+}
+
+.teaser-structure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.teaser-plot {
+  min-height: 12rem;
+}
+
+.teaser-calendar {
+  height: auto;
+  margin: 0;
+  box-shadow: none;
+}
+
+/* The one line at the end of an open page: no banner, no modal. */
+.visitor-more {
+  margin: var(--space-8) 0 0;
+  color: var(--ink-muted);
 }

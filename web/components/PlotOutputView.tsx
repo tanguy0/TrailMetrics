@@ -37,7 +37,7 @@ export function PlotOutputView({
         </p>
         <button
           type="button"
-          className="button"
+          className="tm-btn tm-btn--secondary tm-btn--sm"
           onClick={() => onCompute?.(result.plot_id)}
           disabled={!onCompute}
         >

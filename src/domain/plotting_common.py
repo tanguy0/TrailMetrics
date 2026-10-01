@@ -1,9 +1,10 @@
 """Shared Plotly styling so every figure in the app matches the theme.
 
 All charts are Plotly (interactive: clickable legends, hover read-outs, zoom).
-This module is the single source of truth for the Trail / Earthy look — the base
-figure layout, the line-color cycle and a few formatting helpers — so the GAP,
-race-comparison and long-term-progress figures stay visually coherent.
+This module is the single source of truth for the TAGG chart chrome —
+design/tagg/charts.md, setting by setting — plus the line-color cycle and a few
+formatting helpers, so the GAP, race-comparison and long-term-progress figures
+stay visually coherent. ``web/components/ChartView.tsx`` mirrors it.
 """
 
 from typing import Sequence
@@ -13,43 +14,70 @@ import plotly.graph_objects as go
 
 from src.domain.gap import theme
 
-# Distinct on-theme line colors, cycled for traces without an explicit color.
-CURVE_PALETTE = [
-    "#2E6F40", "#C65D3B", "#E8A33D", "#3A6EA5", "#7A4E9E",
-    "#5E9C4E", "#A6843E", "#14532B", "#B5651D", "#6B4226",
-    "#2A7E8C", "#9E4E6E",
-]
+# On-theme line colors, cycled for traces without an explicit color: the
+# athlete's five series, then the reference grey. Past five groups a chart should
+# become small multiples rather than reach for a sixth hue (charts.md).
+CURVE_PALETTE = theme.CURVE_CYCLE
 
 # matplotlib linestyle → Plotly dash, so existing GapCurve.linestyle values port.
-DASH_BY_LINESTYLE = {"-": "solid", "--": "dash", "-.": "dashdot", ":": "dot"}
+# The two dashed styles are the reference patterns of charts.md: "--" is 5-4
+# (the balanced runner, targets), ":" is 2-4 (Kilian).
+DASH_BY_LINESTYLE = {"-": "solid", "--": "5px,4px", "-.": "dashdot", ":": "2px,4px"}
+
+# Margins of charts.md: the figure has no title of its own (the card around it
+# carries one), so the top only has to clear the legend.
+MARGIN = dict(l=44, r=16, t=16, b=32)
+
+
+def axis_style(*, grid: bool) -> dict:
+    """Axis chrome: mono 11 px ticks; only the y-axis draws a grid, only x a line."""
+    return dict(
+        showgrid=grid,
+        gridcolor=theme.CHART_GRID,
+        gridwidth=1,
+        zeroline=False,
+        showline=not grid,
+        linecolor=theme.LINE,
+        ticks="",
+        tickfont=dict(family=theme.FONT_MONO, size=11, color=theme.CHART_AXIS),
+        title_font=dict(family=theme.FONT_MONO, size=11, color=theme.CHART_AXIS),
+        automargin=True,
+    )
 
 
 def base_figure(*, title: str, x_title: str, y_title: str, height: int = 480) -> go.Figure:
-    """An empty figure pre-styled with the Trail / Earthy theme."""
+    """An empty figure pre-styled with the TAGG chart chrome.
+
+    ``title`` is kept as the figure's *name* (``layout.meta``) for exports, but not
+    drawn: on screen the title belongs to the card around the figure.
+    """
     fig = go.Figure()
     fig.update_layout(
-        title=dict(text=title, font=dict(color=theme.TEXT, size=18)),
-        paper_bgcolor=theme.FIGURE_FACE,
-        plot_bgcolor=theme.AXES_FACE,
-        font=dict(color=theme.TEXT, size=13),
+        meta=dict(title=title),
+        paper_bgcolor=theme.BG_CHART,
+        plot_bgcolor=theme.BG_CHART,
+        font=dict(family=theme.FONT_SANS, color=theme.INK, size=12),
         legend=dict(
-            bgcolor=theme.AXES_FACE,
-            bordercolor=theme.SPINE,
-            borderwidth=1,
-            font=dict(color=theme.TEXT),
+            orientation="h",
+            x=0,
+            xanchor="left",
+            y=1.02,
+            yanchor="bottom",
+            bgcolor="rgba(0,0,0,0)",
+            borderwidth=0,
+            itemwidth=30,
+            font=dict(family=theme.FONT_SANS, color=theme.INK_MUTED, size=12),
         ),
-        margin=dict(l=70, r=25, t=60, b=55),
+        margin=MARGIN,
         height=height,
-        hoverlabel=dict(bgcolor=theme.AXES_FACE, font=dict(color=theme.TEXT)),
+        hoverlabel=dict(
+            bgcolor=theme.BG_SURFACE,
+            bordercolor=theme.LINE,
+            font=dict(family=theme.FONT_SANS, color=theme.INK, size=12),
+        ),
     )
-    fig.update_xaxes(
-        title_text=x_title, gridcolor=theme.GRID, linecolor=theme.SPINE,
-        zeroline=False, color=theme.TEXT,
-    )
-    fig.update_yaxes(
-        title_text=y_title, gridcolor=theme.GRID, linecolor=theme.SPINE,
-        zeroline=False, color=theme.TEXT,
-    )
+    fig.update_xaxes(title_text=x_title, **axis_style(grid=False))
+    fig.update_yaxes(title_text=y_title, **axis_style(grid=True))
     return fig
 
 

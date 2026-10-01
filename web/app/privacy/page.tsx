@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — TrailMetrics",
+  title: "Privacy Policy — TAGG",
 };
 
 export default function PrivacyPage() {
@@ -11,13 +11,13 @@ export default function PrivacyPage() {
       <p className="muted">Last updated: 6 August 2026</p>
 
       <p>
-        TrailMetrics is a personal project built and operated by Tanguy Blervacque. This
+        TAGG is a personal project built and operated by Tanguy Blervacque. This
         page explains what data the app collects, why, and how to get it deleted.
       </p>
 
       <h2>Who this is</h2>
       <p>
-        Tanguy Blervacque is the sole operator of TrailMetrics and the data controller
+        Tanguy Blervacque is the sole operator of TAGG and the data controller
         for anything it stores. Contact:{" "}
         <a href="mailto:tanguy.blervacque@gmail.com">tanguy.blervacque@gmail.com</a>.
       </p>
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
         <li>Your Strava name, profile picture URL, and athlete ID.</li>
         <li>
           Your Strava access and refresh tokens, encrypted at rest — used only to fetch
-          your own activities from Strava's API.
+          your own activities from Strava’s API.
         </li>
         <li>Your activities: dates, distance, elevation, pace, heart rate, power, GPS-derived route data, and per-second streams for the ones that have them.</li>
         <li>
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
         <li>Vercel and Railway — host the web app and the compute service.</li>
       </ul>
 
-      <h2>How long it's kept</h2>
+      <h2>How long it’s kept</h2>
       <p>
         For as long as your account exists, so the app can keep showing your training
         history. Nothing is retained beyond that once an account is deleted.
@@ -90,7 +90,7 @@ export default function PrivacyPage() {
       <h2>Security</h2>
       <p>
         Strava tokens are encrypted before being stored. Sessions are held in an
-        httpOnly cookie your browser's JavaScript cannot read. The app is not perfect —
+        httpOnly cookie your browser’s JavaScript cannot read. The app is not perfect —
         no software is — but it is built and reviewed with your data in mind.
       </p>
     </main>

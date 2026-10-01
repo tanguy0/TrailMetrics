@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from "react";
 
+import { Icon } from "@/components/Icon";
 import { getAthlete, listCoachAthletes } from "@/lib/api";
 import type { Athlete, CoachAthlete } from "@/lib/types";
 
@@ -48,21 +49,22 @@ export function CoachSwitcher() {
   };
 
   return (
-    <div className="coach-switcher">
-      <button
-        type="button"
-        className={
-          "coach-switcher__toggle" +
-          (athlete.viewing_as ? " coach-switcher__toggle--active" : "")
-        }
-        onClick={toggle}
-      >
-        <span aria-hidden="true">{athlete.viewing_as ? "👁️" : "🧑‍🤝‍🧑"}</span>
-        <span>{athlete.viewing_as ? `Viewing: ${athlete.display_name}` : "Switch athlete"}</span>
+    <div className="shell__switcher">
+      <button type="button" className="tm-rail__switcher" onClick={toggle} aria-expanded={open}>
+        <span>
+          {athlete.viewing_as ? (
+            <>
+              Viewing <strong>{athlete.display_name}</strong>
+            </>
+          ) : (
+            <strong>Switch athlete</strong>
+          )}
+        </span>
+        <Icon name={athlete.viewing_as ? "eye" : "users"} />
       </button>
 
       {open && (
-        <ul className="coach-switcher__list">
+        <ul className="shell__switcher-list">
           {athlete.viewing_as && (
             <li>
               <button type="button" onClick={() => switchTo(null)}>
@@ -71,9 +73,9 @@ export function CoachSwitcher() {
             </li>
           )}
           {roster === null ? (
-            <li className="coach-switcher__hint">Loading…</li>
+            <li className="shell__switcher-hint">Loading…</li>
           ) : roster.length === 0 ? (
-            <li className="coach-switcher__hint">No other athletes yet.</li>
+            <li className="shell__switcher-hint">No other athletes yet.</li>
           ) : (
             roster.map((entry) => (
               <li key={entry.id}>

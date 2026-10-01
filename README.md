@@ -1,4 +1,4 @@
-# TrailMetrics
+# TAGG
 
 A data-science workbench for running data. The athlete builds the analyses: pick a
 data source, then add the plots you want over it.

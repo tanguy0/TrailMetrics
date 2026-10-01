@@ -16,9 +16,9 @@ import { ParamForm } from "./ParamForm";
 import { DataSourceEditor } from "./DataSourceEditor";
 import { Modal } from "./Modal";
 import { ApiError, renderPanel } from "@/lib/api";
-import { scaleStepStyle } from "@/lib/colorScale";
 import type {
   ActivitySummary,
+  DataSourceSpec,
   PanelResult,
   PanelSpec,
   PlotSpec,
@@ -46,12 +46,10 @@ interface Props {
    */
   refreshToken?: number;
   /**
-   * This panel's position among the page's panels — its accent is this
-   * many steps along the app's gold-to-red scale (see `lib/colorScale.ts`),
-   * so a page's panels read top-to-bottom the same way Home's sections do.
+   * This panel's position among the page's panels, from 0. A panel is
+   * numbered, not coloured (design/tagg/migration.md § Variables).
    */
-  accentIndex: number;
-  accentCount: number;
+  index: number;
 }
 
 export function PanelEditor({
@@ -66,8 +64,7 @@ export function PanelEditor({
   editable,
   initialResult,
   refreshToken = 0,
-  accentIndex,
-  accentCount,
+  index,
 }: Props) {
   const [result, setResult] = useState<PanelResult | undefined>(initialResult);
   const [loading, setLoading] = useState(!initialResult);
@@ -179,85 +176,105 @@ export function PanelEditor({
 
   const resultsByPlot = new Map((result?.plots ?? []).map((p) => [p.plot_id, p]));
 
-  return (
-    <section className="panel" style={scaleStepStyle(accentIndex, accentCount)}>
-      <header className="panel__header">
-        {editable ? (
-          <input
-            className="panel__title-input"
-            value={panel.title}
-            placeholder="Panel title"
-            onChange={(event) => onChange({ ...panel, title: event.target.value })}
-          />
-        ) : (
-          <h2 className="panel__title">{panel.title || "Panel"}</h2>
-        )}
+  // Which plots span all 12 columns. A one-column panel: all of them. A two-column
+  // panel: tables (unreadable in half a row), plots not rendered yet, and a last
+  // half-width plot left without a partner — it takes the row rather than leaving
+  // a blank half beside it.
+  const fullWidth = new Set<string>();
+  const halves: string[] = [];
+  for (const plot of panel.plots) {
+    const output = resultsByPlot.get(plot.id)?.output;
+    if (panel.columns !== 2 || !output || output.tables.length > 0) fullWidth.add(plot.id);
+    else halves.push(plot.id);
+  }
+  if (halves.length % 2 === 1) fullWidth.add(halves[halves.length - 1]);
 
-        <div className="panel__meta">
-          {result && !result.error && (
-            <span className="muted">
-              {result.activity_count} activities
-              {result.groups.length > 1 &&
-                ` · ${result.groups.map((g) => `${g.label} (${g.size})`).join(", ")}`}
-            </span>
-          )}
-          {loading && <span className="spinner" aria-label="Rendering" />}
+  return (
+    <section className="tm-panel panel">
+      <header className="tm-panel__head">
+        <div className="tm-panel__lead">
+          <span className="tm-panel__index">{String(index + 1).padStart(2, "0")}</span>
+          <div className="panel__heading">
+            {editable ? (
+              <input
+                className="tm-panel__title panel__title-input"
+                value={panel.title}
+                placeholder="Panel title"
+                onChange={(event) => onChange({ ...panel, title: event.target.value })}
+              />
+            ) : (
+              <h2 className="tm-panel__title">{panel.title || "Panel"}</h2>
+            )}
+            {/* Where the data comes from lives here, never in the title (Panel.md). */}
+            <div className="tm-panel__meta">
+              <span className="tm-chip tm-chip--forest">{describeSource(panel.source)}</span>
+              {result && !result.error && (
+                <span className="tm-chip">{result.activity_count} activities</span>
+              )}
+              {result && !result.error && result.groups.length > 1 &&
+                result.groups.map((g) => (
+                  <span className="tm-chip" key={g.label}>
+                    {g.label} · {g.size}
+                  </span>
+                ))}
+              {loading && <span className="spinner" aria-label="Rendering" />}
+            </div>
+            {panel.description && <p className="tm-panel__desc">{panel.description}</p>}
+          </div>
         </div>
 
         {editable && (
-          <div className="panel__actions">
-            <button
-              type="button"
-              className="button button--ghost button--small"
-              onClick={() => setShowSource((v) => !v)}
-            >
-              {showSource ? "Hide data source" : "Data source"}
-            </button>
-            <select
-              className="select--small"
-              value={panel.columns}
-              onChange={(event) =>
-                onChange({ ...panel, columns: Number(event.target.value) })
-              }
-              aria-label="Columns"
-            >
-              <option value={1}>1 column</option>
-              <option value={2}>2 columns</option>
-            </select>
-            {onMove && (
-              <>
-                <button
-                  type="button"
-                  className="button button--ghost button--small"
-                  onClick={() => onMove(-1)}
-                  aria-label="Move panel up"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  className="button button--ghost button--small"
-                  onClick={() => onMove(1)}
-                  aria-label="Move panel down"
-                >
-                  ↓
-                </button>
-              </>
-            )}
-            {onRemove && (
+          <div className="tm-panel__actions">
+          <button
+            type="button"
+            className="tm-btn tm-btn--secondary tm-btn--sm"
+            onClick={() => setShowSource((v) => !v)}
+          >
+            {showSource ? "Hide data source" : "Data source"}
+          </button>
+          <select
+            className="tm-select tm-select--sm"
+            value={panel.columns}
+            onChange={(event) =>
+              onChange({ ...panel, columns: Number(event.target.value) })
+            }
+            aria-label="Columns"
+          >
+            <option value={1}>1 column</option>
+            <option value={2}>2 columns</option>
+          </select>
+          {onMove && (
+            <>
               <button
                 type="button"
-                className="button button--danger button--small"
-                onClick={onRemove}
+                className="tm-btn tm-btn--secondary tm-btn--sm"
+                onClick={() => onMove(-1)}
+                aria-label="Move panel up"
               >
-                Delete panel
+                ↑
               </button>
-            )}
+              <button
+                type="button"
+                className="tm-btn tm-btn--secondary tm-btn--sm"
+                onClick={() => onMove(1)}
+                aria-label="Move panel down"
+              >
+                ↓
+              </button>
+            </>
+          )}
+          {onRemove && (
+            <button
+              type="button"
+              className="tm-btn tm-btn--danger tm-btn--sm"
+              onClick={onRemove}
+            >
+              Delete panel
+            </button>
+          )}
           </div>
         )}
       </header>
-
-      {panel.description && <p className="panel__description">{panel.description}</p>}
 
       {editable && showSource && (
         <DataSourceEditor
@@ -273,64 +290,68 @@ export function PanelEditor({
       {failure && <p className="note note--error">Could not render this panel: {failure}</p>}
       {result?.error && <p className="note note--error">{result.error}</p>}
 
-      <div className={`plot-grid plot-grid--${panel.columns === 2 ? "two" : "one"}`}>
+      <div className="tm-plot-grid">
         {panel.plots.map((plot, index) => {
           const definition = definitions.get(plot.plot_type);
           const plotResult = resultsByPlot.get(plot.id);
-          // Tables read badly in a narrow column, so they always span the grid.
-          const spans = !plotResult || plotResult.output.tables.length > 0;
+          const spans = fullWidth.has(plot.id);
           // A content block *is* the page's prose, so it renders without card chrome.
           const isContent = definition ? !definition.requires_data : false;
           return (
             <article
               key={plot.id}
               className={[
-                "plot-card",
-                spans ? "plot-card--wide" : "",
+                "tm-plot",
+                spans ? "tm-plot--12" : "tm-plot--6",
                 isContent ? "plot-card--content" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
             >
-              {editable && (
-                <header className="plot-card__header">
-                  <div className="plot-card__actions">
-                    <button
-                      type="button"
-                      className="button button--ghost button--small"
-                      onClick={() => toggleSettings(plot.id)}
-                    >
-                      {expanded.has(plot.id) ? "Hide settings" : "Settings"}
-                    </button>
-                    <button
-                      type="button"
-                      className="button button--ghost button--small"
-                      onClick={() => movePlot(index, -1)}
-                      aria-label="Move plot up"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="button button--ghost button--small"
-                      onClick={() => movePlot(index, 1)}
-                      aria-label="Move plot down"
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      className="button button--danger button--small"
-                      onClick={() =>
-                        onChange({
-                          ...panel,
-                          plots: panel.plots.filter((p) => p.id !== plot.id),
-                        })
-                      }
-                    >
-                      Remove
-                    </button>
-                  </div>
+              {(editable || (definition && !isContent)) && (
+                <header className="tm-plot__head">
+                  {definition && !isContent && (
+                    <span className="tm-chip">{definition.category}</span>
+                  )}
+                  {editable && (
+                    <div className="plot-card__actions">
+                      <button
+                        type="button"
+                        className="tm-btn tm-btn--secondary tm-btn--sm"
+                        onClick={() => toggleSettings(plot.id)}
+                      >
+                        {expanded.has(plot.id) ? "Hide settings" : "Settings"}
+                      </button>
+                      <button
+                        type="button"
+                        className="tm-btn tm-btn--secondary tm-btn--sm"
+                        onClick={() => movePlot(index, -1)}
+                        aria-label="Move plot up"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="tm-btn tm-btn--secondary tm-btn--sm"
+                        onClick={() => movePlot(index, 1)}
+                        aria-label="Move plot down"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className="tm-btn tm-btn--danger tm-btn--sm"
+                        onClick={() =>
+                          onChange({
+                            ...panel,
+                            plots: panel.plots.filter((p) => p.id !== plot.id),
+                          })
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </header>
               )}
 
@@ -363,6 +384,15 @@ export function PanelEditor({
   );
 }
 
+/** The panel's data source in a few words, for its source chip. */
+function describeSource(source: DataSourceSpec): string {
+  if (source.mode === "activities") {
+    return source.selection_label || `${source.activity_ids.length} chosen activities`;
+  }
+  const named = source.windows.map((w) => w.name || `${w.start} → ${w.end}`);
+  return source.mode === "window" ? (named[0] ?? "One time window") : named.join(" · ");
+}
+
 /** Grouped by category, so the catalogue stays navigable as it grows. */
 function PlotPicker({
   registry,
@@ -387,7 +417,7 @@ function PlotPicker({
     <>
       <button
         type="button"
-        className="button button--wide"
+        className="tm-btn tm-btn--secondary tm-btn--wide"
         onClick={() => setOpen(true)}
         aria-label="Add a plot"
         title="Add a plot"
@@ -404,7 +434,7 @@ function PlotPicker({
                   <button
                     key={definition.key}
                     type="button"
-                    className="button button--ghost button--wide"
+                    className="tm-btn tm-btn--secondary tm-btn--wide"
                     onClick={() => {
                       onAdd(definition.key);
                       setOpen(false);

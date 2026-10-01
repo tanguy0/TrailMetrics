@@ -69,12 +69,13 @@ export function BlogPostForm({ existing }: { existing?: BlogPost }) {
     <form className="blog-form" onSubmit={submit}>
       <label>
         Titre
-        <input value={title} onChange={(e) => setTitle(e.target.value)} required />
+        <input className="tm-input" value={title} onChange={(e) => setTitle(e.target.value)} required />
       </label>
 
       <label>
         Texte d&apos;explication
         <textarea
+          className="tm-textarea"
           value={bodyText}
           onChange={(e) => setBodyText(e.target.value)}
           rows={8}
@@ -83,7 +84,7 @@ export function BlogPostForm({ existing }: { existing?: BlogPost }) {
 
       <label>
         Slug (URL) — laissez vide pour le générer depuis le titre
-        <input value={slug} onChange={(e) => setSlug(e.target.value)} />
+        <input className="tm-input" value={slug} onChange={(e) => setSlug(e.target.value)} />
       </label>
 
       <label>
@@ -91,25 +92,26 @@ export function BlogPostForm({ existing }: { existing?: BlogPost }) {
         <input type="file" accept="application/pdf" onChange={(e) => setPdf(e.target.files?.[0] ?? null)} />
       </label>
 
-      <label className="blog-form__checkbox">
+      <label className="tm-toggle">
         <input
           type="checkbox"
           checked={published}
           onChange={(e) => setPublished(e.target.checked)}
         />
+        <span className="tm-toggle__track" aria-hidden="true" />
         Publié (visible dans la liste publique)
       </label>
 
       {error && <p className="note note--error">{error}</p>}
 
       <div className="blog-form__actions">
-        <button type="submit" className="button" disabled={busy}>
+        <button type="submit" className="tm-btn" disabled={busy}>
           {busy ? "Enregistrement…" : existing ? "Enregistrer" : "Publier"}
         </button>
         {existing && (
           <button
             type="button"
-            className="button button--danger"
+            className="tm-btn tm-btn--danger"
             onClick={remove}
             disabled={busy}
           >

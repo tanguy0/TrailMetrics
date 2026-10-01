@@ -9,6 +9,8 @@
 
 import { useEffect } from "react";
 
+import { Icon } from "@/components/Icon";
+
 export function Modal({
   title,
   onClose,
@@ -38,23 +40,23 @@ export function Modal({
       }}
     >
       <div
-        className={`modal-panel${wide ? " modal-panel--wide" : ""}`}
+        className={`tm-modal${wide ? " tm-modal--wide" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="modal-panel__header">
-          <h3 className="modal-panel__title">{title}</h3>
+        <div className="tm-modal__head">
+          <h3 className="tm-modal__title">{title}</h3>
           <button
             type="button"
-            className="modal-panel__close"
+            className="tm-btn tm-btn--ghost tm-btn--icon"
             onClick={onClose}
             aria-label="Close"
           >
-            ×
+            <Icon name="x" />
           </button>
         </div>
-        <div className="modal-panel__body">{children}</div>
+        <div className="tm-modal__body">{children}</div>
       </div>
     </div>
   );

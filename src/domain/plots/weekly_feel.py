@@ -80,7 +80,7 @@ _FITNESS_TAG = {
 # number as `weekFitnessTrend` in TrainingScreen.tsx.
 _TREND_THRESHOLD = 1.0
 
-_RPE_COLOR = "#3A6EA5"  # lake blue — theme.TIME_SCALE_CYCLE[3]
+_RPE_COLOR = theme.CHART_YOU_4  # lake blue
 _RPE_MIN, _RPE_MAX = 1.0, 10.0
 # Headroom above the RPE scale for the badge row to live in (see ir.Badge).
 _BADGE_HEADROOM = 1.5

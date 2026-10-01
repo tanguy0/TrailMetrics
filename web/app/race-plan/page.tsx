@@ -13,7 +13,7 @@ import { RacePlanScreen } from "@/components/RacePlanScreen";
 import { readSession } from "@/lib/session";
 import { loadStrings } from "@/lib/strings.server";
 
-export const metadata: Metadata = { title: "Plan de course — TrailMetrics" };
+export const metadata: Metadata = { title: "Plan de course — TAGG" };
 
 export default async function RacePlanPage() {
   const strings = await loadStrings();

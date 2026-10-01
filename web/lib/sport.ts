@@ -18,18 +18,26 @@ export const CYCLING_SPORT_TYPES = [
 export const HIKING_SPORT_TYPES = ["Hike", "Walk"];
 export const SWIMMING_SPORT_TYPES = ["Swim"];
 
-/** Colour a sport type reads as, wherever one is shown: the calendar's
- * completed-session chip, the session detail's sport tag, and a training
- * week's totals share this so a run — trail, road, or virtual — looks the
- * same everywhere it appears. One tone per family, not per exact sport
- * type: the four families are the unit a rider or a hiker thinks in, not
- * the distinction between a trail and a road run. */
-export type SportTone = "running" | "hiking" | "cycling" | "swimming" | "neutral";
+/** The `data-sport` a sport type reads as wherever one is shown — the
+ * calendar's session card (its left border), the session detail's sport tag and
+ * a training week's totals — so a run, trail, road or virtual, looks the same
+ * everywhere. One key per family, not per exact sport type: the families are the
+ * unit a rider or a hiker thinks in. Each key has its fixed `--sport-*` token. */
+export type SportKey = "run" | "bike" | "hike" | "swim" | "other";
 
-export function sportTone(sportType: string): SportTone {
-  if (RUNNING_SPORT_TYPES.includes(sportType)) return "running";
-  if (CYCLING_SPORT_TYPES.includes(sportType)) return "cycling";
-  if (HIKING_SPORT_TYPES.includes(sportType)) return "hiking";
-  if (SWIMMING_SPORT_TYPES.includes(sportType)) return "swimming";
-  return "neutral";
+export function sportKey(sportType: string): SportKey {
+  if (RUNNING_SPORT_TYPES.includes(sportType)) return "run";
+  if (CYCLING_SPORT_TYPES.includes(sportType)) return "bike";
+  if (HIKING_SPORT_TYPES.includes(sportType)) return "hike";
+  if (SWIMMING_SPORT_TYPES.includes(sportType)) return "swim";
+  return "other";
 }
+
+/** The stroke icon that redoes the sport beside its colour (SessionCard.md). */
+export const SPORT_ICON = {
+  run: "run",
+  bike: "bike",
+  hike: "mountain",
+  swim: "swim",
+  other: "activity",
+} as const satisfies Record<SportKey, string>;

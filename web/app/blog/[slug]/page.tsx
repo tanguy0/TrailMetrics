@@ -32,7 +32,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const post = await fetchPost((await params).slug);
-  return { title: post ? `${post.title} — TrailMetrics Blog` : "Blog — TrailMetrics" };
+  return { title: post ? `${post.title} — TAGG Blog` : "Blog — TAGG" };
 }
 
 export default async function BlogPostPage({

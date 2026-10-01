@@ -25,6 +25,7 @@ from typing import Any, Dict, List
 from src.domain.charts.ir import Axis, AxisKind, ChartData, PlotOutput, Trace, TraceKind, empty_output
 from src.domain.dataset.resolved import DataLevel, ResolvedPanelData
 from src.domain.dataset.training_load import daily_training_load, fitness_fatigue_series
+from src.domain.gap import theme
 from src.domain.plots.base import PlotDefinition, display_window, register
 from src.translations import translate
 
@@ -33,8 +34,8 @@ from src.translations import translate
 # daily timeline, which a discrete pick list doesn't naturally define.
 _FALLBACK_DISPLAY_DAYS = 182  # ~6 months
 
-_FITNESS_COLOR = "#3E7C59"  # forest — slow, steady
-_FATIGUE_COLOR = "#C9622B"  # terracotta — fast, reactive
+_FITNESS_COLOR = theme.CHART_YOU_1  # forest — slow, steady
+_FATIGUE_COLOR = theme.CHART_YOU_2  # terra — fast, reactive
 
 
 def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
@@ -77,12 +78,12 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
             Trace(
                 name=translate("plot.fitness_fatigue.fitness", lang),
                 x=x, y=fitness_y, kind=TraceKind.LINE,
-                color=_FITNESS_COLOR, width=7.28,
+                color=_FITNESS_COLOR, width=2.0,
             ),
             Trace(
                 name=translate("plot.fitness_fatigue.fatigue", lang),
                 x=x, y=fatigue_y, kind=TraceKind.LINE,
-                color=_FATIGUE_COLOR, width=5.6,
+                color=_FATIGUE_COLOR, width=2.0,
             ),
         ],
         height=420,

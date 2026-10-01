@@ -5,8 +5,10 @@
  * to start another — the same shape as the Analysis tab's list of pages.
  */
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { PageHeader } from "@/components/PageHeader";
 import { listRacePlans } from "@/lib/api";
 import { formatDate, formatHms, formatNumber } from "@/lib/format";
 import { translator, type Strings } from "@/lib/strings";
@@ -23,13 +25,7 @@ export function RacePlanList({ strings }: { strings: Strings }) {
 
   return (
     <main className="container">
-      <div className="page-header">
-        <div className="page-header__title">
-          <span className="page-header__icon" aria-hidden="true">🏁</span>
-          <h1>{t("race_plan.title")}</h1>
-        </div>
-      </div>
-      <p className="page-description">{t("race_plan.intro")}</p>
+      <PageHeader kicker={t("nav.race_plan")} title={t("race_plan.title")} sub={t("race_plan.intro")} />
 
       {error && <p className="note note--error">{error}</p>}
       {plans == null && !error ? (
@@ -40,7 +36,6 @@ export function RacePlanList({ strings }: { strings: Strings }) {
         <div className="card-grid">
           {(plans ?? []).map((plan) => (
             <a className="card" key={plan.id} href={`/race-plan/${plan.id}`}>
-              <span className="card__icon" aria-hidden="true">🏁</span>
               <span className="card__title">{plan.title || t("race_plan.untitled")}</span>
               <span className="card__meta">
                 {[
@@ -62,13 +57,13 @@ export function RacePlanList({ strings }: { strings: Strings }) {
         </div>
       )}
 
-      <a className="new-page" href="/race-plan/new">
+      <Link className="new-page" href="/race-plan/new">
         <span className="new-page__plus" aria-hidden="true">+</span>
         <span className="new-page__text">
           <span className="new-page__label">{t("race_plan.new.button")}</span>
           <span className="new-page__hint">{t("race_plan.new.hint")}</span>
         </span>
-      </a>
+      </Link>
     </main>
   );
 }
