@@ -810,7 +810,7 @@ TRANSLATIONS = {
     # translation table of its own, so this block is the only place its wording
     # lives — see the module docstring.
     "ui.nav.home": {"en": "Home", "fr": "Accueil"},
-    "ui.nav.analysis": {"en": "Analysis", "fr": "Analysis"},
+    "ui.nav.analysis": {"en": "Analysis", "fr": "Analyses"},
     "ui.nav.training": {"en": "Training", "fr": "Entraînement"},
     "ui.nav.blog": {"en": "Blog", "fr": "Blog"},
     "ui.nav.sign_in_required": {
@@ -818,6 +818,113 @@ TRANSLATIONS = {
         "fr": "Connectez-vous pour y accéder",
     },
     "ui.nav.sign_out": {"en": "Sign out", "fr": "Se déconnecter"},
+    "ui.nav.group_open": {"en": "Open", "fr": "Ouvert"},
+    "ui.nav.group_strava": {"en": "With Strava", "fr": "Avec Strava"},
+    "ui.nav.connect": {"en": "Connect Strava", "fr": "Connecter Strava"},
+
+    # --- Visitor (no account): design/tagg/visitor.md -------------------------
+    # Two free tiers, never sold as such: "Free · now" and "Free · with Strava".
+    # No "Pro", "Premium" or "Unlock" anywhere.
+    "ui.visitor.lede": {
+        "en": "TAGG analyses your runs and helps you improve. Two tools are open to "
+              "everyone; the rest opens when you connect Strava.",
+        "fr": "TAGG analyse vos sorties et vous aide à progresser. Deux outils sont "
+              "ouverts à tous ; le reste s’ouvre en connectant Strava.",
+    },
+    "ui.visitor.open.title": {"en": "Without an account", "fr": "Sans compte"},
+    "ui.visitor.open.tier": {"en": "Free · now", "fr": "Gratuit · maintenant"},
+    "ui.visitor.strava.title": {"en": "With Strava", "fr": "Avec Strava"},
+    "ui.visitor.strava.tier": {"en": "Free · 1 click", "fr": "Gratuit · 1 clic"},
+    "ui.visitor.race_plan": {
+        "en": "The pace to hold on every stretch of your race, from its GPX.",
+        "fr": "L’allure à tenir sur chaque portion de votre course, à partir de son GPX.",
+    },
+    "ui.visitor.blog": {
+        "en": "Training methods and analyses, free to read.",
+        "fr": "Méthodes d’entraînement et analyses, en libre lecture.",
+    },
+    "ui.visitor.home": {
+        "en": "Your profile, your records and your latest runs in one place.",
+        "fr": "Votre profil, vos records et vos dernières sorties au même endroit.",
+    },
+    "ui.visitor.analysis": {
+        "en": "Charts built on your own activities: trends, models, comparisons.",
+        "fr": "Des graphiques construits sur vos propres activités : évolutions, "
+              "modèles, comparaisons.",
+    },
+    "ui.visitor.training": {
+        "en": "Your week, your sessions and your goals on one calendar.",
+        "fr": "Votre semaine, vos séances et vos objectifs sur un calendrier.",
+    },
+    "ui.visitor.connect": {"en": "Connect with Strava", "fr": "Se connecter avec Strava"},
+    "ui.visitor.trust": {
+        "en": "Free, no card. TAGG reads your Strava activities to analyse them; your "
+              "Strava tokens are encrypted and never leave the server.",
+        "fr": "Gratuit, sans carte. TAGG lit vos activités Strava pour les analyser ; vos "
+              "jetons Strava sont chiffrés et ne quittent jamais le serveur.",
+    },
+    "ui.visitor.fine": {
+        "en": "Free, no card. TAGG only reads your activities.",
+        "fr": "Gratuit, sans carte. TAGG ne lit que vos activités.",
+    },
+    "ui.visitor.tier": {"en": "Free · with Strava", "fr": "Gratuit · avec Strava"},
+    "ui.visitor.teaser.home.title": {
+        "en": "Your runner’s dashboard",
+        "fr": "Votre tableau de bord de coureur",
+    },
+    "ui.visitor.teaser.home.1": {
+        "en": "Distance, climbing and time since your very first run",
+        "fr": "Distance, dénivelé et temps cumulés depuis votre première sortie",
+    },
+    "ui.visitor.teaser.home.2": {
+        "en": "Your records over 5 km, 10 km, half and full marathon",
+        "fr": "Vos records sur 5 km, 10 km, semi et marathon",
+    },
+    "ui.visitor.teaser.home.3": {
+        "en": "Your zones and paces, set from your max heart rate and VMA",
+        "fr": "Vos zones et allures, calées sur votre FCmax et votre VMA",
+    },
+    "ui.visitor.teaser.analysis.title": {
+        "en": "Analyses built on your own runs",
+        "fr": "Des analyses construites sur vos sorties",
+    },
+    "ui.visitor.teaser.analysis.1": {
+        "en": "A personal GAP curve: what a gradient costs you, specifically",
+        "fr": "Une courbe GAP personnelle : ce que la pente vous coûte, à vous",
+    },
+    "ui.visitor.teaser.analysis.2": {
+        "en": "Your durability: what the effort costs after two, three, five hours",
+        "fr": "Votre durabilité : ce que l’effort coûte après deux, trois, cinq heures",
+    },
+    "ui.visitor.teaser.analysis.3": {
+        "en": "Your seasons compared, and your races side by side",
+        "fr": "Vos saisons comparées, et vos courses côte à côte",
+    },
+    "ui.visitor.teaser.training.title": {
+        "en": "Your training week at a glance",
+        "fr": "Votre semaine d’entraînement d’un coup d’œil",
+    },
+    "ui.visitor.teaser.training.1": {
+        "en": "Your Strava sessions on a calendar, rated by RPE and feel",
+        "fr": "Vos séances Strava sur un calendrier, notées en RPE et en ressenti",
+    },
+    "ui.visitor.teaser.training.2": {
+        "en": "Your planned sessions, notes and race goals",
+        "fr": "Vos séances prévues, vos notes et vos objectifs de course",
+    },
+    "ui.visitor.teaser.training.3": {
+        "en": "Each week’s summary: volume, climbing, fitness",
+        "fr": "Le bilan de chaque semaine : volume, dénivelé, forme",
+    },
+    "ui.visitor.more.race_plan": {
+        "en": "With Strava, TAGG learns this plan from your own climbs.",
+        "fr": "Avec Strava, TAGG apprend ce plan à partir de vos propres montées.",
+    },
+    "ui.visitor.more.blog": {
+        "en": "With Strava, TAGG applies these methods to your own runs.",
+        "fr": "Avec Strava, TAGG applique ces méthodes à vos propres sorties.",
+    },
+    "ui.visitor.more.link": {"en": "Connect Strava", "fr": "Connecter Strava"},
 
     "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},
     "ui.common.close": {"en": "Close", "fr": "Fermer"},

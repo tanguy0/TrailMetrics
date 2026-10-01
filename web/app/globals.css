@@ -172,6 +172,13 @@ h4 {
   color: var(--on-rail-muted);
 }
 
+/* A visitor's two groups, "Open" and "With Strava" (visitor.md § Rail). */
+.shell__groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 /* Mobile: the rail becomes a bottom bar of icons (NavRail.md). */
 @media (max-width: 720px) {
   .shell {
@@ -197,6 +204,16 @@ h4 {
   .shell__rail .shell__switcher,
   .shell__rail .shell__signout {
     display: none;
+  }
+
+  .shell__rail .tm-rail__group,
+  .shell__rail .tm-lock {
+    display: none;
+  }
+
+  .shell__rail .shell__groups {
+    flex-direction: row;
+    width: 100%;
   }
 
   .shell__rail .tm-rail__nav {
@@ -1314,18 +1331,6 @@ input[type="radio"] {
   overflow: hidden;
 }
 
-.feature-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: var(--space-4);
-  margin: 2rem 0;
-}
-
-.feature-list p {
-  font-size: 0.875rem;
-  color: var(--ink-muted);
-}
-
 /* --- Content blocks: prose and images in a panel -------------------------- */
 
 /* `pre-wrap` is what preserves the author's line breaks. The text is rendered as
@@ -2210,3 +2215,65 @@ a.new-page {
   line-height: 26px;
 }
 
+/* --- Visitor (design/tagg/visitor.md) ------------------------------------- */
+
+.landing__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-4);
+}
+
+/* The motto under the wordmark, on editorial surfaces only (logo/README.md). */
+.landing__motto {
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.landing .tm-access {
+  margin: var(--space-6) 0;
+}
+
+.landing__connect {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.landing__trust {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--ink-muted);
+}
+
+/* A locked page's background: the page's own empty structure. */
+.tm-teaser {
+  min-height: 34rem;
+}
+
+.teaser-structure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.teaser-plot {
+  min-height: 12rem;
+}
+
+.teaser-calendar {
+  height: auto;
+  margin: 0;
+  box-shadow: none;
+}
+
+/* The one line at the end of an open page: no banner, no modal. */
+.visitor-more {
+  margin: var(--space-8) 0 0;
+  color: var(--ink-muted);
+}

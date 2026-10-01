@@ -1,5 +1,10 @@
 /**
- * Landing page: connect Strava, or go straight through if already signed in.
+ * Landing page for a visitor (design/tagg/visitor.md § Les trois surfaces), or
+ * straight through to Home if already signed in.
+ *
+ * In this order: lockup and motto, one sentence, then the access grid — what is
+ * open now, what opens with Strava, every entry a real link — and only then the
+ * Strava button. The visitor sees what is theirs before being asked for anything.
  *
  * A server component so the session cookie decides before anything renders — no
  * flash of a sign-in screen for a signed-in user.
@@ -7,70 +12,111 @@
 
 import { redirect } from "next/navigation";
 
+import { Icon, type IconName } from "@/components/Icon";
+import { signInHref } from "@/lib/auth";
 import { readSession } from "@/lib/session";
+import { translator, type Translate } from "@/lib/strings";
+import { loadStrings } from "@/lib/strings.server";
 
-export default async function Home({
+const OPEN: { href: string; label: string; desc: string; icon: IconName }[] = [
+  { href: "/race-plan", label: "nav.race_plan", desc: "visitor.race_plan", icon: "flag" },
+  { href: "/blog", label: "nav.blog", desc: "visitor.blog", icon: "newspaper" },
+];
+
+const WITH_STRAVA: typeof OPEN = [
+  { href: "/home", label: "nav.home", desc: "visitor.home", icon: "home" },
+  { href: "/pages", label: "nav.analysis", desc: "visitor.analysis", icon: "chart" },
+  { href: "/training", label: "nav.training", desc: "visitor.training", icon: "calendar" },
+];
+
+export default async function Landing({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
   if (await readSession()) redirect("/home");
   const { error } = await searchParams;
+  const t = translator(await loadStrings());
 
   return (
-    <main className="container container--narrow">
-      <h1>Analyse your running, your way</h1>
-      <p className="lede">
-        TAGG is a data-science workbench for running. You build the pages: choose
-        a data source — specific runs, a date range, or several periods to compare — then
-        add the plots you want over it.
-      </p>
+    <main className="container container--narrow landing">
+      <div className="landing__brand">
+        {/* eslint-disable-next-line @next/next/no-img-element -- a static SVG gains nothing from next/image */}
+        <img src="/logo/tagg-lockup.svg" alt="TAGG" height={44} />
+        <span className="kicker landing__motto">Train · Analyse · Guide · Grow</span>
+      </div>
+
+      <p className="lede">{t("visitor.lede")}</p>
 
       {error && <p className="note note--error">{error}</p>}
 
-      <a className="tm-btn tm-btn--strava" href="/api/auth/strava/start">
-        Connect with Strava
-      </a>
+      <div className="tm-access">
+        <AccessColumn
+          title={t("visitor.open.title")}
+          tier={t("visitor.open.tier")}
+          tone="moss"
+          items={OPEN}
+          t={t}
+        />
+        <AccessColumn
+          title={t("visitor.strava.title")}
+          tier={t("visitor.strava.tier")}
+          tone="forest"
+          items={WITH_STRAVA}
+          locked
+          t={t}
+        />
+      </div>
 
-      <section className="feature-list">
-        <div>
-          <h3>Panels, not fixed dashboards</h3>
-          <p>
-            A panel has one data source and as many plots as you like. Compare training
-            blocks by defining them as time windows.
-          </p>
-        </div>
-        <div>
-          <h3>Every metric, every chart form</h3>
-          <p>
-            Distance, elevation, gradient, pace, GAP, power-to-heart-rate, best efforts —
-            as trends, distributions, scatter plots or tables.
-          </p>
-        </div>
-        <div>
-          <h3>Models on your own data</h3>
-          <p>
-            Fit a personalized gradient-adjusted-pace curve on any selection and compare
-            it against reference curves.
-          </p>
-        </div>
-        <div>
-          <h3>Examples you can take apart</h3>
-          <p>
-            Three ready-made pages ship with the app. Duplicate one and edit it — they
-            are built from the same panels you get.
-          </p>
-        </div>
-      </section>
-
-      <p className="muted">
-        TAGG reads your activities from Strava so it can analyse them. Your Strava
-        tokens are encrypted and never leave the server.
-      </p>
+      <div className="landing__connect">
+        <a className="tm-btn tm-btn--strava" href={signInHref()}>
+          {t("visitor.connect")}
+        </a>
+        <p className="body-sm landing__trust">{t("visitor.trust")}</p>
+      </div>
 
       <p className="muted">
         <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a>
       </p>
     </main>
+  );
+}
+
+function AccessColumn({
+  title,
+  tier,
+  tone,
+  items,
+  locked = false,
+  t,
+}: {
+  title: string;
+  tier: string;
+  tone: "moss" | "forest";
+  items: typeof OPEN;
+  locked?: boolean;
+  t: Translate;
+}) {
+  return (
+    <div className="tm-access__col">
+      <div className="tm-access__head">
+        {title}
+        <span className={`tm-chip tm-chip--${tone}`}>{tier}</span>
+      </div>
+      {items.map((item) => (
+        <a
+          key={item.href}
+          className={`tm-access__item${locked ? " tm-access__item--locked" : ""}`}
+          href={item.href}
+        >
+          <Icon name={item.icon} size={18} />
+          <span>
+            <span className="tm-access__title">{t(item.label)}</span>
+            <br />
+            <span className="tm-access__desc">{t(item.desc)}</span>
+          </span>
+        </a>
+      ))}
+    </div>
   );
 }

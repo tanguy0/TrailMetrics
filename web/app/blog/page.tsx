@@ -12,7 +12,10 @@ import type { Metadata } from "next";
 
 import { Icon } from "@/components/Icon";
 import { PageHeader } from "@/components/PageHeader";
+import { StravaMore } from "@/components/Teaser";
 import { apiBaseUrl, lang, readSession } from "@/lib/session";
+import { translator } from "@/lib/strings";
+import { loadStrings } from "@/lib/strings.server";
 import type { Athlete, BlogPostSummary } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -35,6 +38,7 @@ async function fetchJson<T>(path: string, session: string | null): Promise<T | n
 
 export default async function BlogIndexPage() {
   const session = await readSession();
+  const t = translator(await loadStrings());
   const athlete = session ? await fetchJson<Athlete>("/auth/me", session) : null;
   const isMaster = athlete?.is_master ?? false;
 
@@ -84,6 +88,8 @@ export default async function BlogIndexPage() {
           ))}
         </div>
       )}
+
+      {!session && <StravaMore message={t("visitor.more.blog")} next="/blog" t={t} />}
     </main>
   );
 }

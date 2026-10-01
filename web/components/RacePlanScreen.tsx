@@ -22,6 +22,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ChartView } from "@/components/ChartView";
 import { PageHeader } from "@/components/PageHeader";
+import { StravaMore } from "@/components/Teaser";
 import { TableView } from "@/components/TableView";
 import {
   deleteRacePlan,
@@ -81,8 +82,6 @@ function parseOptional(text: string, min: number, max: number): number | null | 
 }
 
 const numberText = (value: number | null | undefined) => (value == null ? "" : String(value));
-
-const SIGN_IN_HREF = "/api/auth/strava/start?next=/race-plan";
 
 export function RacePlanScreen({
   strings,
@@ -319,16 +318,6 @@ export function RacePlanScreen({
         }
       />
 
-      {!signedIn && (
-        <div className="note race-plan__warning">
-          <p>{t("race_plan.public_warning")}</p>
-          <p>{t("race_plan.sign_in_to_save")}</p>
-          <a className="tm-btn tm-btn--strava tm-btn--sm" href={SIGN_IN_HREF}>
-            {t("race_plan.sign_in")}
-          </a>
-        </div>
-      )}
-
       <form className="tm-panel panel race-plan__form" onSubmit={submit}>
         <div className="race-plan__fields">
           <label className="race-plan__field">
@@ -494,6 +483,11 @@ export function RacePlanScreen({
       </form>
 
       {result && <RacePlanResultView result={result} t={t} />}
+      {/* Open page: say what Strava adds in one quiet line, never a banner
+          (visitor.md § Pages ouvertes). */}
+      {!signedIn && (
+        <StravaMore message={t("visitor.more.race_plan")} next="/race-plan" t={t} />
+      )}
     </main>
   );
 }

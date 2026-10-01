@@ -10,13 +10,16 @@
  * Importing from Strava lives on Home, next to the data it describes.
  */
 
-import { redirect } from "next/navigation";
-
 import { AnalysisScreen } from "@/components/AnalysisScreen";
+import { Teaser } from "@/components/Teaser";
 import { readSession } from "@/lib/session";
+import { translator } from "@/lib/strings";
 import { loadStrings } from "@/lib/strings.server";
 
 export default async function AnalysisPage() {
-  if (!(await readSession())) redirect("/");
-  return <AnalysisScreen strings={await loadStrings()} />;
+  const strings = await loadStrings();
+  // A visitor stays here: the page's empty structure, and what Strava would put
+  // in it (design/tagg/visitor.md) — no redirect to the landing.
+  if (!(await readSession())) return <Teaser page="analysis" t={translator(strings)} />;
+  return <AnalysisScreen strings={strings} />;
 }

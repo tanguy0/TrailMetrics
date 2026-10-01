@@ -6,13 +6,16 @@
  * same shell `home/page.tsx` and `pages/page.tsx` use.
  */
 
-import { redirect } from "next/navigation";
-
 import { TrainingScreen } from "@/components/TrainingScreen";
+import { Teaser } from "@/components/Teaser";
 import { readSession } from "@/lib/session";
+import { translator } from "@/lib/strings";
 import { loadStrings } from "@/lib/strings.server";
 
 export default async function TrainingPage() {
-  if (!(await readSession())) redirect("/");
-  return <TrainingScreen strings={await loadStrings()} />;
+  const strings = await loadStrings();
+  // A visitor stays here: the page's empty structure, and what Strava would put
+  // in it (design/tagg/visitor.md) — no redirect to the landing.
+  if (!(await readSession())) return <Teaser page="training" t={translator(strings)} />;
+  return <TrainingScreen strings={strings} />;
 }
