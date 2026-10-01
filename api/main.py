@@ -1,4 +1,4 @@
-"""The TrailMetrics compute API.
+"""The TAGG compute API.
 
 Sits between the web app and the analytics. It owns Strava credentials, the stored
 activity data, and every computation — and it returns chart IR, never rendered
@@ -109,7 +109,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="TrailMetrics API",
+    title="TAGG API",
     version="0.2.0",
     description="Composable running-data analysis: pages, panels, plots.",
     lifespan=lifespan,

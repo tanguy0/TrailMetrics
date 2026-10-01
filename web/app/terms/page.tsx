@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — TrailMetrics",
+  title: "Terms of Service — TAGG",
 };
 
 export default function TermsPage() {
@@ -11,7 +11,7 @@ export default function TermsPage() {
       <p className="muted">Last updated: 6 August 2026</p>
 
       <p>
-        TrailMetrics is a personal project, run by Tanguy Blervacque, made available to
+        TAGG is a personal project, run by Tanguy Blervacque, made available to
         a small group of people he knows directly. By signing in you agree to the
         following.
       </p>

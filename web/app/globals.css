@@ -18,22 +18,27 @@ a {
 }
 
 h1 {
-  font-size: 1.75rem;
+  font-size: 30px;
+  line-height: 34px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
   margin: 0;
-  border-bottom: 4px solid var(--sun);
-  padding-bottom: 0.2rem;
-  display: inline-block;
 }
 
 h2 {
-  font-size: 1.25rem;
-  color: var(--forest);
+  font-size: 19px;
+  line-height: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
   margin: 2rem 0 0.5rem;
 }
 
 h3 {
-  font-size: 1rem;
-  color: var(--forest);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--ink);
   margin: 0;
 }
 
@@ -53,11 +58,13 @@ h4 {
   max-width: 60ch;
 }
 
-/* --- Shell & sidebar ------------------------------------------------------ */
+/* --- Shell & rail ---------------------------------------------------------- */
 
 .shell {
   display: flex;
+  gap: var(--space-8);
   min-height: 100vh;
+  padding-left: var(--space-8);
 }
 
 .shell__content {
@@ -113,190 +120,93 @@ h4 {
   opacity: 0.6;
 }
 
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  width: 15rem;
+/* The rail (`.tm-rail`, components.css) floats `space-8` off the window edge
+   and stays put while a long page scrolls beside it (NavRail.md). */
+.shell__rail {
   flex-shrink: 0;
-  padding: 1.1rem 0.9rem;
-  background: var(--bg-surface);
-  border-right: 1px solid var(--line-strong);
-  /* The rail stays put while a long page scrolls beside it. */
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: var(--space-8);
+  align-self: flex-start;
+  height: calc(100vh - 2 * var(--space-8));
+  margin: var(--space-8) 0;
+  overflow-y: auto;
 }
 
-.sidebar__brand {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  text-decoration: none;
-  color: var(--ink);
-  font-weight: 800;
-  font-size: 1.05rem;
+.shell__signout {
+  margin-top: auto;
 }
 
-.sidebar__brand-logo {
-  width: 100%;
-  height: auto;
-}
-
-.coach-switcher {
-  position: relative;
-}
-
-.coach-switcher__toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--bg-surface);
-  color: var(--ink);
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  text-align: left;
-}
-
-.coach-switcher__toggle:hover {
-  background: var(--bg-surface-alt);
-}
-
-.coach-switcher__toggle--active {
-  background: var(--terra-tint);
-  border-color: var(--terra);
-  color: var(--terra);
-}
-
-.coach-switcher__list {
+/* The coach's roster opens under the switcher, still on the rail. */
+.shell__switcher-list {
   list-style: none;
-  margin: 0.3rem 0 0;
-  padding: 0.3rem;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-1);
   display: grid;
-  gap: 0.15rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
+  gap: 2px;
+  background: color-mix(in srgb, var(--on-forest) 8%, transparent);
+  border-radius: var(--radius-md);
   max-height: 16rem;
   overflow-y: auto;
 }
 
-.coach-switcher__list button {
+.shell__switcher-list button {
   display: block;
   width: 100%;
-  padding: 0.4rem 0.5rem;
+  padding: 6px 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: none;
-  color: var(--ink);
-  font-size: 0.85rem;
+  color: var(--on-forest);
+  font: 500 12.5px/18px var(--font-sans);
   text-align: left;
   cursor: pointer;
 }
 
-.coach-switcher__list button:hover {
-  background: var(--bg-surface-alt);
+.shell__switcher-list button:hover {
+  background: color-mix(in srgb, var(--on-forest) 8%, transparent);
 }
 
-.coach-switcher__hint {
-  padding: 0.4rem 0.5rem;
-  font-size: 0.85rem;
-  color: var(--ink-muted);
+.shell__switcher-hint {
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: var(--on-rail-muted);
 }
 
-.sidebar__nav {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.3rem;
-}
-
-/*
- * Green is the app's one button color (see "--- Buttons ---" below) — these
- * four are the most-pressed buttons in the product, so they get it as a
- * solid fill, not just an accent.
- */
-.sidebar__link {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 0.7rem;
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  color: var(--on-forest);
-  font-weight: 700;
-  font-size: 0.95rem;
-  background: var(--forest);
-  border: 1px solid var(--forest);
-}
-
-.sidebar__link:not(.sidebar__link--disabled):hover {
-  filter: brightness(1.06);
-}
-
-/* Gold, not another shade of the link's own green, so "you are here" reads
-   as a distinct signal rather than disappearing into the fill. */
-.sidebar__link--active {
-  outline: 2px solid var(--sun);
-  outline-offset: -2px;
-}
-
-/* Shown in place of a link for a section that needs an athlete's own data — the
-   rail stays fully visible before sign-in, but these four are inert until then. */
-.sidebar__link--disabled {
-  background: var(--bg-surface-alt);
-  border-color: var(--line-strong);
-  color: var(--ink-muted);
-  cursor: not-allowed;
-  opacity: 0.75;
-  filter: none;
-}
-
-.sidebar__icon {
-  font-size: 1.05rem;
-}
-
-.sidebar__signout {
-  margin-top: auto;
-  font-size: 0.85rem;
-  color: var(--ink-muted);
-  text-decoration: none;
-  padding: 0 0.6rem;
-}
-
-.sidebar__signout:hover {
-  color: var(--danger);
-}
-
+/* Mobile: the rail becomes a bottom bar of icons (NavRail.md). */
 @media (max-width: 720px) {
   .shell {
-    flex-direction: column;
+    padding-left: 0;
+    padding-bottom: 4.5rem;
   }
 
-  .sidebar {
+  .shell__rail {
+    position: fixed;
+    inset: auto var(--space-2) var(--space-2);
+    top: auto;
     width: auto;
     height: auto;
-    position: static;
+    margin: 0;
     flex-direction: row;
     align-items: center;
-    gap: 0.75rem;
-    border-right: none;
-    border-bottom: 1px solid var(--line-strong);
+    padding: var(--space-2);
+    z-index: 50;
+    overflow: visible;
   }
 
-  .sidebar__nav {
-    display: flex;
+  .shell__rail .tm-rail__brand,
+  .shell__rail .shell__switcher,
+  .shell__rail .shell__signout {
+    display: none;
   }
 
-  .sidebar__signout {
-    margin-top: 0;
-    margin-left: auto;
+  .shell__rail .tm-rail__nav {
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+  }
+
+  .shell__rail .tm-rail__link span {
+    display: none;
   }
 }
 
@@ -313,122 +223,58 @@ h4 {
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-6);
 }
 
-.page-header__title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.page-header__lead {
+  min-width: 0;
 }
 
-.page-header__icon {
-  font-size: 1.5rem;
-}
-
-.page-header__name {
-  font-size: 1.6rem;
-  font-weight: 700;
+.page-title-input {
+  /* The editable name of a page or plan, in the title's own type: no box until
+     it is hovered or focused. */
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background: transparent;
   border: none;
-  border-bottom: 4px solid var(--sun);
-  background: transparent;
-  color: var(--ink);
-  padding: 0 0 0.2rem;
-  min-width: 16rem;
+  border-bottom: 1px dashed transparent;
+  border-radius: 0;
+  padding: 0;
+  width: min(36rem, 100%);
 }
 
-.page-header__actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+.page-title-input:hover,
+.page-title-input:focus {
+  border-bottom-color: var(--line-strong);
+  outline: none;
 }
 
-.page-description {
+/* A file picker's button, dressed as a secondary `sm` button (Button.md). */
+input[type="file"] {
+  font: 400 13px/20px var(--font-sans);
   color: var(--ink-muted);
-  max-width: 80ch;
 }
 
-/* --- Buttons -------------------------------------------------------------- */
-
-.button {
-  display: inline-block;
-  padding: 0.5rem 0.95rem;
-  border: 1px solid var(--forest);
-  border-radius: var(--radius-md);
-  background: var(--forest);
-  color: var(--on-forest);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.button:hover {
-  filter: brightness(1.08);
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  filter: none;
-}
-
-.button--ghost {
-  background: transparent;
-  color: var(--forest);
-}
-
-.button--danger {
-  background: transparent;
-  color: var(--danger);
-  border-color: var(--danger);
-}
-
-.button--small {
-  padding: 0.25rem 0.55rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.button--wide {
-  width: 100%;
-  margin-top: 1rem;
-}
-
-.button--strava {
-  background: var(--strava);
-  border-color: var(--strava);
-  font-size: 1.05rem;
-}
-
-/* --- Forms ---------------------------------------------------------------- */
-
-input,
-select,
-textarea {
-  font: inherit;
+input[type="file"]::file-selector-button {
+  margin-right: var(--space-3);
+  padding: 6px 12px;
+  font: 600 13px/18px var(--font-sans);
   color: var(--ink);
   background: var(--bg-surface);
   border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button:hover {
+  background: var(--bg-surface-alt);
 }
 
 input[type="checkbox"],
 input[type="radio"] {
   width: auto;
   accent-color: var(--forest);
-}
-
-.select--small {
-  padding: 0.25rem 0.4rem;
-  font-size: 0.8rem;
 }
 
 .param-form {
@@ -447,8 +293,9 @@ input[type="radio"] {
 }
 
 .param__label {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
   color: var(--ink-muted);
 }
 
@@ -490,6 +337,12 @@ input[type="radio"] {
   gap: 0.5rem;
   border-left: 3px solid var(--bg-surface-alt);
   padding-left: 0.6rem;
+}
+
+.window-row .tm-input,
+.row-item .tm-input,
+.race-plan__aid-row .tm-input {
+  width: auto;
 }
 
 .row-actions {
@@ -621,7 +474,7 @@ input[type="radio"] {
   color: var(--ink-muted);
 }
 
-.plot-picker-list__group .button {
+.plot-picker-list__group .tm-btn {
   text-align: left;
   margin-top: 0.3rem;
 }
@@ -686,15 +539,17 @@ input[type="radio"] {
 
 .note {
   background: var(--bg-surface-alt);
-  border-left: 3px solid var(--sun);
-  padding: 0.5rem 0.7rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
+  border: 1px solid var(--line);
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 20px;
   margin: 0.5rem 0;
 }
 
 .note--error {
-  border-left-color: var(--danger);
+  background: var(--danger-tint);
+  border-color: transparent;
   color: var(--danger);
 }
 
@@ -720,16 +575,6 @@ input[type="radio"] {
   to {
     transform: rotate(360deg);
   }
-}
-
-.tag {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: var(--bg-surface-alt);
-  color: var(--ink-muted);
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
 }
 
 /* --- Data source editor --------------------------------------------------- */
@@ -859,8 +704,7 @@ input[type="radio"] {
 }
 
 .hero__name {
-  font-size: 1.9rem;
-  border-bottom-width: 5px;
+  font-size: 30px;
 }
 
 /* Plain text under the name, not a tile: strip the tile's chrome and caption,
@@ -1303,48 +1147,12 @@ input[type="radio"] {
   max-width: 80ch;
 }
 
-/* The "Increasing" / "Stable" / "Decreasing" tag between a chart's title and
-   its lede — large and colored on purpose, so the eight-week call is legible
-   without reading the chart itself. */
-.trend-badge {
-  display: inline-block;
-  font-size: 0.95rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.3rem 0.85rem;
-  border-radius: 999px;
-  margin: 0 0 0.6rem;
-}
-
-.trend-badge--increasing {
-  background: var(--moss-tint);
-  color: var(--moss);
-  border: 1.5px solid var(--moss);
-}
-
-.trend-badge--stable {
-  background: var(--sun-tint);
-  color: var(--sun);
-  border: 1.5px solid var(--sun);
-}
-
-.trend-badge--decreasing {
-  background: var(--danger-tint);
-  color: var(--danger);
-  border: 1.5px solid var(--danger);
-}
-
 /* A "Recent" / "Sustained" pair of trend badges, side by side. */
 .trend-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
   margin: 0 0 0.6rem;
-}
-
-.trend-badges .trend-badge {
-  margin: 0;
 }
 
 /* --- Route map ------------------------------------------------------------ */
@@ -1681,10 +1489,6 @@ input[type="radio"] {
   border-color: var(--forest);
 }
 
-.card__icon {
-  font-size: 1.4rem;
-}
-
 .card__title {
   font-weight: 700;
   color: var(--forest);
@@ -1881,8 +1685,6 @@ input[type="radio"] {
 
 .welcome__title {
   font-size: 1.5rem;
-  border-bottom: 4px solid var(--sun);
-  display: inline-block;
   margin: 0 0 0.75rem;
 }
 
@@ -1962,7 +1764,8 @@ input[type="radio"] {
 }
 
 .step__icon {
-  font-size: 1.3rem;
+  display: inline-flex;
+  color: var(--forest);
 }
 
 .step__title {
@@ -2043,54 +1846,6 @@ input[type="radio"] {
   place-items: center;
   padding: 1.5rem;
   z-index: 100;
-}
-
-.modal-panel {
-  background: var(--bg-surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-pop);
-  width: min(32rem, 100%);
-  max-height: 85vh;
-  overflow-y: auto;
-}
-
-.modal-panel--wide {
-  width: 100%;
-  max-width: none;
-}
-
-.modal-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.9rem 1.1rem;
-  border-bottom: 1px solid var(--bg-surface-alt);
-}
-
-.modal-panel__title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--ink);
-  margin: 0;
-}
-
-.modal-panel__close {
-  background: none;
-  border: none;
-  font-size: 1.4rem;
-  line-height: 1;
-  color: var(--ink-muted);
-  cursor: pointer;
-  padding: 0 0.25rem;
-}
-
-.modal-panel__close:hover {
-  color: var(--ink);
-}
-
-.modal-panel__body {
-  padding: 1rem 1.1rem 1.2rem;
 }
 
 /* --- Training calendar ------------------------------------------------------ */
@@ -2218,19 +1973,6 @@ input[type="radio"] {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-}
-
-/* `.trend-badge`/`.trend-badge--increasing/stable/decreasing` are Home's —
-   same colours, same meaning (a metric trending up/flat/down) — just too
-   large for this card's own scale, hence this size-only override. */
-.trend-badge--compact {
-  flex-shrink: 0;
-  font-size: 0.52rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 0.05rem 0.35rem;
-  border-width: 1px;
-  margin: 0;
 }
 
 .week-summary__icon {
@@ -2449,7 +2191,7 @@ input[type="radio"] {
   color: var(--ink-muted);
 }
 
-/* RPE/feeling tags, bottom-right — unlike `.card-badge` these sit inside the
+/* RPE/feeling tags, bottom-right — unlike `.training-badge` these sit inside the
    card's own flow rather than overlapping its corner, since there are two of
    them and both need to stay individually clickable. */
 .training-session__tags {
@@ -2457,33 +2199,6 @@ input[type="radio"] {
   justify-content: flex-end;
   gap: 0.25rem;
   margin-top: 0.15rem;
-}
-
-.session-tag {
-  font: inherit;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
-  background: var(--bg-surface);
-  color: var(--ink-muted);
-  border: 1px solid var(--line-strong);
-  cursor: pointer;
-  line-height: 1.4;
-}
-
-.session-tag:hover {
-  border-color: var(--forest);
-  color: var(--forest);
-}
-
-/* A value has been entered — filled rather than the empty outline, so a
-   glance at the card tells whether it still needs one. */
-.session-tag--set {
-  background: var(--forest);
-  border-color: var(--forest);
-  color: var(--on-forest);
 }
 
 /* RPE's 1-10 grid and feeling's 3-option row, both inside the shared Modal —
@@ -2536,20 +2251,13 @@ input[type="radio"] {
 }
 
 /* A tiny "PLANNED" / "COMPLETED" sticker, overlapping the card's top-right corner. */
-.card-badge {
+.training-badge {
   position: absolute;
-  top: -0.45rem;
+  top: -0.55rem;
   right: -0.35rem;
-  font-size: 0.55rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  font-size: 9.5px;
   text-transform: uppercase;
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
-  background: var(--bg-surface);
-  color: var(--ink-muted);
-  border: 1px solid var(--line-strong);
-  line-height: 1.4;
 }
 
 .training-day__add {
@@ -2647,15 +2355,6 @@ input[type="radio"] {
 .new-page__hint {
   font-size: 0.82rem;
   color: var(--ink-muted);
-}
-
-/* --- Blog ------------------------------------------------------------------ */
-
-.blog-index__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
 }
 
 .blog-card {
@@ -2780,12 +2479,6 @@ input[type="radio"] {
   color: var(--ink-muted);
 }
 
-.blog-form__checkbox {
-  flex-direction: row !important;
-  align-items: center;
-  gap: 0.5rem !important;
-}
-
 .blog-form__actions {
   display: flex;
   gap: 0.6rem;
@@ -2884,13 +2577,6 @@ a.new-page {
   width: 100%;
 }
 
-.race-plan__check {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-}
-
 .race-plan__aid-name {
   flex: 1 1 12rem;
   min-width: 0;
@@ -2907,18 +2593,8 @@ a.new-page {
   margin: 1.25rem 0 0.5rem;
 }
 
-.race-plan .page-header__name {
-  min-width: min(26rem, 100%);
-}
-
 /* A curve name or a D+/D- pair is longer than Home's single numbers. */
 .race-plan__tile-value {
   font-size: 1.05rem;
 }
 
-@media (max-width: 720px) {
-  .race-plan .page-header__name {
-    min-width: 0;
-    width: 100%;
-  }
-}

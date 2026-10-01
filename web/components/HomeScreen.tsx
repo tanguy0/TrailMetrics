@@ -40,6 +40,7 @@ import {
   formatDate, formatHms, formatNumber, formatPaceInput, parsePaceInput,
 } from "@/lib/format";
 import { RUNNING_SPORT_TYPES } from "@/lib/sport";
+import { TREND_TONE, chipClass } from "@/lib/tone";
 import { translator, type Strings, type Translate } from "@/lib/strings";
 import type {
   ActivityCard,
@@ -1094,7 +1095,7 @@ function TrendBadge({
 }) {
   if (!direction) return null;
   return (
-    <span className={`trend-badge trend-badge--${direction}`}>
+    <span className={chipClass(TREND_TONE[direction], "tm-chip--dot")}>
       {label} · {t(`home.trend.${direction}`)}
     </span>
   );
@@ -1228,7 +1229,7 @@ function SyncControls({
         <div className="sync__actions">
           <button
             type="button"
-            className="button"
+            className="tm-btn"
             onClick={() => onImport(false)}
             disabled={busy}
           >
@@ -1239,7 +1240,7 @@ function SyncControls({
           {athlete.activity_count > 0 && (
             <button
               type="button"
-              className="button button--ghost"
+              className="tm-btn tm-btn--secondary"
               onClick={() => onImport(true)}
               disabled={busy}
               title={t("home.import.again_help")}
@@ -1370,7 +1371,7 @@ function EditableTile({
 
       {editing ? (
         <input
-          className="tile__input"
+          className="tm-input tile__input"
           autoFocus
           type={input.type}
           value={draft}

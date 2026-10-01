@@ -4,17 +4,19 @@
  * A server component, like `welcome/page.tsx`: the session cookie (if any) is read
  * here so the master account sees drafts and a "New article" button, while every
  * other visitor — signed in or not — sees the same published list. Nothing here
- * requires a TrailMetrics account.
+ * requires a TAGG account.
  */
 
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import { Icon } from "@/components/Icon";
+import { PageHeader } from "@/components/PageHeader";
 import { apiBaseUrl, lang, readSession } from "@/lib/session";
 import type { Athlete, BlogPostSummary } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Blog — TrailMetrics",
+  title: "Blog — TAGG",
 };
 
 async function fetchJson<T>(path: string, session: string | null): Promise<T | null> {
@@ -44,14 +46,18 @@ export default async function BlogIndexPage() {
 
   return (
     <main className="container">
-      <div className="blog-index__header">
-        <h1>Blog</h1>
-        {isMaster && (
-          <Link className="button" href="/blog/new">
-            + Nouvel article
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        kicker="TAGG"
+        title="Blog"
+        actions={
+          isMaster && (
+            <Link className="tm-btn tm-btn--sm" href="/blog/new">
+              <Icon name="plus" />
+              Nouvel article
+            </Link>
+          )
+        }
+      />
 
       {posts.length === 0 ? (
         <p className="muted">Aucun article pour l&apos;instant.</p>

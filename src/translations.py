@@ -1,4 +1,4 @@
-"""Central translation table for TrailMetrics.
+"""Central translation table for TAGG.
 
 One source of truth for every user-facing string, in English (``en``) and French
 (``fr``). Pure Python with no framework dependency, so the domain, the plot

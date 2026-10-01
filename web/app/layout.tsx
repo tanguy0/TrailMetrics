@@ -10,7 +10,7 @@ import "./components.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TrailMetrics",
+  title: "TAGG",
   description:
     "Build your own running-data analysis pages: pick a data source, add the plots you want.",
 };

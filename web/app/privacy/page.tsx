@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — TrailMetrics",
+  title: "Privacy Policy — TAGG",
 };
 
 export default function PrivacyPage() {
@@ -11,13 +11,13 @@ export default function PrivacyPage() {
       <p className="muted">Last updated: 6 August 2026</p>
 
       <p>
-        TrailMetrics is a personal project built and operated by Tanguy Blervacque. This
+        TAGG is a personal project built and operated by Tanguy Blervacque. This
         page explains what data the app collects, why, and how to get it deleted.
       </p>
 
       <h2>Who this is</h2>
       <p>
-        Tanguy Blervacque is the sole operator of TrailMetrics and the data controller
+        Tanguy Blervacque is the sole operator of TAGG and the data controller
         for anything it stores. Contact:{" "}
         <a href="mailto:tanguy.blervacque@gmail.com">tanguy.blervacque@gmail.com</a>.
       </p>

@@ -15,6 +15,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Icon } from "./Icon";
+import { PageHeader } from "./PageHeader";
 import { PanelEditor, newId } from "./PanelEditor";
 import { ProgressBar } from "./ProgressBar";
 import {
@@ -215,45 +217,50 @@ export function PageWorkspace({
 
   return (
     <main className="container">
-      <header className="page-header">
-        <div className="page-header__title">
-          <span className="page-header__icon">{spec.icon}</span>
+      <PageHeader
+        kicker={t("nav.analysis")}
+        title={
           <input
-            className="page-header__name"
+            className="page-title-input"
             value={spec.name}
             onChange={(event) => setSpec({ ...spec, name: event.target.value })}
             aria-label="Analysis name"
           />
-        </div>
-
-        <div className="page-header__actions">
-          <SaveBadge state={saveState} error={saveError} />
-          <button
-            type="button"
-            className="button button--ghost"
-            onClick={() => setRefreshToken((token) => token + 1)}
-            title="Ignore what was computed before and fit everything again."
-          >
-            ↻ {t("page.recompute")}
-          </button>
-          <button type="button" className="button button--ghost" onClick={duplicate}>
-            {t("page.duplicate")}
-          </button>
-          {/* A default analysis ships with the app, so there is nothing to delete it
-              back to. Duplicating gives a copy that *can* be removed. */}
-          {spec.builtin_key ? (
-            <span className="tag" title={t("page.default_help")}>
-              {t("page.default")}
-            </span>
-          ) : (
-            <button type="button" className="button button--danger" onClick={remove}>
-              {t("page.delete")}
+        }
+        sub={spec.description || undefined}
+        actions={
+          <>
+            <SaveBadge state={saveState} error={saveError} />
+            <button
+              type="button"
+              className="tm-btn tm-btn--secondary tm-btn--sm"
+              onClick={() => setRefreshToken((token) => token + 1)}
+              title="Ignore what was computed before and fit everything again."
+            >
+              <Icon name="refresh" />
+              {t("page.recompute")}
             </button>
-          )}
-        </div>
-      </header>
-
-      {spec.description && <p className="page-description">{spec.description}</p>}
+            <button
+              type="button"
+              className="tm-btn tm-btn--secondary tm-btn--sm"
+              onClick={duplicate}
+            >
+              {t("page.duplicate")}
+            </button>
+            {/* A default analysis ships with the app, so there is nothing to delete it
+                back to. Duplicating gives a copy that *can* be removed. */}
+            {spec.builtin_key ? (
+              <span className="tm-chip" title={t("page.default_help")}>
+                {t("page.default")}
+              </span>
+            ) : (
+              <button type="button" className="tm-btn tm-btn--danger tm-btn--sm" onClick={remove}>
+                {t("page.delete")}
+              </button>
+            )}
+          </>
+        }
+      />
 
       <PrecomputeNotice spec={spec} registry={registry} strings={strings} />
 
@@ -283,7 +290,7 @@ export function PageWorkspace({
 
       <button
         type="button"
-        className="button button--wide"
+        className="tm-btn tm-btn--wide"
         onClick={addPanel}
         aria-label={t("page.add_panel")}
         title={t("page.add_panel")}

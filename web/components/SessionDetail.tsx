@@ -272,7 +272,7 @@ function CommentsSection({ activityId, t }: { activityId: number; t: Translate }
       ))}
       <div className="session-comments__form">
         <textarea
-          className="session-comments__input"
+          className="tm-textarea session-comments__input"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder={t("session.comments.placeholder")}
@@ -280,7 +280,7 @@ function CommentsSection({ activityId, t }: { activityId: number; t: Translate }
         />
         <button
           type="button"
-          className="button button--ghost button--small"
+          className="tm-btn tm-btn--secondary tm-btn--sm"
           disabled={posting || !draft.trim()}
           onClick={handleAdd}
         >
@@ -312,7 +312,7 @@ function CommentRow({
     return (
       <div className="session-comments__form">
         <textarea
-          className="session-comments__input"
+          className="tm-textarea session-comments__input"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           rows={2}
@@ -321,7 +321,7 @@ function CommentRow({
         <div className="session-comments__actions">
           <button
             type="button"
-            className="button button--ghost button--small"
+            className="tm-btn tm-btn--secondary tm-btn--sm"
             disabled={busy}
             onClick={() => {
               setDraft(comment.body);
@@ -332,7 +332,7 @@ function CommentRow({
           </button>
           <button
             type="button"
-            className="button button--ghost button--small"
+            className="tm-btn tm-btn--secondary tm-btn--sm"
             disabled={busy || !draft.trim()}
             onClick={async () => {
               setBusy(true);
@@ -357,14 +357,14 @@ function CommentRow({
       <div className="session-comments__actions">
         <button
           type="button"
-          className="button button--ghost button--small"
+          className="tm-btn tm-btn--secondary tm-btn--sm"
           onClick={() => setEditing(true)}
         >
           {t("session.comments.edit")}
         </button>
         <button
           type="button"
-          className="button button--danger button--small"
+          className="tm-btn tm-btn--danger tm-btn--sm"
           onClick={() => deleteComment(activityId, comment.id).then(onDelete)}
         >
           {t("session.comments.delete")}

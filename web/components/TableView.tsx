@@ -75,7 +75,7 @@ export function TableView({ table }: { table: TableData }) {
         </table>
       </div>
       {table.caption && <p className="muted">{table.caption}</p>}
-      <button type="button" className="button button--ghost button--small" onClick={exportCsv}>
+      <button type="button" className="tm-btn tm-btn--secondary tm-btn--sm" onClick={exportCsv}>
         Download table (CSV)
       </button>
     </div>

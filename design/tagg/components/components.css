@@ -163,6 +163,9 @@
 .tm-week-summary__icon svg{width:12px;height:12px}
 
 .tm-rail__footer .tm-btn{width:100%;justify-content:center}
+button.tm-chip{cursor:pointer}
+button.tm-chip:hover{border-color:var(--line-strong)}
+button.tm-chip:focus-visible{outline:none;box-shadow:var(--focus-ring)}
 
 @media (max-width:900px){
   .tm-plot-grid>.tm-plot{grid-column:span 12}

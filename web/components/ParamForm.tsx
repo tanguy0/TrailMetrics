@@ -118,16 +118,20 @@ function ParamField(props: FieldProps) {
       </label>
 
       {spec.kind === "bool" && (
-        <input
-          id={id}
-          type="checkbox"
-          checked={Boolean(value)}
-          onChange={(event) => onChange(event.target.checked)}
-        />
+        <span className="tm-toggle">
+          <input
+            id={id}
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={(event) => onChange(event.target.checked)}
+          />
+          <span className="tm-toggle__track" aria-hidden="true" />
+        </span>
       )}
 
       {(spec.kind === "int" || spec.kind === "float") && (
         <input
+          className="tm-input"
           id={id}
           type="number"
           value={value == null ? "" : String(value)}
@@ -145,6 +149,7 @@ function ParamField(props: FieldProps) {
 
       {spec.kind === "text" && (
         <input
+          className="tm-input"
           id={id}
           type="text"
           value={value == null ? "" : String(value)}
@@ -155,7 +160,7 @@ function ParamField(props: FieldProps) {
       {spec.kind === "textarea" && (
         <textarea
           id={id}
-          className="param__textarea"
+          className="tm-textarea param__textarea"
           rows={4}
           value={value == null ? "" : String(value)}
           onChange={(event) => onChange(event.target.value)}
@@ -172,6 +177,7 @@ function ParamField(props: FieldProps) {
 
       {spec.kind === "choice" && (
         <select
+          className="tm-select"
           id={id}
           value={value == null ? "" : String(value)}
           onChange={(event) => onChange(event.target.value)}
@@ -236,7 +242,7 @@ function ImageField({
   return (
     <div className="image-field">
       <div className="image-field__actions">
-        <label className="button button--ghost button--small">
+        <label className="tm-btn tm-btn--secondary tm-btn--sm">
           {uploading ? "Uploading…" : "Upload"}
           {/* The file input itself is hidden: a <label>-wrapped input styles as a
               button, where a bare one cannot be. */}
@@ -255,7 +261,7 @@ function ImageField({
         {value && (
           <button
             type="button"
-            className="button button--ghost button--small"
+            className="tm-btn tm-btn--secondary tm-btn--sm"
             onClick={() => onChange("")}
           >
             Remove
@@ -264,6 +270,7 @@ function ImageField({
       </div>
 
       <input
+        className="tm-input"
         id={id}
         type="text"
         placeholder="…or paste an image URL"
@@ -362,7 +369,7 @@ function ParamRows({
           />
           <button
             type="button"
-            className="button button--ghost button--small"
+            className="tm-btn tm-btn--secondary tm-btn--sm"
             onClick={() => onChange(rows.filter((_, i) => i !== index))}
             aria-label="Remove row"
           >
@@ -373,7 +380,7 @@ function ParamRows({
 
       <button
         type="button"
-        className="button button--ghost button--small"
+        className="tm-btn tm-btn--secondary tm-btn--sm"
         onClick={addRow}
         disabled={atLimit}
         title={atLimit ? `At most ${spec.max_items}` : undefined}

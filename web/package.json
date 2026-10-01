@@ -1,8 +1,8 @@
 {
-  "name": "trailmetrics-web",
+  "name": "tagg-web",
   "version": "0.1.0",
   "private": true,
-  "description": "TrailMetrics web app — build custom running-analysis pages.",
+  "description": "TAGG web app — build custom running-analysis pages.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

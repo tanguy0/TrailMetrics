@@ -1,4 +1,4 @@
--- TrailMetrics schema (Supabase Postgres).
+-- TAGG schema (Supabase Postgres).
 --
 -- Design notes worth keeping in mind:
 --

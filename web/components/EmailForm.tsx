@@ -64,7 +64,7 @@ export function EmailForm({
       <div className="email-form__row">
         <input
           id="athlete-email"
-          className="email-form__input"
+          className="tm-input email-form__input"
           type="email"
           autoFocus
           autoComplete="email"
@@ -73,7 +73,7 @@ export function EmailForm({
           value={email}
           onChange={(event) => setEmail(event.target.value)}
         />
-        <button type="submit" className="button" disabled={saving}>
+        <button type="submit" className="tm-btn" disabled={saving}>
           {saving ? t("common.saving") : submitLabel ?? t("email.submit")}
         </button>
       </div>

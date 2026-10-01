@@ -1,7 +1,7 @@
 """The blog: articles written by the master account, read by anyone.
 
 Unlike every other router in this API, the read routes take **no** auth dependency
-at all — the blog is public, meant to be shared and found without a TrailMetrics
+at all — the blog is public, meant to be shared and found without a TAGG
 account. Only the write routes are gated, by :func:`api.deps.require_master`.
 
 An article's carousel is a single uploaded PDF, rasterized page-by-page into PNGs

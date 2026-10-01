@@ -52,6 +52,7 @@ import {
   sportTone,
 } from "@/lib/sport";
 import { translator, type Strings, type Translate } from "@/lib/strings";
+import { TREND_TONE, chipClass } from "@/lib/tone";
 import type {
   ActivityCard,
   PanelSpec,
@@ -868,7 +869,7 @@ function WeekDetailColumn({
       <span className="week-summary__value" style={{ gridColumn, gridRow: 3 }}>
         {arrow ? (
           <span
-            className={`trend-badge trend-badge--${fitnessTrend} trend-badge--compact`}
+            className={chipClass(TREND_TONE[fitnessTrend!])}
             title={t(`training.week.fitness_${fitnessTrend}`)}
           >
             {t("training.week.fitness_label")} {arrow}
@@ -964,7 +965,7 @@ function DayCell({
               }}
               onClick={() => onOpenItem(item)}
             >
-              <span className="card-badge">
+              <span className="tm-chip training-badge">
                 {t(item.kind === "note" ? "training.badge.note" : "training.badge.planned")}
               </span>
               {item.title || t(`training.kind.${item.kind}`)}
@@ -990,7 +991,7 @@ function DayCell({
                 if (event.key === "Enter" || event.key === " ") onOpenSession(activity);
               }}
             >
-              <span className="card-badge">{t("training.badge.completed")}</span>
+              <span className="tm-chip training-badge">{t("training.badge.completed")}</span>
               <span className="training-session__sport">{activity.sport_type}</span>
               <span className="training-session__stats">
                 {formatHms(activity.moving_s)} ·{" "}
@@ -1000,7 +1001,7 @@ function DayCell({
               <span className="training-session__tags">
                 <button
                   type="button"
-                  className={`session-tag session-tag--rpe${activity.rpe != null ? " session-tag--set" : ""}`}
+                  className="tm-chip"
                   style={activity.rpe != null
                     ? { background: ratingColor(activity.rpe, 10), borderColor: ratingColor(activity.rpe, 10) }
                     : undefined}
@@ -1013,7 +1014,7 @@ function DayCell({
                 </button>
                 <button
                   type="button"
-                  className={`session-tag session-tag--feeling${activity.feeling != null ? " session-tag--set" : ""}`}
+                  className="tm-chip"
                   style={activity.feeling != null
                     ? {
                       background: FEELING_COLOR[activity.feeling],
@@ -1113,14 +1114,14 @@ function ItemForm({
           </div>
         )}
         <input
-          className="training-form__title"
+          className="tm-input training-form__title"
           value={draftTitle}
           onChange={(event) => setDraftTitle(event.target.value)}
           placeholder={t("training.form.title_placeholder")}
           autoFocus
         />
         <textarea
-          className="training-form__body"
+          className="tm-textarea training-form__body"
           value={draftBody}
           onChange={(event) => setDraftBody(event.target.value)}
           placeholder={t("training.form.body_placeholder")}
@@ -1152,6 +1153,7 @@ function ItemForm({
           <label className="training-form__end-date">
             {t("training.form.end_date_label")}
             <input
+              className="tm-input"
               type="date"
               value={draftEndDate}
               min={startDate}
@@ -1163,7 +1165,7 @@ function ItemForm({
           {onDelete && (
             <button
               type="button"
-              className="button button--ghost"
+              className="tm-btn tm-btn--secondary"
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
@@ -1180,7 +1182,7 @@ function ItemForm({
           {onDuplicate && (
             <button
               type="button"
-              className="button button--ghost"
+              className="tm-btn tm-btn--secondary"
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
@@ -1196,7 +1198,7 @@ function ItemForm({
           )}
           <button
             type="button"
-            className="button"
+            className="tm-btn"
             disabled={busy || !draftTitle.trim()}
             onClick={async () => {
               setBusy(true);

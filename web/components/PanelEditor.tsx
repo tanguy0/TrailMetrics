@@ -204,13 +204,13 @@ export function PanelEditor({
           <div className="panel__actions">
             <button
               type="button"
-              className="button button--ghost button--small"
+              className="tm-btn tm-btn--secondary tm-btn--sm"
               onClick={() => setShowSource((v) => !v)}
             >
               {showSource ? "Hide data source" : "Data source"}
             </button>
             <select
-              className="select--small"
+              className="tm-select tm-select--sm"
               value={panel.columns}
               onChange={(event) =>
                 onChange({ ...panel, columns: Number(event.target.value) })
@@ -224,7 +224,7 @@ export function PanelEditor({
               <>
                 <button
                   type="button"
-                  className="button button--ghost button--small"
+                  className="tm-btn tm-btn--secondary tm-btn--sm"
                   onClick={() => onMove(-1)}
                   aria-label="Move panel up"
                 >
@@ -232,7 +232,7 @@ export function PanelEditor({
                 </button>
                 <button
                   type="button"
-                  className="button button--ghost button--small"
+                  className="tm-btn tm-btn--secondary tm-btn--sm"
                   onClick={() => onMove(1)}
                   aria-label="Move panel down"
                 >
@@ -243,7 +243,7 @@ export function PanelEditor({
             {onRemove && (
               <button
                 type="button"
-                className="button button--danger button--small"
+                className="tm-btn tm-btn--danger tm-btn--sm"
                 onClick={onRemove}
               >
                 Delete panel
@@ -293,14 +293,14 @@ export function PanelEditor({
                   <div className="plot-card__actions">
                     <button
                       type="button"
-                      className="button button--ghost button--small"
+                      className="tm-btn tm-btn--secondary tm-btn--sm"
                       onClick={() => toggleSettings(plot.id)}
                     >
                       {expanded.has(plot.id) ? "Hide settings" : "Settings"}
                     </button>
                     <button
                       type="button"
-                      className="button button--ghost button--small"
+                      className="tm-btn tm-btn--secondary tm-btn--sm"
                       onClick={() => movePlot(index, -1)}
                       aria-label="Move plot up"
                     >
@@ -308,7 +308,7 @@ export function PanelEditor({
                     </button>
                     <button
                       type="button"
-                      className="button button--ghost button--small"
+                      className="tm-btn tm-btn--secondary tm-btn--sm"
                       onClick={() => movePlot(index, 1)}
                       aria-label="Move plot down"
                     >
@@ -316,7 +316,7 @@ export function PanelEditor({
                     </button>
                     <button
                       type="button"
-                      className="button button--danger button--small"
+                      className="tm-btn tm-btn--danger tm-btn--sm"
                       onClick={() =>
                         onChange({
                           ...panel,
@@ -383,7 +383,7 @@ function PlotPicker({
     <>
       <button
         type="button"
-        className="button button--wide"
+        className="tm-btn tm-btn--secondary tm-btn--wide"
         onClick={() => setOpen(true)}
         aria-label="Add a plot"
         title="Add a plot"
@@ -400,7 +400,7 @@ function PlotPicker({
                   <button
                     key={definition.key}
                     type="button"
-                    className="button button--ghost button--wide"
+                    className="tm-btn tm-btn--secondary tm-btn--wide"
                     onClick={() => {
                       onAdd(definition.key);
                       setOpen(false);

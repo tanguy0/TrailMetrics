@@ -239,6 +239,7 @@ function WindowRow({
     <div className="window-row">
       {showName && (
         <input
+          className="tm-input"
           type="text"
           value={window.name}
           placeholder="Name (e.g. Marathon block)"
@@ -246,17 +247,19 @@ function WindowRow({
         />
       )}
       <input
+        className="tm-input"
         type="date"
         value={window.start}
         onChange={(event) => onChange({ ...window, start: event.target.value })}
       />
       <input
+        className="tm-input"
         type="date"
         value={window.end}
         onChange={(event) => onChange({ ...window, end: event.target.value })}
       />
       {onRemove && (
-        <button type="button" className="button button--ghost button--small" onClick={onRemove}>
+        <button type="button" className="tm-btn tm-btn--secondary tm-btn--sm" onClick={onRemove}>
           Remove
         </button>
       )}
@@ -305,14 +308,14 @@ function WindowList({
       <div className="row-actions">
         <button
           type="button"
-          className="button button--ghost button--small"
+          className="tm-btn tm-btn--secondary tm-btn--sm"
           onClick={() => onChange([...windows, blankWindow(`Window ${windows.length + 1}`, oldest, newest)])}
         >
           Add window
         </button>
         <button
           type="button"
-          className="button button--ghost button--small"
+          className="tm-btn tm-btn--secondary tm-btn--sm"
           onClick={() => onChange(calendarYears(oldest, newest))}
         >
           Use calendar years
@@ -354,6 +357,7 @@ function ActivityPicker({
   return (
     <div className="activity-picker">
       <input
+        className="tm-input"
         type="search"
         placeholder="Filter by date, sport or distance…"
         value={query}
@@ -372,7 +376,7 @@ function ActivityPicker({
               onChange={() => toggle(activity.activity_id)}
             />
             <span>{activity.label}</span>
-            {!activity.has_streams && <span className="tag">summary only</span>}
+            {!activity.has_streams && <span className="tm-chip">summary only</span>}
           </label>
         ))}
         {!shown.length && <p className="muted">No activity matches that filter.</p>}
@@ -476,6 +480,7 @@ function Filters({
         <div className="param">
           <label className="param__label">Min distance (km)</label>
           <input
+            className="tm-input"
             type="number"
             min={0}
             value={filters.min_distance_km ?? ""}
@@ -489,6 +494,7 @@ function Filters({
         <div className="param">
           <label className="param__label">Max distance (km)</label>
           <input
+            className="tm-input"
             type="number"
             min={0}
             value={filters.max_distance_km ?? ""}

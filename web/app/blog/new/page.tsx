@@ -10,7 +10,7 @@ import { BlogPostForm } from "@/components/BlogPostForm";
 import { apiBaseUrl, lang, readSession } from "@/lib/session";
 import type { Athlete } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Nouvel article — TrailMetrics Blog" };
+export const metadata: Metadata = { title: "Nouvel article — TAGG Blog" };
 
 export default async function NewBlogPostPage() {
   const session = await readSession();

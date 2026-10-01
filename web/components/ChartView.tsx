@@ -310,7 +310,7 @@ export function ChartView({ chart }: { chart: ChartData }) {
       {chart.caption && <figcaption className="chart__caption">{chart.caption}</figcaption>}
       <button
         type="button"
-        className="button button--ghost button--small"
+        className="tm-btn tm-btn--secondary tm-btn--sm"
         onClick={() => downloadChartCsv(chart)}
       >
         Download data (CSV)

@@ -21,14 +21,14 @@ export default async function Home({
     <main className="container container--narrow">
       <h1>Analyse your running, your way</h1>
       <p className="lede">
-        TrailMetrics is a data-science workbench for running. You build the pages: choose
+        TAGG is a data-science workbench for running. You build the pages: choose
         a data source — specific runs, a date range, or several periods to compare — then
         add the plots you want over it.
       </p>
 
       {error && <p className="note note--error">{error}</p>}
 
-      <a className="button button--strava" href="/api/auth/strava/start">
+      <a className="tm-btn tm-btn--strava" href="/api/auth/strava/start">
         Connect with Strava
       </a>
 
@@ -64,7 +64,7 @@ export default async function Home({
       </section>
 
       <p className="muted">
-        TrailMetrics reads your activities from Strava so it can analyse them. Your Strava
+        TAGG reads your activities from Strava so it can analyse them. Your Strava
         tokens are encrypted and never leave the server.
       </p>
 
