@@ -1,5 +1,5 @@
 /**
- * The Training tab.
+ * The Coaching tab (formerly Training): the planned/done diary.
  *
  * A server component so the session decides before anything renders, and so the
  * translated strings are in the first paint rather than fetched afterwards — the
@@ -12,7 +12,7 @@ import { getViewer } from "@/lib/session";
 import { translator } from "@/lib/strings";
 import { loadStrings } from "@/lib/strings.server";
 
-export default async function TrainingPage() {
+export default async function CoachingPage() {
   const strings = await loadStrings();
   // A visitor, or an account without Strava, stays here: the page's empty
   // structure and what the next tier would put in it (design/tagg/access.md).

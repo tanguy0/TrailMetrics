@@ -16,9 +16,23 @@ import { PageHeader } from "@/components/PageHeader";
 import { connectStravaHref, loginHref, registerHref } from "@/lib/auth";
 import type { Translate } from "@/lib/strings";
 
-export type TeaserPage = "home" | "analysis" | "training";
+export type TeaserPage = "home" | "analysis" | "training" | "gap" | "durability";
 
-const PATH: Record<TeaserPage, string> = { home: "/home", analysis: "/pages", training: "/training" };
+const PATH: Record<TeaserPage, string> = {
+  home: "/home",
+  analysis: "/pages",
+  training: "/coaching",
+  gap: "/tools/gap",
+  durability: "/tools/durability",
+};
+
+const TITLE: Record<TeaserPage, string> = {
+  home: "nav.home",
+  analysis: "nav.analysis",
+  training: "nav.coaching",
+  gap: "tools.gap_profile",
+  durability: "tools.durability",
+};
 
 /**
  * `tier` is what the reader already has: a visitor is invited to create an
@@ -33,14 +47,14 @@ export function Teaser({
   tier?: "visitor" | "account";
   t: Translate;
 }) {
-  const title = t({ home: "nav.home", analysis: "nav.analysis", training: "nav.training" }[page]);
+  const title = t(TITLE[page]);
   return (
     <main className="container">
       <PageHeader kicker="TAGG" title={title} />
       <section className="tm-teaser" aria-labelledby="teaser-title">
         <div className="tm-teaser__bg" aria-hidden="true" inert>
           {page === "home" && <HomeStructure t={t} />}
-          {page === "analysis" && <AnalysisStructure />}
+          {(page === "analysis" || page === "gap" || page === "durability") && <AnalysisStructure />}
           {page === "training" && <TrainingStructure />}
         </div>
         <div className="tm-teaser__card">

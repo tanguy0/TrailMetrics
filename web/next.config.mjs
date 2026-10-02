@@ -27,6 +27,15 @@ const nextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },
+  // Old addresses from before the Tools tab (design/tagg/access.md): bookmarks
+  // and shared plan links keep working.
+  async redirects() {
+    return [
+      { source: "/race-plan", destination: "/tools/race-planning", permanent: true },
+      { source: "/race-plan/:path*", destination: "/tools/race-planning/:path*", permanent: true },
+      { source: "/training", destination: "/coaching", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

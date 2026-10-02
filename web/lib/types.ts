@@ -453,6 +453,73 @@ export interface Athlete {
   /** Whether Strava still answers for it — false once disconnected (history
    * kept). Absent when `strava_connected` is false. */
   strava_authorized?: boolean;
+  /** The account's latest level estimate, for the Zones card's "estimated on"
+   * line. Null without one, and while a coach views another athlete. */
+  level_estimate: LevelEstimateMeta | null;
+}
+
+// --- Tools ------------------------------------------------------------------
+
+export type LevelMethod = "half_cooper" | "critical_speed" | "records";
+
+export interface LevelEstimateMeta {
+  method: LevelMethod;
+  created_at: string;
+  vma_pace_s_per_km: number | null;
+}
+
+export interface PaceZone {
+  key: string;
+  low_pct: number;
+  high_pct: number;
+  fast_s_per_km: number;
+  slow_s_per_km: number;
+}
+
+export interface LevelResult {
+  method: LevelMethod;
+  vma_kmh: number;
+  vma_pace_s_per_km: number;
+  vdot: number;
+  confidence: "high" | "medium" | "low";
+  extras: Record<string, number>;
+  zones: PaceZone[];
+  hr_max: number | null;
+  hr_zones: { key: string; bpm: number }[];
+  notes: string[];
+  saved_at: string | null;
+}
+
+export interface ZoneDefinitions {
+  vma_pace: { key: string; low_pct: number; high_pct: number }[];
+  hr_max_pct: { key: "z1" | "z2" | "z3" | "z4"; pct: number }[];
+  hr_pace: { key: string; low_pct: number; high_pct: number }[];
+}
+
+export interface GapSummary {
+  available: boolean;
+  reason?: string;
+  uphill_factor?: number;
+  downhill_factor?: number;
+  uphill_vs_reference_pct?: number;
+  downhill_vs_reference_pct?: number;
+  flat_pace_s_per_km?: number | null;
+  slope_pct?: number;
+}
+
+export interface DurabilitySummary {
+  confidence: "personalized" | "partially_personalized" | "population_only";
+  personal: boolean;
+  extra_cost_pct: Record<string, number>;
+  population_extra_cost_pct: Record<string, number>;
+  n_activities: number;
+}
+
+export interface PageTemplate {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
 }
 
 /** One entry in a coach's athlete switcher — not the full profile. */

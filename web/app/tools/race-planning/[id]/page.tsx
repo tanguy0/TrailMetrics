@@ -1,4 +1,4 @@
-/** One saved race plan. Saved plans belong to a Strava athlete, so this needs one. */
+/** One saved race plan. Saved plans belong to an account, so this needs one. */
 
 import { redirect } from "next/navigation";
 
@@ -11,7 +11,7 @@ export default async function SavedRacePlanPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  if ((await getViewer())?.tier !== "strava") redirect("/race-plan");
+  if (!(await getViewer())) redirect("/tools/race-planning");
   const { id } = await params;
   return <RacePlanScreen strings={await loadStrings()} signedIn planId={id} />;
 }

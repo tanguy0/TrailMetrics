@@ -22,14 +22,15 @@ import { translator, type Translate } from "@/lib/strings";
 import { loadStrings } from "@/lib/strings.server";
 
 const OPEN: { href: string; label: string; desc: string; icon: IconName }[] = [
-  { href: "/race-plan", label: "nav.race_plan", desc: "visitor.race_plan", icon: "flag" },
+  { href: "/tools/race-planning", label: "tools.race_planning", desc: "visitor.race_plan", icon: "flag" },
+  { href: "/tools/level", label: "tools.level", desc: "visitor.level", icon: "target" },
   { href: "/blog", label: "nav.blog", desc: "visitor.blog", icon: "newspaper" },
 ];
 
 const WITH_ACCOUNT: typeof OPEN = [
   { href: "/home", label: "nav.home", desc: "visitor.home", icon: "home" },
-  { href: "/pages", label: "nav.analysis", desc: "visitor.analysis", icon: "chart" },
-  { href: "/training", label: "nav.training", desc: "visitor.training", icon: "calendar" },
+  { href: "/tools/gap", label: "nav.tools", desc: "visitor.tools", icon: "ruler" },
+  { href: "/coaching", label: "nav.coaching", desc: "visitor.coaching", icon: "calendar" },
 ];
 
 export default async function Landing({

@@ -816,7 +816,6 @@ TRANSLATIONS = {
     # lives — see the module docstring.
     "ui.nav.home": {"en": "Home", "fr": "Accueil"},
     "ui.nav.analysis": {"en": "Analysis", "fr": "Analyses"},
-    "ui.nav.training": {"en": "Training", "fr": "Entraînement"},
     "ui.nav.blog": {"en": "Blog", "fr": "Blog"},
     "ui.nav.sign_in_required": {
         "en": "Sign in to access this",
@@ -825,7 +824,6 @@ TRANSLATIONS = {
     "ui.nav.sign_out": {"en": "Sign out", "fr": "Se déconnecter"},
     "ui.nav.group_open": {"en": "Open", "fr": "Ouvert"},
     "ui.nav.group_strava": {"en": "With Strava", "fr": "Avec Strava"},
-    "ui.nav.connect": {"en": "Connect Strava", "fr": "Connecter Strava"},
 
     # --- Visitor (no account): design/tagg/visitor.md -------------------------
     # Two free tiers, never sold as such: "Free · now" and "Free · with Strava".
@@ -838,8 +836,6 @@ TRANSLATIONS = {
     },
     "ui.visitor.open.title": {"en": "Without an account", "fr": "Sans compte"},
     "ui.visitor.open.tier": {"en": "Free · now", "fr": "Gratuit · maintenant"},
-    "ui.visitor.strava.title": {"en": "With Strava", "fr": "Avec Strava"},
-    "ui.visitor.strava.tier": {"en": "Free · 1 click", "fr": "Gratuit · 1 clic"},
     "ui.visitor.race_plan": {
         "en": "The pace to hold on every stretch of your race, from its GPX.",
         "fr": "L’allure à tenir sur chaque portion de votre course, à partir de son GPX.",
@@ -860,13 +856,6 @@ TRANSLATIONS = {
     "ui.visitor.training": {
         "en": "Your week, your sessions and your goals on one calendar.",
         "fr": "Votre semaine, vos séances et vos objectifs sur un calendrier.",
-    },
-    "ui.visitor.connect": {"en": "Connect with Strava", "fr": "Se connecter avec Strava"},
-    "ui.visitor.trust": {
-        "en": "Free, no card. TAGG reads your Strava activities to analyse them; your "
-              "Strava tokens are encrypted and never leave the server.",
-        "fr": "Gratuit, sans carte. TAGG lit vos activités Strava pour les analyser ; vos "
-              "jetons Strava sont chiffrés et ne quittent jamais le serveur.",
     },
     "ui.visitor.fine": {
         "en": "Free, no card. TAGG only reads your activities.",
@@ -921,9 +910,37 @@ TRANSLATIONS = {
         "en": "Each week’s summary: volume, climbing, fitness",
         "fr": "Le bilan de chaque semaine : volume, dénivelé, forme",
     },
-    "ui.visitor.more.race_plan": {
-        "en": "With Strava, TAGG learns this plan from your own climbs.",
-        "fr": "Avec Strava, TAGG apprend ce plan à partir de vos propres montées.",
+    "ui.visitor.teaser.gap.title": {
+        "en": "What a slope costs you, specifically",
+        "fr": "Ce que la pente vous coûte, à vous",
+    },
+    "ui.visitor.teaser.gap.1": {
+        "en": "Your own GAP curve, fitted on your runs",
+        "fr": "Votre propre courbe GAP, ajustée sur vos sorties",
+    },
+    "ui.visitor.teaser.gap.2": {
+        "en": "Your cost uphill and downhill, against a reference runner",
+        "fr": "Votre coût en montée et en descente, face à un coureur de référence",
+    },
+    "ui.visitor.teaser.gap.3": {
+        "en": "Your flat-equivalent pace over the last weeks",
+        "fr": "Votre allure plat équivalente sur les dernières semaines",
+    },
+    "ui.visitor.teaser.durability.title": {
+        "en": "How you hold up on long efforts",
+        "fr": "Comment vous tenez sur l’effort long",
+    },
+    "ui.visitor.teaser.durability.1": {
+        "en": "Your extra cost after two and four hours",
+        "fr": "Votre surcoût après deux et quatre heures",
+    },
+    "ui.visitor.teaser.durability.2": {
+        "en": "Measured on your long runs of the past year",
+        "fr": "Mesuré sur vos sorties longues de l’année écoulée",
+    },
+    "ui.visitor.teaser.durability.3": {
+        "en": "The same model your race plans pace along",
+        "fr": "Le même modèle que suivent vos plans de course",
     },
     "ui.visitor.more.blog": {
         "en": "With Strava, TAGG applies these methods to your own runs.",
@@ -1080,6 +1097,152 @@ TRANSLATIONS = {
         "en": "Something went wrong. Try again.",
         "fr": "Une erreur est survenue. Réessayez.",
     },
+
+    # --- Navigation and Tools (v2): design/tagg/access.md ----------------------
+    "ui.nav.tools": {"en": "Tools", "fr": "Outils"},
+    "ui.nav.coaching": {"en": "Coaching", "fr": "Coaching"},
+    "ui.nav.group_coached": {"en": "Coached by TAGG", "fr": "Coaché par TAGG"},
+    "ui.tools.race_planning": {"en": "Race Planning", "fr": "Planification de course"},
+    "ui.tools.level": {"en": "Level Assessment", "fr": "Évaluation du niveau"},
+    "ui.tools.gap_profile": {"en": "Slope Profile", "fr": "Profil de pente"},
+    "ui.tools.durability": {"en": "Durability", "fr": "Durabilité"},
+    "ui.tools.keep_plans": {
+        "en": "Create an account to keep your plans.",
+        "fr": "Créez un compte pour garder vos plans.",
+    },
+    "ui.tools.keep_zones": {
+        "en": "Create an account to keep your zones.",
+        "fr": "Créez un compte pour garder vos zones.",
+    },
+    "ui.tools.saved_zones": {
+        "en": "Saved: your Home zones now use this VMA.",
+        "fr": "Enregistré : les zones de votre Accueil utilisent maintenant cette VMA.",
+    },
+    "ui.visitor.level": {
+        "en": "Your VMA and training zones from a field test or your records.",
+        "fr": "Votre VMA et vos zones d’entraînement, à partir d’un test ou de vos records.",
+    },
+    "ui.visitor.tools": {
+        "en": "Slope profile and durability, read from your own runs.",
+        "fr": "Profil de pente et durabilité, lus dans vos propres sorties.",
+    },
+    "ui.visitor.coaching": {
+        "en": "A weekly plan built on your data, with a coach.",
+        "fr": "Un plan hebdomadaire construit sur vos données, avec un coach.",
+    },
+
+    # Level tool page
+    "ui.level.hero.kicker": {"en": "Level Assessment", "fr": "Évaluation du niveau"},
+    "ui.level.hero.title": {"en": "Where do you stand?", "fr": "Où en êtes-vous ?"},
+    "ui.level.hero.lede": {
+        "en": "Three ways in, one result: your VMA, and the zones that follow from it.",
+        "fr": "Trois façons d’entrer, un seul résultat : votre VMA, et les zones qui en découlent.",
+    },
+    "ui.level.method.half_cooper": {"en": "Half-Cooper", "fr": "Demi-Cooper"},
+    "ui.level.method.critical_speed": {"en": "Critical speed", "fr": "Vitesse critique"},
+    "ui.level.method.records": {"en": "Records", "fr": "Records"},
+    "ui.level.help.half_cooper": {
+        "en": "Run six minutes as fast as you can hold, on a track or a flat loop. "
+              "Enter the distance covered.",
+        "fr": "Courez six minutes aussi vite que vous pouvez tenir, sur piste ou boucle "
+              "plate. Indiquez la distance parcourue.",
+    },
+    "ui.level.help.critical_speed": {
+        "en": "Two all-out efforts on separate days, or 30 minutes apart: 3 minutes, then "
+              "12 minutes. Enter both distances.",
+        "fr": "Deux efforts à fond, des jours différents ou à 30 minutes d’écart : 3 minutes, "
+              "puis 12 minutes. Indiquez les deux distances.",
+    },
+    "ui.level.help.records": {
+        "en": "One or more recent bests, between 3 minutes and 6 hours.",
+        "fr": "Un ou plusieurs records récents, entre 3 minutes et 6 heures.",
+    },
+    "ui.level.field.distance_6": {"en": "Distance in 6 min (m)", "fr": "Distance en 6 min (m)"},
+    "ui.level.field.d3": {"en": "Distance in 3 min (m)", "fr": "Distance en 3 min (m)"},
+    "ui.level.field.d12": {"en": "Distance in 12 min (m)", "fr": "Distance en 12 min (m)"},
+    "ui.level.field.record_distance": {"en": "Distance (m)", "fr": "Distance (m)"},
+    "ui.level.field.record_time": {"en": "Time (h:mm:ss)", "fr": "Temps (h:mm:ss)"},
+    "ui.level.field.hr_max": {"en": "Max heart rate (optional)", "fr": "FCmax (facultatif)"},
+    "ui.level.add_record": {"en": "Add a record", "fr": "Ajouter un record"},
+    "ui.level.remove_record": {"en": "Remove", "fr": "Retirer"},
+    "ui.level.submit": {"en": "Estimate", "fr": "Estimer"},
+    "ui.level.result.title": {"en": "Your estimate", "fr": "Votre estimation"},
+    "ui.level.result.vma": {"en": "VMA", "fr": "VMA"},
+    "ui.level.result.vma_pace": {"en": "VMA pace", "fr": "Allure VMA"},
+    "ui.level.result.vdot": {"en": "VDOT", "fr": "VDOT"},
+    "ui.level.result.critical_pace": {"en": "Critical pace", "fr": "Seuil critique"},
+    "ui.level.result.d_prime": {"en": "Anaerobic reserve (D′)", "fr": "Réserve anaérobie (D′)"},
+    "ui.level.result.sentence": {
+        "en": "Your VMA is {vma}: your endurance runs sit around {endurance} per km.",
+        "fr": "Votre VMA est de {vma} : vos sorties d’endurance se situent autour de "
+              "{endurance} au km.",
+    },
+    "ui.level.result.zones": {"en": "Pace zones", "fr": "Zones d’allure"},
+    "ui.level.result.hr_zones": {"en": "Heart-rate zones", "fr": "Zones cardiaques"},
+    "ui.level.confidence.high": {"en": "Confidence: high", "fr": "Confiance : élevée"},
+    "ui.level.confidence.medium": {"en": "Confidence: medium", "fr": "Confiance : moyenne"},
+    "ui.level.confidence.low": {"en": "Confidence: low", "fr": "Confiance : faible"},
+    "ui.home.zones.estimated": {
+        "en": "Estimated {date} · method: {method}",
+        "fr": "Estimée le {date} · méthode : {method}",
+    },
+    "ui.home.zones.estimate_link": {
+        "en": "Estimate your zones without Strava →",
+        "fr": "Estimez vos zones sans Strava →",
+    },
+    "ui.home.zones.reestimate": {"en": "New estimate →", "fr": "Nouvelle estimation →"},
+
+    # Slope profile tool page
+    "ui.gap_tool.kicker": {"en": "Slope Profile", "fr": "Profil de pente"},
+    "ui.gap_tool.title": {"en": "What climbing costs you", "fr": "Votre coût du dénivelé"},
+    "ui.gap_tool.uphill": {"en": "Cost at +{slope} %", "fr": "Coût à +{slope} %"},
+    "ui.gap_tool.downhill": {"en": "Cost at −{slope} %", "fr": "Coût à −{slope} %"},
+    "ui.gap_tool.flat": {"en": "Flat-equivalent pace", "fr": "Allure plat équivalente"},
+    "ui.gap_tool.flat_note": {"en": "last 12 weeks", "fr": "12 dernières semaines"},
+    "ui.gap_tool.vs_ref": {"en": "{value} vs reference", "fr": "{value} vs référence"},
+    "ui.gap_tool.less_up": {
+        "en": "Uphill, you lose {value} less than the reference runner.",
+        "fr": "En montée, vous perdez {value} de moins que le coureur de référence.",
+    },
+    "ui.gap_tool.more_up": {
+        "en": "Uphill, you lose {value} more than the reference runner.",
+        "fr": "En montée, vous perdez {value} de plus que le coureur de référence.",
+    },
+    "ui.gap_tool.chart": {"en": "Your GAP curve", "fr": "Votre courbe GAP"},
+    "ui.gap_tool.more": {
+        "en": "To tune the model or compare periods, the GAP curves panel is in Analysis.",
+        "fr": "Pour régler le modèle ou comparer des périodes, le panneau Courbes GAP est "
+              "dans Analyses.",
+    },
+
+    # Durability tool page
+    "ui.durability_tool.kicker": {"en": "Durability", "fr": "Durabilité"},
+    "ui.durability_tool.title": {
+        "en": "Your drift on long efforts",
+        "fr": "Votre dérive sur l’effort long",
+    },
+    "ui.durability_tool.at": {"en": "Extra cost after {hours} h", "fr": "Surcoût après {hours} h"},
+    "ui.durability_tool.confidence": {"en": "Confidence", "fr": "Confiance"},
+    "ui.durability_tool.confidence.personalized": {"en": "personal", "fr": "personnelle"},
+    "ui.durability_tool.confidence.partially_personalized": {"en": "partial", "fr": "partielle"},
+    "ui.durability_tool.confidence.population_only": {"en": "population", "fr": "population"},
+    "ui.durability_tool.runs": {"en": "{count} long runs", "fr": "{count} sorties longues"},
+    "ui.durability_tool.sentence": {
+        "en": "After 4 hours, running costs you {value} more than at the start.",
+        "fr": "Après 4 heures, courir vous coûte {value} de plus qu’au départ.",
+    },
+    "ui.durability_tool.vs_population": {
+        "en": "Typical runner: {value}.", "fr": "Coureur type : {value}.",
+    },
+
+    # Analyses: templates
+    "ui.pages.new.blank": {"en": "Blank analysis", "fr": "Analyse vide"},
+    "ui.pages.new.blank_hint": {
+        "en": "One empty panel over your whole history.",
+        "fr": "Un panneau vide sur tout votre historique.",
+    },
+    "ui.pages.new.from_template": {"en": "From a template", "fr": "À partir d’un modèle"},
+    "ui.pages.new.title": {"en": "New analysis", "fr": "Nouvelle analyse"},
 
     # --- Level assessment (v2): design/specs/level.md ------------------------
     "ui.level.error.half_cooper_range": {
@@ -1635,7 +1798,6 @@ TRANSLATIONS = {
         "en": "Enter a target finish time.", "fr": "Indiquez un temps d'arrivée visé.",
     },
 
-    "ui.nav.race_plan": {"en": "Race plan", "fr": "Plan de course"},
     # --- Durability (cost drift over a long effort) ---------------------------
     # "Durability", never "fatigue": fatigue is the Banister acute-load series.
     "race_plan.series.gap_pace_durability": {

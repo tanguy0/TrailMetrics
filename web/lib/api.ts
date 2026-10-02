@@ -16,9 +16,14 @@ import type {
   BlogPost,
   BlogPostSummary,
   CoachAthlete,
+  DurabilitySummary,
+  GapSummary,
   HomeSummary,
+  LevelMethod,
+  LevelResult,
   PageSpec,
   PageSummary,
+  PageTemplate,
   PanelResult,
   PanelSpec,
   PlannedItem,
@@ -34,6 +39,7 @@ import type {
   SyncStatus,
   TrainingCalendar,
   UiStrings,
+  ZoneDefinitions,
 } from "./types";
 
 export class ApiError extends Error {
@@ -135,6 +141,35 @@ export const updateProfile = (
 /** Email a fresh verification link to the signed-in account. */
 export const resendVerification = () =>
   request<{ sent: boolean; verified: boolean }>("/auth/verify/resend", { method: "POST" });
+
+// --- Tools -----------------------------------------------------------------
+
+/** Estimate a VMA. Works for a visitor; saved and applied for an account. */
+export const estimateLevel = (body: {
+  method: LevelMethod;
+  inputs: Record<string, unknown>;
+  hr_max?: number | null;
+}) => request<LevelResult>("/tools/level/estimate", { method: "POST", body: JSON.stringify(body) });
+
+export const getLatestLevel = () =>
+  request<{ estimate: { result: Omit<LevelResult, "notes" | "saved_at">; created_at: string } | null }>(
+    "/tools/level/latest",
+  );
+
+let zonesCache: Promise<ZoneDefinitions> | null = null;
+
+/** The zone tables — static, so fetched once per page load. */
+export function getZoneDefinitions(): Promise<ZoneDefinitions> {
+  zonesCache ??= request<ZoneDefinitions>("/tools/zones");
+  return zonesCache;
+}
+
+export const getGapSummary = () => request<GapSummary>("/tools/gap/summary");
+export const getDurabilitySummary = () => request<DurabilitySummary>("/tools/durability/summary");
+
+export const listPageTemplates = () => request<{ templates: PageTemplate[] }>("/pages/templates");
+export const createPageFromTemplate = (key: string) =>
+  request<PageSpec>("/pages/from-template", { method: "POST", body: JSON.stringify({ key }) });
 
 /** Forget the account's Strava tokens; the athlete and their history stay. */
 export const disconnectStrava = () => request<{ ok: boolean }>("/auth/strava", { method: "DELETE" });

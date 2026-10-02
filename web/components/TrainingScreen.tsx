@@ -474,7 +474,7 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
 
   return (
     <main className="container">
-      <PageHeader kicker={formatDate(todayIso, "long", t("locale"))} title={t("nav.training")} />
+      <PageHeader kicker={formatDate(todayIso, "long", t("locale"))} title={t("nav.coaching")} />
 
       {error && <Callout tone="terra">{error}</Callout>}
 

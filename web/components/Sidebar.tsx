@@ -7,11 +7,12 @@
  * the labels arrive already translated from the server, and so does the viewer's
  * access tier, so nothing is fetched here.
  *
- * The rail follows the tier (design/tagg/access.md): a visitor sees what is open
- * now, then what opens with an account; an account without Strava sees its own
- * pages, then what opens with Strava. Items the tier does not open still link to
- * their page — which shows its teaser — and carry a lock rather than being greyed
- * out. On the auth pages the rail is reduced to the lockup.
+ * The rail follows the tier (design/tagg/access.md § Navigation): Home · Tools ·
+ * Analysis · Coaching · Blog. What the viewer's tier opens comes first; what it
+ * does not is grouped under the tier that opens it ("With an account", "With
+ * Strava", "Coached by TAGG"). Those items still link to their page — which shows
+ * its teaser — and carry a lock rather than being greyed out. On the auth pages
+ * the rail is reduced to the lockup.
  */
 
 import { usePathname } from "next/navigation";
@@ -22,7 +23,7 @@ import { loginHref } from "@/lib/auth";
 import type { Viewer } from "@/lib/session";
 import { translator, type Strings, type Translate } from "@/lib/strings";
 
-type Tier = "visitor" | "account" | "strava";
+type Tier = "visitor" | "account" | "strava" | "coached";
 
 interface Item {
   href: string;
@@ -31,7 +32,12 @@ interface Item {
   needs: Tier;
 }
 
-const RANK: Record<Tier, number> = { visitor: 0, account: 1, strava: 2 };
+const RANK: Record<Tier, number> = { visitor: 0, account: 1, strava: 2, coached: 3 };
+const GROUP: Record<Exclude<Tier, "visitor">, string> = {
+  account: "nav.group_account",
+  strava: "nav.group_strava",
+  coached: "nav.group_coached",
+};
 const AUTH_PATHS = ["/login", "/register", "/reset", "/verify"];
 
 async function signOut() {
@@ -57,13 +63,16 @@ export function Sidebar({ strings, viewer }: { strings: Strings; viewer: Viewer 
 
   const items: Item[] = [
     { href: "/home", label: t("nav.home"), icon: "home", needs: "account" },
+    { href: "/tools", label: t("nav.tools"), icon: "ruler", needs: "visitor" },
     { href: "/pages", label: t("nav.analysis"), icon: "chart", needs: "strava" },
-    { href: "/training", label: t("nav.training"), icon: "calendar", needs: "strava" },
-    { href: "/race-plan", label: t("nav.race_plan"), icon: "flag", needs: "visitor" },
+    // Coaching opens with Strava until coaching requests land; then "coached".
+    { href: "/coaching", label: t("nav.coaching"), icon: "calendar", needs: "strava" },
     { href: "/blog", label: t("nav.blog"), icon: "newspaper", needs: "visitor" },
   ];
   const open = items.filter((item) => RANK[item.needs] <= RANK[tier]);
-  const locked = items.filter((item) => RANK[item.needs] > RANK[tier]);
+  const lockedTiers = (["account", "strava", "coached"] as const).filter(
+    (needs) => RANK[needs] > RANK[tier] && items.some((item) => item.needs === needs),
+  );
 
   return (
     <nav className="tm-rail shell__rail" aria-label={t("nav.analysis")}>
@@ -71,16 +80,23 @@ export function Sidebar({ strings, viewer }: { strings: Strings; viewer: Viewer 
 
       {viewer?.isCoach && <CoachSwitcher />}
 
-      {locked.length === 0 ? (
+      {lockedTiers.length === 0 ? (
         <RailList items={open} pathname={pathname} t={t} />
       ) : (
         <div className="shell__groups">
           {tier === "visitor" && <div className="tm-rail__group">{t("nav.group_open")}</div>}
           <RailList items={open} pathname={pathname} t={t} />
-          <div className="tm-rail__group">
-            {t(tier === "visitor" ? "nav.group_account" : "nav.group_strava")}
-          </div>
-          <RailList items={locked} pathname={pathname} locked t={t} />
+          {lockedTiers.map((needs) => (
+            <div key={needs}>
+              <div className="tm-rail__group">{t(GROUP[needs])}</div>
+              <RailList
+                items={items.filter((item) => item.needs === needs)}
+                pathname={pathname}
+                locked
+                t={t}
+              />
+            </div>
+          ))}
         </div>
       )}
 

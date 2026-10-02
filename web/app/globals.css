@@ -2308,3 +2308,78 @@ button.tm-rail__link {
 a.tm-segment__item {
   text-decoration: none;
 }
+
+/* --- Tools (design/tagg/access.md § Outils) -------------------------------- */
+
+.tools-tabs {
+  padding-bottom: 0;
+  margin-bottom: calc(-1 * var(--space-4));
+}
+
+.tools-tabs .tm-segment {
+  flex-wrap: wrap;
+}
+
+.tools-tabs .tm-segment__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.level-form,
+.level-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.level-form .tm-segment {
+  align-self: flex-start;
+}
+
+.level-form__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.level-records {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.level-records__row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.level-result__sentence,
+.tool-sentence {
+  margin: 0;
+}
+
+/* "New analysis" chooser: blank, or a template — each one a card. */
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.template-list .card {
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* A tool page: hero, then its cards, spaced like Home's. */
+.level,
+.tool {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}

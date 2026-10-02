@@ -39,6 +39,7 @@ import {
   ApiError,
   disconnectStrava,
   getAthlete,
+  getZoneDefinitions,
   resendVerification,
   getHomeSummary,
   getSyncStatus,
@@ -63,6 +64,7 @@ import type {
   HomeSummary,
   PanelSpec,
   Trace,
+  ZoneDefinitions,
 } from "@/lib/types";
 
 const POLL_MS = 2000;
@@ -745,20 +747,11 @@ function HealthCard({
 }
 
 /**
- * Training zones and VMA pace — self-reported, shown back to the athlete, and
- * read by nothing else in the app. A reference to have written down in one
- * place, not an input to any computation.
+ * Training zones and VMA pace — self-reported or estimated (Tools → Level
+ * Assessment), shown back to the athlete. The zone tables themselves come from
+ * the API (`/tools/zones`, src/domain/level/zones.py): one definition shared
+ * with the level tool, so the two can never disagree.
  */
-/** Reference paces at a %VMA range, in the order (and table) most training
- * plans quote them. The pace shown for the low end of the range comes first —
- * lower %VMA is the slower pace. */
-const VMA_PACE_ZONES: { key: string; lowPct: number; highPct: number }[] = [
-  { key: "z2", lowPct: 60, highPct: 65 },
-  { key: "endurance", lowPct: 70, highPct: 75 },
-  { key: "threshold", lowPct: 85, highPct: 90 },
-  { key: "intervals", lowPct: 95, highPct: 100 },
-  { key: "reps", lowPct: 105, highPct: 115 },
-];
 
 /** The zone's pace interval, fastest first (density.md): `6:17–6:48`. */
 function vmaPaceRange(vmaSecondsPerKm: number, lowPct: number, highPct: number): string {
@@ -766,28 +759,6 @@ function vmaPaceRange(vmaSecondsPerKm: number, lowPct: number, highPct: number):
   const fast = vmaSecondsPerKm / (highPct / 100);
   return formatPaceRange(fast, slow);
 }
-
-/**
- * Each heart-rate zone's ceiling as a %HRmax — replaces what used to be four
- * separately self-reported bpm values with one derived from HRmax alone, so
- * there is only ever one number to keep up to date.
- */
-const HR_ZONE_MAX_PCT: { key: "z1" | "z2" | "z3" | "z4"; pct: number }[] = [
-  { key: "z1", pct: 0.70 },
-  { key: "z2", pct: 0.77 },
-  { key: "z3", pct: 0.87 },
-  { key: "z4", pct: 0.91 },
-];
-
-/** Where each named pace zone's effort sits on the same %HRmax scale — the
- * boundaries `HrZoneMap` draws, kept beside the tiles that read from it. */
-const HR_PACE_ZONES: { key: string; lowPct: number; highPct: number }[] = [
-  { key: "z2", lowPct: 68, highPct: 73 },
-  { key: "endurance", lowPct: 75, highPct: 81 },
-  { key: "threshold", lowPct: 84, highPct: 89 },
-  { key: "intervals", lowPct: 91, highPct: 94 },
-  { key: "reps", lowPct: 96, highPct: 100 },
-];
 
 /** `pct` as a 0–1 fraction of HRmax, truncated like a real monitor reads bpm. */
 function bpmAtPct(hrMax: number, pct: number): number {
@@ -806,11 +777,31 @@ function ZonesCard({
   const vma = athlete.vma_pace_s_per_km;
   const hrMax = athlete.hr_max;
   const offline = useContext(NoStrava);
+  const [zones, setZones] = useState<ZoneDefinitions | null>(null);
+  useEffect(() => {
+    getZoneDefinitions().then(setZones).catch(() => undefined);
+  }, []);
+
+  // "Estimated on … · method" while the VMA shown is still the estimate's — an
+  // edit by hand afterwards makes it the athlete's own again.
+  const estimate = athlete.level_estimate;
+  const estimated =
+    estimate && vma != null && estimate.vma_pace_s_per_km != null &&
+    Math.round(estimate.vma_pace_s_per_km) === Math.round(vma);
 
   return (
     <section className="card-block card-block--zones">
       <SectionTitle icon="target" kicker={t("home.kicker.you")} role="terra">{t("home.zones.title")}</SectionTitle>
       <p className="data-block__lede">{t("home.zones.subtitle")}</p>
+      {estimated && (
+        <p className="body-sm muted">
+          {t("home.zones.estimated", {
+            date: formatDate(estimate.created_at, "short", t("locale")),
+            method: t(`level.method.${estimate.method}`),
+          })}{" "}
+          <a href="/tools/level">{t("home.zones.reestimate")}</a>
+        </p>
+      )}
 
       <div className="kpi-grid">
         <EditableTile
@@ -830,19 +821,19 @@ function ZonesCard({
           t={t}
         />
 
-        {VMA_PACE_ZONES.map((zone) => (
+        {(zones?.vma_pace ?? []).map((zone) => (
           <Tile
             key={zone.key}
             // An interval: the unit moves up into the label, out of the value.
             label={`${t(`home.zones.pace_${zone.key}`)} (${t("common.per_km")})`}
-            value={vma != null ? vmaPaceRange(vma, zone.lowPct, zone.highPct) : "—"}
+            value={vma != null ? vmaPaceRange(vma, zone.low_pct, zone.high_pct) : "—"}
             footnote={t("home.zones.unlocked_by_vma")}
           />
         ))}
       </div>
 
       <div className="kpi-grid kpi-grid--two">
-        {HR_ZONE_MAX_PCT.map((zone) => (
+        {(zones?.hr_max_pct ?? []).map((zone) => (
           <Tile
             key={zone.key}
             label={t(`home.zones.${zone.key}`)}
@@ -863,7 +854,15 @@ function ZonesCard({
         />
       </div>
 
-      {offline ? <PendingNote t={t} /> : <HrZoneMap hrMax={hrMax} t={t} />}
+      {/* Without Strava this is the one card that can be full: from a level
+          estimate, or an invitation to make one (access.md § Accueil dégradé). */}
+      {offline && !estimate ? (
+        <p className="body-sm">
+          <a href="/tools/level">{t("home.zones.estimate_link")}</a>
+        </p>
+      ) : (
+        zones && <HrZoneMap hrMax={hrMax} zones={zones} t={t} />
+      )}
     </section>
   );
 }
@@ -878,24 +877,27 @@ function hrMapPosition(pct: number): number {
   return ((pct - HR_MAP_MIN_PCT) / (HR_MAP_MAX_PCT - HR_MAP_MIN_PCT)) * 100;
 }
 
-/** The heart-rate zone bands the map's background shows — derived from
- * `HR_ZONE_MAX_PCT` itself (plus the open-ended top zone above Z4max) so the
- * tiles and the graph can never drift out of step with each other again. */
-const HR_MAP_BANDS: { key: string; label: string; endPct: number }[] = [
-  ...HR_ZONE_MAX_PCT.map((zone) => ({
-    key: zone.key,
-    label: zone.key.toUpperCase(),
-    endPct: zone.pct * 100,
-  })),
-  { key: "z5", label: "Z5", endPct: 100 },
-];
+/** The heart-rate zone bands the map's background shows — derived from the
+ * zone ceilings themselves (plus the open-ended top zone above Z4max) so the
+ * tiles and the graph can never drift out of step with each other. */
+function hrMapBands(zones: ZoneDefinitions): { key: string; label: string; endPct: number }[] {
+  return [
+    ...zones.hr_max_pct.map((zone) => ({
+      key: zone.key,
+      label: zone.key.toUpperCase(),
+      endPct: zone.pct * 100,
+    })),
+    { key: "z5", label: "Z5", endPct: 100 },
+  ];
+}
 
 /**
  * Where each named pace zone's effort falls in heart rate — a picture, not
  * another table, so the relationship between the two KPI grids above reads
  * at a glance instead of being cross-referenced by hand.
  */
-function HrZoneMap({ hrMax, t }: { hrMax: number | null; t: T }) {
+function HrZoneMap({ hrMax, zones, t }: { hrMax: number | null; zones: ZoneDefinitions; t: T }) {
+  const bands = hrMapBands(zones);
   return (
     <div className="hr-map">
       <h3 className="card-block__subtitle">{t("home.zones.hr_map_title")}</h3>
@@ -905,8 +907,8 @@ function HrZoneMap({ hrMax, t }: { hrMax: number | null; t: T }) {
         <div className="hr-map__scroll">
           <div className="hr-map__chart">
             <div className="hr-map__zones">
-              {HR_MAP_BANDS.map((band, index) => {
-                const startPct = index === 0 ? HR_MAP_MIN_PCT : HR_MAP_BANDS[index - 1].endPct;
+              {bands.map((band, index) => {
+                const startPct = index === 0 ? HR_MAP_MIN_PCT : bands[index - 1].endPct;
                 const left = hrMapPosition(startPct);
                 return (
                   <div
@@ -920,19 +922,19 @@ function HrZoneMap({ hrMax, t }: { hrMax: number | null; t: T }) {
               })}
             </div>
             <div className="hr-map__paces">
-              {HR_PACE_ZONES.map((zone) => {
-                const left = hrMapPosition(zone.lowPct);
+              {zones.hr_pace.map((zone) => {
+                const left = hrMapPosition(zone.low_pct);
                 return (
                   <div
                     key={zone.key}
                     className="hr-map__pace"
-                    style={{ left: `${left}%`, width: `${hrMapPosition(zone.highPct) - left}%` }}
+                    style={{ left: `${left}%`, width: `${hrMapPosition(zone.high_pct) - left}%` }}
                   >
                     <span className="hr-map__pace-label">
                       {t(`home.zones.pace_${zone.key}`)}
                     </span>
                     <span className="hr-map__pace-range">
-                      {bpmAtPct(hrMax, zone.lowPct / 100)}–{bpmAtPct(hrMax, zone.highPct / 100)}
+                      {bpmAtPct(hrMax, zone.low_pct / 100)}–{bpmAtPct(hrMax, zone.high_pct / 100)}
                     </span>
                   </div>
                 );
@@ -1759,8 +1761,9 @@ function EditableTile({
   useEffect(() => setDraft(input.value), [input.value]);
 
   // Profile fields belong to the Strava athlete; with none attached there is
-  // nothing to save them to yet, so the tile is a plain dash.
-  if (offline) return <Tile label={label} value="—" tone={tone} />;
+  // nothing to save them to yet, so the tile is read-only — a dash, or the
+  // value a level estimate supplied.
+  if (offline) return <Tile label={label} value={value ?? "—"} unit={value != null ? unit : undefined} tone={tone} />;
 
   const commit = async () => {
     setEditing(false);
