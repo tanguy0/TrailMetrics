@@ -27,7 +27,7 @@ import {
   renderPanel,
   updateComment,
 } from "@/lib/api";
-import { formatDate, formatHms, formatNumber, formatPace, formatSpeed } from "@/lib/format";
+import { formatDate, formatHms, formatNumber, formatPace, formatSpeed, kpiNumClass } from "@/lib/format";
 import { CYCLING_SPORT_TYPES, HIKING_SPORT_TYPES, SWIMMING_SPORT_TYPES, sportKey } from "@/lib/sport";
 import type { Translate } from "@/lib/strings";
 import type {
@@ -145,7 +145,7 @@ export function SessionDetail({
         <span className="tm-chip tm-chip--dot sport-chip" data-sport={sportKey(activity.sport_type)}>
           {activity.sport_type}
         </span>
-        <span className="last-activity__date">{formatDate(activity.date)}</span>
+        <span className="last-activity__date">{formatDate(activity.date, "long", t("locale"))}</span>
       </p>
 
       <CommentsSection activityId={activityId} t={t} />
@@ -219,7 +219,7 @@ function Metric({ label, value }: { label: string; value: string }) {
     <div className="tm-kpi tm-kpi--flat">
       <dt className="tm-kpi__label">{label}</dt>
       <dd className="tm-kpi__value">
-        <span className="tm-kpi__num">{value}</span>
+        <span className={kpiNumClass(value)}>{value}</span>
       </dd>
     </div>
   );

@@ -474,7 +474,7 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
 
   return (
     <main className="container">
-      <PageHeader kicker={formatDate(todayIso)} title={t("nav.training")} />
+      <PageHeader kicker={formatDate(todayIso, "long", t("locale"))} title={t("nav.training")} />
 
       {error && <Callout tone="terra">{error}</Callout>}
 
@@ -538,7 +538,7 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
 
       {modal?.type === "session" && (
         <Modal
-          title={`${modal.activity.sport_type} · ${modal.activity.date?.slice(0, 10) ?? ""}`}
+          title={`${modal.activity.sport_type} · ${formatDate(modal.activity.date, "long", t("locale"))}`}
           onClose={() => setModal(null)}
           wide
         >

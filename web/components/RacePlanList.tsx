@@ -43,14 +43,14 @@ export function RacePlanList({ strings }: { strings: Strings }) {
                   plan.distance_m != null && `${formatNumber(plan.distance_m / 1000, 1)} km`,
                   plan.elevation_gain_m != null &&
                     `D+ ${formatNumber(plan.elevation_gain_m, 0)} m`,
-                  formatHms(plan.params.target_time_s),
+                  formatHms(plan.params.target_time_s, { exact: true }),
                 ]
                   .filter(Boolean)
                   .join(" · ")}
               </span>
               {plan.updated_at && (
                 <span className="card__description">
-                  {t("race_plan.updated", { date: formatDate(plan.updated_at) })}
+                  {t("race_plan.updated", { date: formatDate(plan.updated_at, "relative", t("locale")) })}
                 </span>
               )}
             </a>

@@ -32,7 +32,7 @@ import {
   planRace,
   saveRacePlan,
 } from "@/lib/api";
-import { formatHms, formatNumber, formatPace, formatPaceInput } from "@/lib/format";
+import { formatHms, formatNumber, formatPaceInput, kpiNumClass } from "@/lib/format";
 import { plural, translator, type Strings, type Translate } from "@/lib/strings";
 import type {
   PlotOutput,
@@ -191,7 +191,7 @@ export function RacePlanScreen({
         const p = saved.params;
         setTitle(saved.title);
         setStoredGpxName(saved.gpx_name || "course.gpx");
-        setTargetTime(formatHms(p.target_time_s));
+        setTargetTime(formatHms(p.target_time_s, { exact: true }));
         setStartTime(p.start_time_s != null ? formatClock(p.start_time_s) : "");
         setAidRows(p.aid_stations.map((s) => ({ km: String(s.km), name: s.name })));
         setCurve(p.curve);
@@ -523,7 +523,7 @@ function RacePlanHero({ result, name, t }: { result: RacePlanResult; name: strin
       : null,
   ].filter(Boolean).join(" · ");
   const stats = [
-    { label: t("race_plan.summary.target"), value: formatHms(s.target_time_s), key: true },
+    { label: t("race_plan.summary.target"), value: formatHms(s.target_time_s, { exact: true }), key: true },
     { label: t("race_plan.summary.distance"), value: formatNumber(s.distance_m / 1000, 1), unit: "km" },
     {
       label: t("race_plan.hero.gain_loss"),
@@ -539,6 +539,7 @@ function RacePlanHero({ result, name, t }: { result: RacePlanResult; name: strin
         <h2 className="tm-hero__title">{name}</h2>
         {meta && <span className="tm-hero__meta">{meta}</span>}
       </div>
+      <div className="tm-hero__sep" role="separator" />
       <div className="tm-hero__stats">
         {stats.map((stat) => (
           <div className={`tm-hero__stat${stat.key ? " is-key" : ""}`} key={stat.label}>
@@ -556,23 +557,27 @@ function RacePlanHero({ result, name, t }: { result: RacePlanResult; name: strin
 
 function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translate }) {
   const s = result.summary;
-  const tiles: [string, string][] = [
-    [t("race_plan.summary.distance"), `${formatNumber(s.distance_m / 1000, 1)} km`],
+  // [label, value, unit] — the unit apart, so the value's length alone sizes it.
+  const perKm = t("common.per_km");
+  const tiles: [string, string, string?][] = [
+    [t("race_plan.summary.distance"), formatNumber(s.distance_m / 1000, 1), "km"],
     [
       t("race_plan.summary.elevation"),
-      `+${formatNumber(s.elevation_gain_m, 0)} / −${formatNumber(s.elevation_loss_m, 0)} m`,
+      `+${formatNumber(s.elevation_gain_m, 0)} / −${formatNumber(s.elevation_loss_m, 0)}`,
+      "m",
     ],
-    [t("race_plan.summary.gap_pace"), formatPace(s.gap_pace_s_per_km)],
-    [t("race_plan.summary.avg_pace"), formatPace(s.average_pace_s_per_km)],
+    [t("race_plan.summary.gap_pace"), formatPaceInput(s.gap_pace_s_per_km), perKm],
+    [t("race_plan.summary.avg_pace"), formatPaceInput(s.average_pace_s_per_km), perKm],
     [t("race_plan.summary.curve"), result.curve_label],
   ];
   if (s.durability_multiplier_finish != null && s.durability_enabled) {
     tiles.push(
       [
         t("race_plan.summary.durability_finish"),
-        `+${formatNumber((s.durability_multiplier_finish - 1) * 100, 1)} %`,
+        `+${formatNumber((s.durability_multiplier_finish - 1) * 100, 1)}`,
+        "%",
       ],
-      [t("race_plan.summary.gap_finish"), formatPace(s.gap_pace_finish_s_per_km ?? NaN)],
+      [t("race_plan.summary.gap_finish"), formatPaceInput(s.gap_pace_finish_s_per_km ?? NaN), perKm],
       [
         t("race_plan.summary.durability_model"),
         t(`race_plan.confidence.${s.durability_confidence ?? "population_only"}`),
@@ -583,11 +588,12 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
   return (
     <div className="race-plan__result">
       <div className="kpi-grid race-plan__summary">
-        {tiles.map(([label, value]) => (
+        {tiles.map(([label, value, unit]) => (
           <div className="tm-kpi" key={label}>
             <span className="tm-kpi__label">{label}</span>
             <span className="tm-kpi__value">
-              <span className="tm-kpi__num race-plan__kpi-num">{value}</span>
+              <span className={kpiNumClass(value)}>{value}</span>
+              {unit && <span className="tm-kpi__unit">{unit}</span>}
             </span>
           </div>
         ))}

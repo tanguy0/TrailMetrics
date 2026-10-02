@@ -167,7 +167,7 @@ def _progression_trace(
     ]
     name = f"{prefix} · {label}" if prefix else label
     color = series_color(color_index)
-    template = "%{x|%Y-%m-%d}<br>%{customdata}<extra>%{fullData.name}</extra>"
+    template = "%{x|%d %b %Y}<br>%{customdata}<extra>%{fullData.name}</extra>"
     line = Trace(
         name=name,
         x=dates,

@@ -15,9 +15,14 @@ import type { CellFormat, Column, TableData } from "@/lib/types";
 
 const NUMERIC_FORMATS = new Set(["duration", "pace", "integer", "percent", "number"]);
 
-/** Numbers right-aligned in mono, dates in muted mono (DataTable.md). */
+/**
+ * Numbers right-aligned in mono, dates in muted mono (DataTable.md); text — an
+ * activity's name — on one line, cut with an ellipsis, whole in its `title`
+ * (density.md).
+ */
 function cellClass(format: CellFormat): string | undefined {
   if (format.kind === "date") return "is-date";
+  if (format.kind === "text") return "is-text";
   return NUMERIC_FORMATS.has(format.kind) ? "is-num" : undefined;
 }
 
@@ -57,7 +62,8 @@ export function TableView({ table }: { table: TableData }) {
   return (
     <div className="table-block">
       {table.title && <h4 className="table-block__title">{table.title}</h4>}
-      <div className="table-scroll">
+      {/* Too wide for its card, the table scrolls rather than wrapping a value. */}
+      <div className="tm-table-scroll">
         <table className="tm-table">
           <thead>
             <tr>
@@ -81,6 +87,7 @@ export function TableView({ table }: { table: TableData }) {
                         .filter(Boolean)
                         .join(" ") || undefined
                     }
+                    title={column.format.kind === "text" ? formatCell(row[column.key], column.format) : undefined}
                   >
                     {formatCell(row[column.key], column.format)}
                   </td>

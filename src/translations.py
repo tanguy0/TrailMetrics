@@ -932,6 +932,9 @@ TRANSLATIONS = {
     "ui.visitor.more.link": {"en": "Connect Strava", "fr": "Connecter Strava"},
 
     "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},
+    # The BCP 47 locale dates and numbers are formatted in (design/tagg/density.md).
+    "ui.locale": {"en": "en-GB", "fr": "fr-FR"},
+    "ui.common.per_km": {"en": "/km", "fr": "/km"},
     "ui.chart.today": {"en": "Today", "fr": "Aujourd'hui"},
     "ui.common.close": {"en": "Close", "fr": "Fermer"},
     "ui.common.not_set": {"en": "Not set", "fr": "Non renseigné"},
