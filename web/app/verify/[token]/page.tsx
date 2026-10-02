@@ -1,4 +1,7 @@
 /**
+ * Dormant while mail is off (api/mail.py): no verification link is sent, so
+ * nothing links here until MAIL_FROM is configured.
+ *
  * The page a verification link opens. Confirms on render, server-side: the token
  * is the proof, so no session is needed — the link may be opened on another
  * device than the one signed in. A link scanner opening it first confirms the

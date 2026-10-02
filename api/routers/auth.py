@@ -11,6 +11,9 @@ runs the OAuth flow, and the callback (on the web app, for the same first-party
 cookie reasons) posts the code here with the account's session; the athlete is
 then attached to the account — see :func:`exchange`.
 
+Mail is optional and currently off (api/mail.py): without it the verification
+link is never sent, and a reset link comes from ``python -m api.roles reset-link``.
+
 Roles are earned by proof, not by typing: the account registered with
 ``MASTER_EMAIL`` only becomes ``master`` once it proves it holds the address —
 a verification link, or a completed password reset (which also takes the

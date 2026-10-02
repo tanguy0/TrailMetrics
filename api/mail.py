@@ -1,5 +1,11 @@
 """Outgoing mail, behind one small interface.
 
+**Off in the current deployment** (no ``MAIL_FROM``): nothing is sent, and every
+caller already handles that — no verification link, no coaching notification,
+"Forgot your password?" points to ``MASTER_EMAIL``, resets go through
+``python -m api.roles reset-link``. Turning it on is configuration only; see
+docs/DEPLOYMENT.md § Mail.
+
 Two adapters — Resend (an HTTP API, through the ``httpx`` the API already
 carries) and plain SMTP (the standard library) — and a third state, *none*: with
 no provider configured, :func:`get_mail_sender` returns ``None`` and callers fall
