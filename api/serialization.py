@@ -22,6 +22,7 @@ from src.domain.dataset.metrics import (
     NO_METRIC,
 )
 from src.domain.plots import all_plots
+from src.domain.ports.accounts import Account
 from src.domain.progress.models import GRADIENT_BAND_KEYS, PR_DISTANCES
 from src.domain.ports.activity_data import ActivitySummary
 from src.domain.ports.storage import Athlete, SyncState
@@ -208,9 +209,6 @@ def athlete_payload(
         "hr_max": athlete.hr_max,
         "vma_pace_s_per_km": athlete.vma_pace_s_per_km,
         "lang": athlete.lang,
-        # Derived rather than left to the client to infer from a null email, so
-        # "have they answered?" has one definition.
-        "needs_email": athlete.needs_email,
         # Derived here rather than in the browser so every client agrees on it.
         "age": athlete.age_on(date.today()),
         "activity_count": activity_count,
@@ -224,6 +222,42 @@ def athlete_payload(
             "message": sync.message,
             "last_synced_at": sync.last_synced_at.isoformat()
             if sync.last_synced_at else None,
+        },
+    }
+
+
+def account_without_strava_payload(account: Account) -> Dict[str, Any]:
+    """``/auth/me`` for an account with no Strava attached yet.
+
+    The same shape as :func:`athlete_payload`, every Strava-derived field empty,
+    so the Home screen renders its real structure with dashes in it (the
+    "degraded" Home, design/tagg/access.md) instead of a different component.
+    """
+    return {
+        "id": None,
+        "firstname": "",
+        "lastname": "",
+        "display_name": account.email,
+        "profile_url": None,
+        "weight_kg": None,
+        "birthdate": None,
+        "height_cm": None,
+        "email": account.email,
+        "hr_zone1_end": None,
+        "hr_zone2_end": None,
+        "hr_zone3_end": None,
+        "hr_zone4_end": None,
+        "hr_max": None,
+        "vma_pace_s_per_km": None,
+        "lang": account.lang,
+        "age": None,
+        "activity_count": 0,
+        "sport_types": [],
+        "oldest_activity": None,
+        "newest_activity": None,
+        "sync": {
+            "status": "idle", "done": 0, "total": 0, "message": "",
+            "last_synced_at": None,
         },
     }
 

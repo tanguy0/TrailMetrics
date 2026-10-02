@@ -36,8 +36,8 @@ class Athlete:
     profile_url: Optional[str] = None
     birthdate: Optional[date] = None
     height_cm: Optional[float] = None
-    # Asked for once, right after the first sign-in. ``None`` for an account that has
-    # not answered yet, which is what the app's first-run prompt keys on.
+    # Legacy: asked for after the first Strava sign-in, before accounts existed.
+    # The account's email (``accounts.email``) is the one the app uses now.
     email: Optional[str] = None
     # Self-reported training zones and VMA pace (seconds per km). Purely a
     # reference the athlete writes down for themselves — nothing here feeds any
@@ -56,10 +56,6 @@ class Athlete:
     def display_name(self) -> str:
         name = f"{self.firstname} {self.lastname}".strip()
         return name or f"Athlete {self.id}"
-
-    @property
-    def needs_email(self) -> bool:
-        return not (self.email or "").strip()
 
     def age_on(self, today: date) -> Optional[int]:
         """Completed years as of ``today``, or ``None`` when no birthdate is set."""
@@ -150,6 +146,10 @@ class AthleteRepository(ABC):
     @abstractmethod
     def get_credentials(self, athlete_id: int) -> Optional[StravaCredentials]:
         ...
+
+    @abstractmethod
+    def delete_credentials(self, athlete_id: int) -> None:
+        """Forget the Strava tokens; the athlete and their data stay."""
 
     @abstractmethod
     def get_sync_state(self, athlete_id: int) -> SyncState:

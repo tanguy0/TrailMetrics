@@ -48,9 +48,15 @@ class StravaTokenService:
         )
 
     def exchange_code(self, code: str) -> Tuple[Athlete, StravaCredentials]:
-        """Trade an authorization code for tokens, and identify the athlete.
+        """Trade an authorization code for tokens, identify the athlete, persist both."""
+        athlete, credentials = self.fetch_identity(code)
+        return self.store(athlete, credentials), credentials
 
-        Persists both, so a caller only has to remember the athlete id.
+    def fetch_identity(self, code: str) -> Tuple[Athlete, StravaCredentials]:
+        """Trade an authorization code for tokens and identify the athlete.
+
+        Persists nothing, so a caller can refuse the athlete (already attached to
+        another account) before any of it is written.
         """
         client = Client()
         response = client.exchange_code_for_token(
@@ -71,12 +77,15 @@ class StravaTokenService:
             # and the app lets it be overridden.
             weight_kg=_weight(profile),
         )
+        return athlete, credentials
+
+    def store(self, athlete: Athlete, credentials: StravaCredentials) -> Athlete:
         stored = self.athletes.upsert(athlete)
         self.athletes.save_credentials(stored.id, credentials)
         if stored.weight_kg is None and athlete.weight_kg:
             self.athletes.set_weight(stored.id, athlete.weight_kg)
             stored.weight_kg = athlete.weight_kg
-        return stored, credentials
+        return stored
 
     def valid_credentials(self, athlete_id: int) -> Optional[StravaCredentials]:
         """Stored credentials, refreshed first if the access token is due to expire."""

@@ -11,8 +11,8 @@ uvicorn[standard]>=0.27
 psycopg[binary,pool]>=3.1
 # Encrypts Strava tokens at rest.
 cryptography>=42.0
-# Signs the session tokens the web app holds in a cookie.
-PyJWT>=2.8
+# Hashes account passwords (argon2id). Ships wheels; no system library to add.
+argon2-cffi>=23.1
 # Supabase Storage is reached over its REST API rather than the SDK.
 httpx>=0.27
 # Multipart parsing — FastAPI needs it for the image upload endpoint (UploadFile).

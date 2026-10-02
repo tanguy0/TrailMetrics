@@ -930,6 +930,137 @@ TRANSLATIONS = {
         "fr": "Avec Strava, TAGG applique ces méthodes à vos propres sorties.",
     },
     "ui.visitor.more.link": {"en": "Connect Strava", "fr": "Connecter Strava"},
+    "ui.visitor.account.title": {"en": "With an account", "fr": "Avec un compte"},
+    "ui.visitor.account.tier": {"en": "Free · with an account", "fr": "Gratuit · avec un compte"},
+    "ui.visitor.register": {"en": "Create an account", "fr": "Créer un compte"},
+    "ui.visitor.login": {"en": "Sign in", "fr": "Se connecter"},
+    "ui.visitor.account_trust": {
+        "en": "Free, no card. An email and a password, nothing else; Strava connects "
+              "afterwards, from your Home.",
+        "fr": "Gratuit, sans carte. Un e-mail et un mot de passe, rien d’autre ; Strava "
+              "se connecte ensuite, depuis votre Accueil.",
+    },
+    "ui.visitor.account_fine": {
+        "en": "Free, no card. Strava connects afterwards, from your Home.",
+        "fr": "Gratuit, sans carte. Strava se connecte ensuite, depuis votre Accueil.",
+    },
+    "ui.nav.group_account": {"en": "With an account", "fr": "Avec un compte"},
+
+    # --- Accounts (v2): design/specs/auth.md ----------------------------------
+    "ui.auth.login.title": {"en": "Sign in", "fr": "Se connecter"},
+    "ui.auth.register.title": {"en": "Create an account", "fr": "Créer un compte"},
+    "ui.auth.email": {"en": "Email", "fr": "E-mail"},
+    "ui.auth.password": {"en": "Password", "fr": "Mot de passe"},
+    "ui.auth.password_hint": {"en": "At least 10 characters", "fr": "10 caractères minimum"},
+    "ui.auth.forgot": {"en": "Forgot your password?", "fr": "Mot de passe oublié ?"},
+    "ui.auth.submit.login": {"en": "Sign in", "fr": "Se connecter"},
+    "ui.auth.submit.register": {"en": "Create my account", "fr": "Créer mon compte"},
+    "ui.auth.fine": {
+        "en": "Creating an account means accepting the Terms of Service and the Privacy Policy.",
+        "fr": "Créer un compte vaut acceptation des conditions d’utilisation et de la "
+              "politique de confidentialité.",
+    },
+    "ui.auth.reset.title": {"en": "Reset your password", "fr": "Réinitialiser le mot de passe"},
+    "ui.auth.reset.lede": {
+        "en": "Enter your account’s email: you will receive a link, valid for 30 minutes.",
+        "fr": "Indiquez l’e-mail du compte : vous recevrez un lien valable 30 minutes.",
+    },
+    "ui.auth.reset.submit": {"en": "Send the link", "fr": "Envoyer le lien"},
+    "ui.auth.reset.sent": {
+        "en": "If an account exists for this address, a link is on its way. It is valid "
+              "for 30 minutes.",
+        "fr": "Si un compte existe pour cette adresse, un lien vient de partir. Il est "
+              "valable 30 minutes.",
+    },
+    "ui.auth.reset.write_to": {
+        "en": "Write to {email} from your account’s address, and we will reset your password.",
+        "fr": "Écrivez à {email} depuis l’adresse de votre compte : nous réinitialiserons "
+              "votre mot de passe.",
+    },
+    "ui.auth.reset.new_title": {"en": "Choose a new password", "fr": "Nouveau mot de passe"},
+    "ui.auth.reset.new_lede": {
+        "en": "Every device signed in to this account will be signed out.",
+        "fr": "Tous les appareils connectés à ce compte seront déconnectés.",
+    },
+    "ui.auth.reset.new_submit": {"en": "Save and sign in", "fr": "Enregistrer et se connecter"},
+    "ui.auth.reset.back": {"en": "Back to sign in", "fr": "Retour à la connexion"},
+    "ui.auth.reset.mail.subject": {
+        "en": "TAGG — reset your password",
+        "fr": "TAGG — réinitialiser votre mot de passe",
+    },
+    "ui.auth.reset.mail.body": {
+        "en": "Hello,\n\nTo choose a new TAGG password, open this link (valid for 30 "
+              "minutes):\n{link}\n\nIf you did not ask for this, ignore this message: "
+              "your password does not change.\n\nTAGG",
+        "fr": "Bonjour,\n\nPour choisir un nouveau mot de passe TAGG, ouvrez ce lien "
+              "(valable 30 minutes) :\n{link}\n\nSi vous n’avez rien demandé, ignorez ce "
+              "message : votre mot de passe ne change pas.\n\nTAGG",
+    },
+    "ui.auth.logout_all": {
+        "en": "Sign out of all my devices",
+        "fr": "Déconnecter tous mes appareils",
+    },
+    "ui.auth.error.credentials": {
+        "en": "Incorrect email or password.",
+        "fr": "E-mail ou mot de passe incorrect.",
+    },
+    "ui.auth.error.too_many": {
+        "en": "Too many attempts. Try again in a few minutes.",
+        "fr": "Trop de tentatives. Réessayez dans quelques minutes.",
+    },
+    "ui.auth.error.exists": {
+        "en": "This address already has an account. Sign in, or reset the password.",
+        "fr": "Cette adresse a déjà un compte. Connectez-vous, ou réinitialisez le mot de passe.",
+    },
+    "ui.auth.error.email_invalid": {
+        "en": "This email address does not look valid.",
+        "fr": "Cette adresse e-mail ne semble pas valide.",
+    },
+    "ui.auth.error.password_too_short": {
+        "en": "The password needs at least 10 characters.",
+        "fr": "Le mot de passe doit faire au moins 10 caractères.",
+    },
+    "ui.auth.error.password_too_long": {
+        "en": "The password can have at most 128 characters.",
+        "fr": "Le mot de passe doit faire au plus 128 caractères.",
+    },
+    "ui.auth.error.password_too_common": {
+        "en": "This password is too common. Choose another one.",
+        "fr": "Ce mot de passe est trop courant. Choisissez-en un autre.",
+    },
+    "ui.auth.error.reset_invalid": {
+        "en": "This link is no longer valid. Ask for a new one.",
+        "fr": "Ce lien n’est plus valide. Demandez-en un nouveau.",
+    },
+    "ui.auth.error.strava_taken": {
+        "en": "This Strava is already linked to another TAGG account.",
+        "fr": "Ce Strava est déjà lié à un autre compte TAGG.",
+    },
+    "ui.auth.error.strava_other": {
+        "en": "Your account is already linked to another Strava account.",
+        "fr": "Votre compte est déjà lié à un autre compte Strava.",
+    },
+    "ui.auth.error.generic": {
+        "en": "Something went wrong. Try again.",
+        "fr": "Une erreur est survenue. Réessayez.",
+    },
+
+    # --- Home without Strava (v2): design/tagg/access.md § Accueil dégradé ------
+    "ui.home.account.kicker": {"en": "TAGG account", "fr": "Compte TAGG"},
+    "ui.home.account.since": {"en": "Account created {date}", "fr": "Compte créé le {date}"},
+    "ui.home.empty.strava": {
+        "en": "Fills in once Strava is connected",
+        "fr": "Se remplit dès que Strava est connecté",
+    },
+    "ui.home.strava.connect": {"en": "Connect Strava", "fr": "Connecter Strava"},
+    "ui.home.strava.reconnect": {"en": "Reconnect Strava", "fr": "Reconnecter Strava"},
+    "ui.home.strava.disconnect": {"en": "Disconnect Strava", "fr": "Déconnecter Strava"},
+    "ui.home.strava.disconnected": {
+        "en": "Strava is disconnected: your history stays here, but nothing new is "
+              "imported until you reconnect.",
+        "fr": "Strava est déconnecté : votre historique reste là, mais rien de nouveau "
+              "n’est importé tant que vous ne le reconnectez pas.",
+    },
 
     "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},
     # The BCP 47 locale dates and numbers are formatted in (design/tagg/density.md).
