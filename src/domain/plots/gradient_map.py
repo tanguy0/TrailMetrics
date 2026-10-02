@@ -42,8 +42,10 @@ BAND_COLORS = {
     "gentle_ascent": theme.SLOPE_UP,
     "steep_ascent": theme.SLOPE_UP,
 }
-BAND_OPACITY = {"steep_descent": 1.0, "gentle_descent": 0.55, "flat": 1.0,
-                "gentle_ascent": 0.55, "steep_ascent": 1.0}
+# charts.md § v1.2: within a sign, opacity grows with the slope (0.5 at 5 %,
+# 1 at 25 %). The bands here are two per sign, so they take the two ends.
+BAND_OPACITY = {"steep_descent": 1.0, "gentle_descent": 0.5, "flat": 1.0,
+                "gentle_ascent": 0.5, "steep_ascent": 1.0}
 
 PARAMS: List[ParamSpec] = [
     choice("granularity", "param.granularity", "week", choices_from="granularities"),
