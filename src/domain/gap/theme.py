@@ -1,11 +1,17 @@
-"""TAGG colour theme — mirrors design/tagg/tokens.json (couleurs) ; the web app reads tokens.css.
+"""TAGG colour theme — mirrors design/tagg/tokens.json v2 (couleurs) ; the web app reads tokens.css.
 Regenerate from tokens.json rather than editing by hand."""
 
-BG_PAGE = "#F4F1EA"
+BG_PAGE = "#EEE9DE"
 BG_SURFACE = "#FFFFFF"
 BG_SURFACE_ALT = "#F8F6F1"
 BG_RAIL = "#1F4B2C"
 BG_CHART = "#FFFFFF"
+BG_HERO = "#1F4B2C"
+ON_HERO_MUTED = "rgba(255,255,255,0.68)"
+ON_HERO_LINE = "rgba(255,255,255,0.25)"
+ON_HERO_FILL = "rgba(255,255,255,0.10)"
+BG_TILE = "#F8F6F1"
+HL = "#FDF4E3"
 LINE = "#E8E2D6"
 LINE_STRONG = "#D5CDBE"
 INK = "#241F19"
@@ -66,3 +72,14 @@ TIME_SCALE_CYCLE = [CHART_YOU_1, CHART_YOU_2, CHART_YOU_3, CHART_YOU_4, CHART_YO
 CURVE_CYCLE = TIME_SCALE_CYCLE + [CHART_REF]
 SUNRISE_TINT = SUN_TINT
 GRADIENT = [FOREST, MOSS, TERRA, SUN]
+# v1.1 — barres sémantiques de la carte des pentes : signe de la pente, pas ordre des séries
+SLOPE_DOWN = MOSS
+SLOPE_FLAT = FOREST
+SLOPE_UP = TERRA
+# v1.1 — fitness / fatigue / forme
+FITNESS = CHART_YOU_1
+FATIGUE = CHART_YOU_2
+FORM = SUN
+AREA_ALPHA_TOP = 0.22
+TODAY_MARKER = SUN
+RACE_MARKER = TERRA

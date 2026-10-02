@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"TAGG","components":[{"name":"Button"},{"name":"Chip"},{"name":"KpiTile"},{"name":"Field"},{"name":"Toggle"},{"name":"NavRail"},{"name":"PageHeader"},{"name":"Panel"},{"name":"PlotCard"},{"name":"DataTable"},{"name":"SessionCard"},{"name":"Teaser"},{"name":"AccessGrid"}]} */
+/* @ds-bundle: {"format":4,"namespace":"TAGG","components":[{"name":"Button"},{"name":"Chip"},{"name":"KpiTile"},{"name":"Field"},{"name":"Toggle"},{"name":"NavRail"},{"name":"PageHeader"},{"name":"Panel"},{"name":"PlotCard"},{"name":"DataTable"},{"name":"SessionCard"},{"name":"Teaser"},{"name":"AccessGrid"},{"name":"Hero"},{"name":"Highlights"}]} */
 (function(){
   var R = window.React, h = R.createElement;
   function cx(){ return Array.prototype.slice.call(arguments).filter(Boolean).join(" "); }
@@ -57,6 +57,10 @@
       (c.items||[]).map(function(it){ return h("a",{key:it.href,href:it.href,className:cx("tm-access__item",locked&&"tm-access__item--locked")}, it.icon,
         h("div",null,h("div",{className:"tm-access__title"},it.title),h("div",{className:"tm-access__desc"},it.desc))); })); }
     return h("div",{className:"tm-access"}, col(p.open,false), col(p.locked,true)); }
+  function Hero(p){ return h("header",{className:"tm-hero"}, p.avatar&&h("img",{className:"tm-hero__avatar",src:p.avatar,alt:""}),
+    h("div",{className:"tm-hero__body"}, p.kicker&&h("div",{className:"tm-hero__kicker"},p.kicker), h("h1",{className:"tm-hero__title"},p.title), p.meta&&h("div",{className:"tm-hero__meta"},p.meta)),
+    p.stats&&h("div",{className:"tm-hero__stats"}, p.stats.map(function(s,i){ return h("div",{key:i,className:cx("tm-hero__stat",s.key&&"is-key")}, h("span",{className:"l"},s.label), h("span",{className:"v"},s.value, s.unit&&h("small",null,s.unit))); })),
+    p.action&&h("div",{style:{position:"relative"}},p.action)); }
   window.TAGG = window.TAGG || {};
-  Object.assign(window.TAGG, {Button:Button,Chip:Chip,KpiTile:KpiTile,Field:Field,Toggle:Toggle,NavRail:NavRail,PageHeader:PageHeader,Panel:Panel,PlotCard:PlotCard,DataTable:DataTable,SessionCard:SessionCard,Teaser:Teaser,AccessGrid:AccessGrid});
+  Object.assign(window.TAGG, {Button:Button,Chip:Chip,KpiTile:KpiTile,Field:Field,Toggle:Toggle,NavRail:NavRail,PageHeader:PageHeader,Panel:Panel,PlotCard:PlotCard,DataTable:DataTable,SessionCard:SessionCard,Teaser:Teaser,AccessGrid:AccessGrid,Hero:Hero});
 })();

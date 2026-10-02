@@ -15,3 +15,5 @@ export interface SessionCardProps { kind?: "done" | "planned" | "goal"; sport?: 
 export interface TeaserProps { kicker?: string; title: string; bullets?: string[]; actions: ReactNode; fine?: string; background?: ReactNode; }
 export interface AccessItem { href: string; title: string; desc: string; icon?: ReactNode; }
 export interface AccessGridProps { open: { title: string; chip?: ReactNode; items: AccessItem[] }; locked: { title: string; chip?: ReactNode; items: AccessItem[] }; }
+export interface HeroStat { label: string; value: string; unit?: string; key?: boolean; }
+export interface HeroProps { avatar?: string; kicker?: string; title: string; meta?: string; stats?: HeroStat[]; action?: ReactNode; }
