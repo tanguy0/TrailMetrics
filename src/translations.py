@@ -942,6 +942,10 @@ TRANSLATIONS = {
     "ui.common.hours": {"en": "h", "fr": "h"},
 
     # Home — profile card
+    # Card kickers (design/tagg/contrast.md § 4): the time window, or "you".
+    "ui.home.kicker.you": {"en": "You", "fr": "Vous"},
+    "ui.home.kicker.all_time": {"en": "All time", "fr": "Tout l'historique"},
+    "ui.home.kicker.weeks": {"en": "Last {count} weeks", "fr": "{count} dernières semaines"},
     "ui.home.profile.title": {"en": "Athlete History", "fr": "Historique de l'athlète"},
     "ui.home.profile.activities": {"en": "Activities", "fr": "Activités"},
     "ui.home.profile.oldest": {"en": "First run", "fr": "Première sortie"},

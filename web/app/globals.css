@@ -733,26 +733,19 @@ input[type="radio"] {
   margin: 1.5rem 0;
 }
 
-.card-block__title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 19px;
-  line-height: 26px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--ink);
+/* Layout of a Home card's `tm-section` heading: the kicker stacks over the
+   title, and the pair takes the row's width beside the icon. */
+.section-title {
   margin: 0 0 var(--space-4);
 }
 
-.card-block__title svg {
-  color: var(--forest);
+.section-title svg {
   flex: none;
 }
 
-
-.card-block__title-text {
+.section-title__text {
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .card-block__subtitle {
@@ -803,13 +796,6 @@ input[type="radio"] {
 /* Space between a card's stacked KPI grids. */
 .kpi-grid+.kpi-grid {
   margin-top: var(--space-4);
-}
-
-/* Inside a panel a tile is a bordered card without its own shadow (KpiTile.md). */
-.card-block .tm-kpi,
-.tm-panel .tm-kpi,
-.tm-modal .tm-kpi {
-  box-shadow: none;
 }
 
 .tm-kpi__num {

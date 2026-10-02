@@ -725,7 +725,7 @@ function WeekSummary({
   return (
     <div className="training-week__summary">
       <div className="tm-week-summary week-summary">
-        <div className="tm-week-summary__title week-summary__title" style={{ gridColumn: "1 / -1", gridRow: 1 }}>
+        <div className="tm-section__kicker week-summary__title" style={{ gridColumn: "1 / -1", gridRow: 1 }}>
           {t("training.week.summary_title")}
         </div>
 

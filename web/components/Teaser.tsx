@@ -55,7 +55,7 @@ export function Teaser({ page, t }: { page: TeaserPage; t: Translate }) {
 
 function EmptyKpi({ label }: { label: string }) {
   return (
-    <div className="tm-kpi">
+    <div className="tm-kpi tm-kpi--flat">
       <span className="tm-kpi__label">{label}</span>
       <span className="tm-kpi__value">
         <span className="tm-kpi__num">—</span>

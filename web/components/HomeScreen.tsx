@@ -253,7 +253,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
           an account created before it existed, or a skipped `/welcome`. */}
       {athlete.needs_email && (
         <section className="card-block card-block--welcome">
-          <SectionTitle icon="mail">{t("email.missing")}</SectionTitle>
+          <SectionTitle icon="mail" kicker={t("home.kicker.you")} role="terra">{t("email.missing")}</SectionTitle>
           <p className="muted">{t("email.body")}</p>
           <EmailForm
             strings={strings}
@@ -283,7 +283,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
 
       {/* Last Run: the import controls, then the most recent activity itself. */}
       <section className="card-block card-block--sync">
-        <SectionTitle icon="refresh">{t("home.last.title")}</SectionTitle>
+        <SectionTitle icon="refresh" kicker={summary.last_activity ? formatDate(summary.last_activity.date) : null}>{t("home.last.title")}</SectionTitle>
 
         <SyncControls
           athlete={athlete}
@@ -303,7 +303,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
 
       {/* Recent Progress: volume, efficiency and form over the trailing window. */}
       <section className="card-block card-block--progress">
-        <SectionTitle icon="chart">{t("home.progress.title")}</SectionTitle>
+        <SectionTitle icon="chart" kicker={t("home.kicker.weeks", { count: WEEKS_SHOWN })}>{t("home.progress.title")}</SectionTitle>
 
         <div className="data-stack">
           <RecentHistoryBlock
@@ -497,12 +497,34 @@ function isoDate(date: Date): string {
 
 // --- Profile ---------------------------------------------------------------
 
-/** The heading of a Home section (History, Health, Performance, Records). */
-function SectionTitle({ icon, children }: { icon: IconName; children: ReactNode }) {
+/**
+ * A section's colour role (contrast.md § 4): its kicker and icon take it, nothing
+ * else in the heading does. `forest` is the default and needs no modifier.
+ */
+type SectionRole = "forest" | "terra" | "sun" | "moss";
+
+/**
+ * The heading of a Home card: a mono kicker (the time window, or "You") over the
+ * title, both beside an icon in the section's role colour.
+ */
+function SectionTitle({
+  icon,
+  kicker,
+  role = "forest",
+  children,
+}: {
+  icon: IconName;
+  kicker?: string | null;
+  role?: SectionRole;
+  children: ReactNode;
+}) {
   return (
-    <h2 className="card-block__title">
+    <h2 className={`tm-section${role === "forest" ? "" : ` tm-section--${role}`} section-title`}>
       <Icon name={icon} size={18} />
-      <span className="card-block__title-text">{children}</span>
+      <span className="section-title__text">
+        {kicker && <span className="tm-section__kicker">{kicker}</span>}
+        {children}
+      </span>
     </h2>
   );
 }
@@ -511,7 +533,7 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
   const { profile, records } = summary;
   return (
     <section className="card-block card-block--profile">
-      <SectionTitle icon="run">{t("home.profile.title")}</SectionTitle>
+      <SectionTitle icon="run" kicker={t("home.kicker.all_time")}>{t("home.profile.title")}</SectionTitle>
 
       <div className="kpi-grid kpi-grid--four">
         <Tile
@@ -572,11 +594,11 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
 function RecordsCard({ records, t }: { records: HomeRecord[]; t: T }) {
   return (
     <section className="card-block card-block--records">
-      <SectionTitle icon="award">{t("home.profile.records")}</SectionTitle>
+      <SectionTitle icon="award" kicker={t("home.kicker.all_time")} role="sun">{t("home.profile.records")}</SectionTitle>
       {records.length ? (
         <div className="kpi-grid kpi-grid--records">
           {records.map((record) => (
-            <div className="tm-kpi" key={record.label}>
+            <div className="tm-kpi tm-kpi--flat" key={record.label}>
               <span className="tm-kpi__label">{record.label}</span>
               <span className="tm-kpi__value">
                 <span className="tm-kpi__num">{formatHms(record.seconds)}</span>
@@ -609,7 +631,7 @@ function HealthCard({
 
   return (
     <section className="card-block card-block--health">
-      <SectionTitle icon="heart">{t("home.health.title")}</SectionTitle>
+      <SectionTitle icon="heart" kicker={t("home.kicker.you")} role="terra">{t("home.health.title")}</SectionTitle>
 
       <div className="kpi-grid kpi-grid--square">
         <EditableTile
@@ -725,7 +747,7 @@ function ZonesCard({
 
   return (
     <section className="card-block card-block--zones">
-      <SectionTitle icon="target">{t("home.zones.title")}</SectionTitle>
+      <SectionTitle icon="target" kicker={t("home.kicker.you")} role="terra">{t("home.zones.title")}</SectionTitle>
       <p className="data-block__lede">{t("home.zones.subtitle")}</p>
 
       <div className="kpi-grid">
@@ -1287,7 +1309,7 @@ function Tile({
   footnote?: string | null;
 }) {
   return (
-    <div className="tm-kpi">
+    <div className="tm-kpi tm-kpi--flat">
       <span className="tm-kpi__label">{label}</span>
       <span className="tm-kpi__value">
         <span className="tm-kpi__num">{value}</span>
@@ -1354,7 +1376,7 @@ function EditableTile({
   };
 
   return (
-    <div className="tm-kpi kpi--editable">
+    <div className="tm-kpi tm-kpi--flat kpi--editable">
       <span className="tm-kpi__label">
         {label}
         {saving && <span> · {t("common.saving")}</span>}

@@ -216,7 +216,7 @@ export function SessionDetail({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="tm-kpi">
+    <div className="tm-kpi tm-kpi--flat">
       <dt className="tm-kpi__label">{label}</dt>
       <dd className="tm-kpi__value">
         <span className="tm-kpi__num">{value}</span>
