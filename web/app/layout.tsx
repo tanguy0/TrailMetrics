@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Sidebar } from "@/components/Sidebar";
-import { lang, readSession } from "@/lib/session";
+import { getViewer, lang } from "@/lib/session";
 import { loadStrings } from "@/lib/strings.server";
 
 import "./tokens.css";
@@ -21,9 +21,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   // The rail is always there — brand + wayfinding — even for a visitor with no
-  // session yet. `Sidebar` is the one that decides which of its links actually
-  // go anywhere.
-  const signedIn = Boolean(await readSession());
+  // session yet. `Sidebar` decides from the viewer's tier which links are open.
+  const viewer = await getViewer();
   const strings = await loadStrings();
 
   return (
@@ -40,7 +39,7 @@ export default async function RootLayout({
       </head>
       <body>
         <div className="shell">
-          <Sidebar strings={strings} authenticated={signedIn} />
+          <Sidebar strings={strings} viewer={viewer} />
           <div className="shell__content">
             <div className="shell__topbar">
               <LanguageSwitcher />

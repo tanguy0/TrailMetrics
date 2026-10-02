@@ -1,10 +1,12 @@
 /**
- * Landing page for a visitor (design/tagg/visitor.md § Les trois surfaces), or
+ * Landing page for a visitor (design/tagg/access.md § Arrivée sur le site), or
  * straight through to Home if already signed in.
  *
  * In this order: lockup and motto, one sentence, then the access grid — what is
- * open now, what opens with Strava, every entry a real link — and only then the
- * Strava button. The visitor sees what is theirs before being asked for anything.
+ * open now, what opens with an account, every entry a real link — and only then
+ * the two buttons, Create an account first. The visitor sees what is theirs
+ * before being asked for anything. Strava is not here any more: it attaches to
+ * an account, from Home.
  *
  * A server component so the session cookie decides before anything renders — no
  * flash of a sign-in screen for a signed-in user.
@@ -14,8 +16,8 @@ import { redirect } from "next/navigation";
 
 import { Icon, type IconName } from "@/components/Icon";
 import { Callout } from "@/components/Callout";
-import { signInHref } from "@/lib/auth";
-import { readSession } from "@/lib/session";
+import { loginHref, registerHref } from "@/lib/auth";
+import { getViewer } from "@/lib/session";
 import { translator, type Translate } from "@/lib/strings";
 import { loadStrings } from "@/lib/strings.server";
 
@@ -24,7 +26,7 @@ const OPEN: { href: string; label: string; desc: string; icon: IconName }[] = [
   { href: "/blog", label: "nav.blog", desc: "visitor.blog", icon: "newspaper" },
 ];
 
-const WITH_STRAVA: typeof OPEN = [
+const WITH_ACCOUNT: typeof OPEN = [
   { href: "/home", label: "nav.home", desc: "visitor.home", icon: "home" },
   { href: "/pages", label: "nav.analysis", desc: "visitor.analysis", icon: "chart" },
   { href: "/training", label: "nav.training", desc: "visitor.training", icon: "calendar" },
@@ -35,7 +37,7 @@ export default async function Landing({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  if (await readSession()) redirect("/home");
+  if (await getViewer()) redirect("/home");
   const { error } = await searchParams;
   const t = translator(await loadStrings());
 
@@ -60,20 +62,25 @@ export default async function Landing({
           t={t}
         />
         <AccessColumn
-          title={t("visitor.strava.title")}
-          tier={t("visitor.strava.tier")}
+          title={t("visitor.account.title")}
+          tier={t("visitor.account.tier")}
           tone="forest"
-          items={WITH_STRAVA}
+          items={WITH_ACCOUNT}
           locked
           t={t}
         />
       </div>
 
       <div className="landing__connect">
-        <a className="tm-btn tm-btn--strava" href={signInHref()}>
-          {t("visitor.connect")}
-        </a>
-        <p className="body-sm landing__trust">{t("visitor.trust")}</p>
+        <div className="landing__actions">
+          <a className="tm-btn" href={registerHref()}>
+            {t("visitor.register")}
+          </a>
+          <a className="tm-btn tm-btn--secondary" href={loginHref()}>
+            {t("visitor.login")}
+          </a>
+        </div>
+        <p className="body-sm landing__trust">{t("visitor.account_trust")}</p>
       </div>
 
       <p className="muted">
@@ -99,7 +106,7 @@ function AccessColumn({
   t: Translate;
 }) {
   return (
-    // "With Strava" is the landing's one tinted block (contrast.md § 1): the
+    // "With an account" is the landing's one tinted block (contrast.md § 1): the
     // column the visitor is being invited into.
     <div className={`tm-access__col landing__col${locked ? " tm-panel--tint" : ""}`}>
       <div className="tm-access__head">

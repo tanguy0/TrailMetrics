@@ -122,7 +122,7 @@ export const getAthlete = () => request<Athlete>("/auth/me");
 export const updateProfile = (
   changes: Partial<Pick<
     Athlete,
-    | "weight_kg" | "birthdate" | "height_cm" | "email"
+    | "weight_kg" | "birthdate" | "height_cm"
     | "hr_zone1_end" | "hr_zone2_end" | "hr_zone3_end" | "hr_zone4_end"
     | "hr_max" | "vma_pace_s_per_km" | "lang"
   >>,
@@ -131,6 +131,9 @@ export const updateProfile = (
     method: "PATCH",
     body: JSON.stringify(changes),
   });
+
+/** Forget the account's Strava tokens; the athlete and their history stay. */
+export const disconnectStrava = () => request<{ ok: boolean }>("/auth/strava", { method: "DELETE" });
 
 // --- Home ------------------------------------------------------------------
 

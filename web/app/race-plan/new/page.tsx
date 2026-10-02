@@ -1,10 +1,10 @@
-/** A new, not-yet-saved race plan. Open to visitors too — they just can't save it. */
+/** A new, not-yet-saved race plan. Open to everyone; saving needs a Strava athlete for now. */
 
 import { RacePlanScreen } from "@/components/RacePlanScreen";
-import { readSession } from "@/lib/session";
+import { getViewer } from "@/lib/session";
 import { loadStrings } from "@/lib/strings.server";
 
 export default async function NewRacePlanPage() {
-  const signedIn = Boolean(await readSession());
+  const signedIn = (await getViewer())?.tier === "strava";
   return <RacePlanScreen strings={await loadStrings()} signedIn={signedIn} planId={null} />;
 }

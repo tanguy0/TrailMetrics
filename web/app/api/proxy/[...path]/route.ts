@@ -11,7 +11,13 @@
 
 import { NextRequest } from "next/server";
 
-import { LANG_COOKIE, SESSION_COOKIE, VIEW_AS_COOKIE, apiBaseUrl } from "@/lib/session";
+import {
+  LANG_COOKIE,
+  SESSION_COOKIE,
+  VIEW_AS_COOKIE,
+  apiBaseUrl,
+  isSameOrigin,
+} from "@/lib/session";
 
 // Renders can take a while (a GAP fit is a real model fit), so allow well past the
 // default. Vercel caps this by plan; the API's own timeouts are the real bound.
@@ -24,6 +30,11 @@ const HOP_BY_HOP = new Set([
 ]);
 
 async function forward(request: NextRequest, path: string[]): Promise<Response> {
+  // The CSRF lock (design/specs/auth.md § CSRF): a write reaching the API with
+  // the session cookie must come from this app's own pages.
+  if (!["GET", "HEAD"].includes(request.method) && !isSameOrigin(request)) {
+    return Response.json({ detail: "Cross-origin request refused." }, { status: 403 });
+  }
   const target = new URL(`${apiBaseUrl()}/${path.join("/")}`);
   target.search = request.nextUrl.search;
   // The browser bundle no longer knows the language — it's a server concern

@@ -402,7 +402,8 @@ export interface AssetUpload {
 }
 
 export interface Athlete {
-  id: number;
+  /** The Strava athlete id — null for an account with no Strava attached. */
+  id: number | null;
   firstname: string;
   lastname: string;
   display_name: string;
@@ -423,8 +424,6 @@ export interface Athlete {
   vma_pace_s_per_km: number | null;
   /** The athlete's chosen UI language — "en" or "fr". Always set. */
   lang: string;
-  /** Server's verdict on whether the email question has been answered. */
-  needs_email: boolean;
   age: number | null;
   activity_count: number;
   sport_types: string[];
@@ -435,8 +434,17 @@ export interface Athlete {
   is_coach: boolean;
   /** True when a coach is browsing this account rather than their own. */
   viewing_as: boolean;
-  /** Whether *this* account is the one allowed to write blog posts. */
+  /** Whether the signed-in account is the operator's (blog + coach). */
   is_master: boolean;
+  /** The signed-in account. `email` above is the *viewed* athlete's sign-in
+   * address, which differs only while a coach is viewing another athlete. */
+  account: { id: string; email: string; role: "athlete" | "coach" | "master" };
+  /** Whether a Strava athlete is attached. False: every Strava field above is
+   * empty, `id` is null, and Home renders its degraded variant. */
+  strava_connected: boolean;
+  /** Whether Strava still answers for it — false once disconnected (history
+   * kept). Absent when `strava_connected` is false. */
+  strava_authorized?: boolean;
 }
 
 /** One entry in a coach's athlete switcher — not the full profile. */

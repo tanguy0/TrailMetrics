@@ -6,11 +6,14 @@
  * route only carries the chosen athlete id along so it survives navigation.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import { VIEW_AS_COOKIE, viewAsCookieOptions } from "@/lib/session";
+import { VIEW_AS_COOKIE, isSameOrigin, viewAsCookieOptions } from "@/lib/session";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  if (!isSameOrigin(request)) {
+    return NextResponse.json({ detail: "Cross-origin request refused." }, { status: 403 });
+  }
   const { athleteId } = await request.json();
   const response = NextResponse.json({ ok: true });
   if (athleteId == null) {

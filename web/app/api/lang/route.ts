@@ -8,13 +8,16 @@
  * doesn't need a DB round trip on every request. Mirrors `/api/view-as`.
  */
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import { LANG_COOKIE, langCookieOptions } from "@/lib/session";
+import { LANG_COOKIE, isSameOrigin, langCookieOptions } from "@/lib/session";
 
 const KNOWN_LANGS = new Set(["en", "fr"]);
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  if (!isSameOrigin(request)) {
+    return NextResponse.json({ detail: "Cross-origin request refused." }, { status: 403 });
+  }
   const { lang } = await request.json();
   if (typeof lang !== "string" || !KNOWN_LANGS.has(lang)) {
     return NextResponse.json({ detail: "Unknown language." }, { status: 422 });

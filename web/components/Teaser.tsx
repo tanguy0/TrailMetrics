@@ -13,14 +13,26 @@
 
 import { Icon } from "@/components/Icon";
 import { PageHeader } from "@/components/PageHeader";
-import { signInHref } from "@/lib/auth";
+import { connectStravaHref, loginHref, registerHref } from "@/lib/auth";
 import type { Translate } from "@/lib/strings";
 
 export type TeaserPage = "home" | "analysis" | "training";
 
 const PATH: Record<TeaserPage, string> = { home: "/home", analysis: "/pages", training: "/training" };
 
-export function Teaser({ page, t }: { page: TeaserPage; t: Translate }) {
+/**
+ * `tier` is what the reader already has: a visitor is invited to create an
+ * account, an account without Strava to connect it — never both at once.
+ */
+export function Teaser({
+  page,
+  tier = "visitor",
+  t,
+}: {
+  page: TeaserPage;
+  tier?: "visitor" | "account";
+  t: Translate;
+}) {
   const title = t({ home: "nav.home", analysis: "nav.analysis", training: "nav.training" }[page]);
   return (
     <main className="container">
@@ -32,7 +44,9 @@ export function Teaser({ page, t }: { page: TeaserPage; t: Translate }) {
           {page === "training" && <TrainingStructure />}
         </div>
         <div className="tm-teaser__card">
-          <span className="tm-teaser__kicker">{t("visitor.tier")}</span>
+          <span className="tm-teaser__kicker">
+            {t(tier === "visitor" ? "visitor.account.tier" : "visitor.tier")}
+          </span>
           <h2 className="tm-teaser__title" id="teaser-title">
             {t(`visitor.teaser.${page}.title`)}
           </h2>
@@ -42,11 +56,24 @@ export function Teaser({ page, t }: { page: TeaserPage; t: Translate }) {
             ))}
           </ul>
           <div className="tm-teaser__actions">
-            <a className="tm-btn tm-btn--strava" href={signInHref(PATH[page])}>
-              {t("visitor.connect")}
-            </a>
+            {tier === "visitor" ? (
+              <>
+                <a className="tm-btn" href={registerHref(PATH[page])}>
+                  {t("visitor.register")}
+                </a>
+                <a className="tm-btn tm-btn--secondary" href={loginHref(PATH[page])}>
+                  {t("visitor.login")}
+                </a>
+              </>
+            ) : (
+              <a className="tm-btn tm-btn--strava" href={connectStravaHref(PATH[page])}>
+                {t("visitor.more.link")}
+              </a>
+            )}
           </div>
-          <p className="tm-teaser__fine">{t("visitor.fine")}</p>
+          <p className="tm-teaser__fine">
+            {t(tier === "visitor" ? "visitor.account_fine" : "visitor.fine")}
+          </p>
         </div>
       </section>
     </main>
@@ -163,7 +190,7 @@ export function StravaMore({ message, next, t }: { message: string; next: string
   return (
     <p className="body-sm visitor-more">
       {message}{" "}
-      <a href={signInHref(next)}>{t("visitor.more.link")}</a>
+      <a href={connectStravaHref(next)}>{t("visitor.more.link")}</a>
     </p>
   );
 }

@@ -1,81 +1,100 @@
 "use client";
 
 /**
- * The navigation rail — always on screen, signed in or not
- * (design/tagg/components/NavRail.md).
+ * The navigation rail — always on screen (design/tagg/components/NavRail.md).
  *
  * A client component only because the active item depends on the current path;
- * the labels arrive already translated from the server, so nothing is fetched here.
+ * the labels arrive already translated from the server, and so does the viewer's
+ * access tier, so nothing is fetched here.
  *
- * Signed in, it is one list. For a visitor it is two groups (visitor.md § Rail):
- * what is open now (Race plan, Blog), then what opens with Strava — those still
- * link to their page, which shows its teaser, and carry a lock rather than being
- * greyed out — with the Strava button at the foot of the rail.
+ * The rail follows the tier (design/tagg/access.md): a visitor sees what is open
+ * now, then what opens with an account; an account without Strava sees its own
+ * pages, then what opens with Strava. Items the tier does not open still link to
+ * their page — which shows its teaser — and carry a lock rather than being greyed
+ * out. On the auth pages the rail is reduced to the lockup.
  */
 
 import { usePathname } from "next/navigation";
 
 import { CoachSwitcher } from "@/components/CoachSwitcher";
 import { Icon, type IconName } from "@/components/Icon";
-import { signInHref } from "@/lib/auth";
+import { loginHref } from "@/lib/auth";
+import type { Viewer } from "@/lib/session";
 import { translator, type Strings, type Translate } from "@/lib/strings";
+
+type Tier = "visitor" | "account" | "strava";
 
 interface Item {
   href: string;
   label: string;
   icon: IconName;
-  public: boolean;
+  needs: Tier;
 }
 
-export function Sidebar({
-  strings,
-  authenticated,
-}: {
-  strings: Strings;
-  authenticated: boolean;
-}) {
+const RANK: Record<Tier, number> = { visitor: 0, account: 1, strava: 2 };
+const AUTH_PATHS = ["/login", "/register", "/reset"];
+
+async function signOut() {
+  await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
+  window.location.assign("/");
+}
+
+export function Sidebar({ strings, viewer }: { strings: Strings; viewer: Viewer | null }) {
   const t = translator(strings);
   const pathname = usePathname() ?? "";
+  const tier: Tier = viewer?.tier ?? "visitor";
+
+  const brand = (
+    <a className="tm-rail__brand" href={viewer ? "/home" : "/"}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a static SVG gains nothing from next/image */}
+      <img src="/logo/tagg-lockup-on-rail.svg" alt="TAGG" height={28} />
+    </a>
+  );
+
+  if (AUTH_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
+    return <nav className="tm-rail shell__rail shell__rail--bare" aria-label="TAGG">{brand}</nav>;
+  }
 
   const items: Item[] = [
-    { href: "/home", label: t("nav.home"), icon: "home", public: false },
-    { href: "/pages", label: t("nav.analysis"), icon: "chart", public: false },
-    { href: "/training", label: t("nav.training"), icon: "calendar", public: false },
-    { href: "/race-plan", label: t("nav.race_plan"), icon: "flag", public: true },
-    { href: "/blog", label: t("nav.blog"), icon: "newspaper", public: true },
+    { href: "/home", label: t("nav.home"), icon: "home", needs: "account" },
+    { href: "/pages", label: t("nav.analysis"), icon: "chart", needs: "strava" },
+    { href: "/training", label: t("nav.training"), icon: "calendar", needs: "strava" },
+    { href: "/race-plan", label: t("nav.race_plan"), icon: "flag", needs: "visitor" },
+    { href: "/blog", label: t("nav.blog"), icon: "newspaper", needs: "visitor" },
   ];
+  const open = items.filter((item) => RANK[item.needs] <= RANK[tier]);
+  const locked = items.filter((item) => RANK[item.needs] > RANK[tier]);
 
   return (
     <nav className="tm-rail shell__rail" aria-label={t("nav.analysis")}>
-      <a className="tm-rail__brand" href={authenticated ? "/home" : "/"}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- a static SVG gains nothing from next/image */}
-        <img src="/logo/tagg-lockup-on-rail.svg" alt="TAGG" height={28} />
-      </a>
+      {brand}
 
-      {authenticated && <CoachSwitcher />}
+      {viewer?.isCoach && <CoachSwitcher />}
 
-      {authenticated ? (
-        <RailList items={items} pathname={pathname} t={t} />
+      {locked.length === 0 ? (
+        <RailList items={open} pathname={pathname} t={t} />
       ) : (
         <div className="shell__groups">
-          <div className="tm-rail__group">{t("nav.group_open")}</div>
-          <RailList items={items.filter((item) => item.public)} pathname={pathname} t={t} />
-          <div className="tm-rail__group">{t("nav.group_strava")}</div>
-          <RailList items={items.filter((item) => !item.public)} pathname={pathname} locked t={t} />
+          {tier === "visitor" && <div className="tm-rail__group">{t("nav.group_open")}</div>}
+          <RailList items={open} pathname={pathname} t={t} />
+          <div className="tm-rail__group">
+            {t(tier === "visitor" ? "nav.group_account" : "nav.group_strava")}
+          </div>
+          <RailList items={locked} pathname={pathname} locked t={t} />
         </div>
       )}
 
-      {authenticated ? (
-        <a className="tm-rail__link shell__signout" href="/api/auth/logout">
+      {viewer ? (
+        <button type="button" className="tm-rail__link shell__signout" onClick={signOut}>
           <Icon name="logout" size={17} />
           <span>{t("nav.sign_out")}</span>
-        </a>
+        </button>
       ) : (
         <a
-          className="tm-btn tm-btn--strava tm-btn--sm tm-btn--wide shell__signout"
-          href={signInHref(pathname || undefined)}
+          className="tm-btn tm-btn--secondary tm-btn--sm tm-btn--wide shell__signout"
+          href={loginHref(pathname && pathname !== "/" ? pathname : undefined)}
         >
-          {t("nav.connect")}
+          {t("visitor.login")}
         </a>
       )}
     </nav>
