@@ -53,7 +53,7 @@ La règle complète est dans la section **Graphiques (Plotly)**. En bref : fond 
 
 Les composants sont décrits et prévisualisés dans l'onglet Composants. Ils existent en deux formes équivalentes : des **classes CSS** préfixées `tm-` dans `components/components.css` (pour l'app actuelle en CSS écrit main ; le repo en a une copie, `web/app/components.css`, qui contient aussi des classes propres à l'app — `tm-modal`, `tm-week-summary`, `tm-textarea`, le responsive — absentes d'ici : le repo **fusionne**, il ne remplace jamais) et des **composants React** `window.TAGG.*` dans `components/components.js` qui ne font que poser ces classes. Le consommateur fournit le texte, les icônes (SVG inline) et les données ; le système fournit la forme.
 
-Deux composants servent le visiteur sans compte (`Teaser`, `AccessGrid`) ; la logique d'ensemble est dans la section **Expérience visiteur (freemium)**.
+Les paliers d'accès (visiteur, compte, Strava, coaché), le rail par palier et l'architecture *Outils / Analyses / Coaching* sont décrits dans **Accès, paliers et architecture de l'information** (`access.md`). Deux composants servent le visiteur sans compte (`Teaser`, `AccessGrid`) ; la logique d'ensemble est dans la section **Expérience visiteur (freemium)**.
 
 Le formatage des dates, allures et nombres dans les cellules suit la section **Densité des cellules et des valeurs** (`density.md`).
 
