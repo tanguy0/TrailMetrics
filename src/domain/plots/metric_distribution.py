@@ -112,7 +112,14 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     y_title = translate(
         "plot.distribution.y_pct" if normalize else "plot.distribution.y_count", lang
     )
+    if len(traces) > 1 and all(t.kind is TraceKind.BAR for t in traces):
+        # charts.md § v1.2: overlaid bars hide each other, so two groups or more
+        # become outlines — one 2 px step per group, unfilled.
+        for trace in traces:
+            _as_outline(trace, edges.tolist())
+
     chart = ChartData(
+        family="composition",
         title=translate("plot.distribution.title", lang).format(
             metric=metric_label(metric, lang)),
         x_axis=metric_axis(metric, lang),
@@ -124,6 +131,25 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
         # One group only: with several, colour is what tells the groups apart.
         _paint_slopes(traces[0], centers, normalize)
     return PlotOutput(charts=[chart])
+
+
+# A group's histogram drawn as its outline.
+_OUTLINE_WIDTH = 2.0
+
+
+def _as_outline(trace: Trace, edges: List[float]) -> None:
+    """Turn a bar histogram into its step outline over the shared bin edges.
+
+    Steps start at each bin's left edge and hold its count to the next one, so
+    the last count is repeated at the right edge to close the shape.
+    """
+    trace.kind = TraceKind.STEP
+    trace.x = list(edges)
+    trace.y = list(trace.y) + ([trace.y[-1]] if trace.y else [])
+    if trace.hover_text:
+        trace.hover_text = list(trace.hover_text) + [trace.hover_text[-1]]
+    trace.width = _OUTLINE_WIDTH
+    trace.opacity = 1.0
 
 
 def _paint_slopes(trace: Trace, centers: List[float], normalize: bool) -> None:
