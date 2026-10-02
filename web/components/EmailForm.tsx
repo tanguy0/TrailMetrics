@@ -15,6 +15,7 @@
 
 import { useState } from "react";
 
+import { Callout } from "@/components/Callout";
 import { updateProfile } from "@/lib/api";
 import { translator, type Strings } from "@/lib/strings";
 
@@ -77,7 +78,7 @@ export function EmailForm({
           {saving ? t("common.saving") : submitLabel ?? t("email.submit")}
         </button>
       </div>
-      {failure && <p className="note note--error">{failure}</p>}
+      {failure && <Callout tone="terra">{failure}</Callout>}
     </form>
   );
 }

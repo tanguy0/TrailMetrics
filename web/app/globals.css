@@ -480,24 +480,8 @@ input[type="radio"] {
 
 /* --- Notes & status ------------------------------------------------------- */
 
-.note {
-  background: var(--bg-surface-alt);
-  border: 1px solid var(--line);
-  padding: 0.6rem 0.8rem;
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  line-height: 20px;
-  margin: 0.5rem 0;
-}
-
-.note--error {
-  background: var(--danger-tint);
-  border-color: transparent;
-  color: var(--danger);
-}
-
-/* Callouts sit in the flow the old notes did; a callout carrying several
-   notes stacks them one per line. */
+/* A callout sits in the flow with a little air around it; one carrying
+   several notes stacks them one per line. */
 .tm-callout {
   margin: 0.5rem 0;
 }

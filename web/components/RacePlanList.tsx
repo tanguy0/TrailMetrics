@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { Callout } from "@/components/Callout";
 import { PageHeader } from "@/components/PageHeader";
 import { listRacePlans } from "@/lib/api";
 import { formatDate, formatHms, formatNumber } from "@/lib/format";
@@ -27,7 +28,7 @@ export function RacePlanList({ strings }: { strings: Strings }) {
     <main className="container">
       <PageHeader kicker={t("nav.race_plan")} title={t("race_plan.title")} sub={t("race_plan.intro")} />
 
-      {error && <p className="note note--error">{error}</p>}
+      {error && <Callout tone="terra">{error}</Callout>}
       {plans == null && !error ? (
         <p className="muted">{t("common.loading")}</p>
       ) : plans && plans.length === 0 ? (
