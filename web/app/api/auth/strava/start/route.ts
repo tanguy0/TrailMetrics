@@ -1,28 +1,38 @@
 /**
- * Step 1 of the Strava login: send the user to Strava's consent screen.
+ * Step 1 of connecting Strava: send the user to Strava's consent screen.
+ *
+ * Strava attaches to an account (design/specs/auth.md), so a visitor is sent to
+ * create one first, with this very route as where to go next — they land on
+ * Strava's screen right after signing up.
  *
  * The API builds the URL (it owns the client id and the scopes); this route only
  * decides where Strava should come back to — which must be *this* app, so the
- * session cookie it eventually sets is first-party.
+ * callback can read the session cookie.
  */
 
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import { apiBaseUrl, appUrl } from "@/lib/session";
+import { SESSION_COOKIE, apiBaseUrl, appUrl, safeNext } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
-  const redirectUri = `${appUrl()}/api/auth/strava/callback`;
-  // Where to land after login; kept relative so it can't be used as an open redirect.
-  // Home rather than the page list: it is where the import, the profile and the
-  // recent-form charts are, which is what a returning athlete opens the app for.
-  const next = request.nextUrl.searchParams.get("next") || "/home";
-  const state = next.startsWith("/") ? next : "/home";
+  // Where to land once connected; kept relative so it can't be an open redirect.
+  // Home by default: it is where the import and the profile are.
+  const next = safeNext(request.nextUrl.searchParams.get("next"));
 
+  if (!request.cookies.get(SESSION_COOKIE)?.value) {
+    const back = `/api/auth/strava/start?next=${encodeURIComponent(next)}`;
+    return NextResponse.redirect(
+      new URL(`/register?next=${encodeURIComponent(back)}`, appUrl()).toString(),
+      302,
+    );
+  }
+
+  const redirectUri = `${appUrl()}/api/auth/strava/callback`;
   try {
     const response = await fetch(`${apiBaseUrl()}/auth/strava/url`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ redirect_uri: redirectUri, state }),
+      body: JSON.stringify({ redirect_uri: redirectUri, state: next }),
       cache: "no-store",
     });
     if (!response.ok) {

@@ -12,14 +12,17 @@
 
 import { AnalysisScreen } from "@/components/AnalysisScreen";
 import { Teaser } from "@/components/Teaser";
-import { readSession } from "@/lib/session";
+import { getViewer } from "@/lib/session";
 import { translator } from "@/lib/strings";
 import { loadStrings } from "@/lib/strings.server";
 
 export default async function AnalysisPage() {
   const strings = await loadStrings();
-  // A visitor stays here: the page's empty structure, and what Strava would put
-  // in it (design/tagg/visitor.md) — no redirect to the landing.
-  if (!(await readSession())) return <Teaser page="analysis" t={translator(strings)} />;
+  // A visitor, or an account without Strava, stays here: the page's empty
+  // structure and what the next tier would put in it (design/tagg/access.md).
+  const viewer = await getViewer();
+  if (viewer?.tier !== "strava") {
+    return <Teaser page="analysis" tier={viewer ? "account" : "visitor"} t={translator(strings)} />;
+  }
   return <AnalysisScreen strings={strings} />;
 }

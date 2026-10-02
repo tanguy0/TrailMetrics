@@ -366,6 +366,127 @@ create table if not exists race_plans (
 create index if not exists race_plans_athlete_updated_idx
     on race_plans (athlete_id, updated_at desc);
 
+-- --- Accounts (v2, design/specs/auth.md) -------------------------------------
+
+-- The identity is an email + password account; the Strava athlete becomes an
+-- optional attachment of it (`athletes.account_id`). What comes from Strava stays
+-- keyed by `athlete_id`; what comes from the account (saved plans, estimated
+-- zones, coaching requests) is keyed by `account_id`. Nothing from Strava is
+-- written into `accounts`.
+create extension if not exists citext;
+
+create table if not exists accounts (
+    id                uuid primary key default gen_random_uuid(),
+    email             citext unique not null,
+    password_hash     text not null,              -- argon2id, parameters encoded in the hash
+    role              text not null default 'athlete'
+                      check (role in ('athlete', 'coach', 'master')),
+    lang              text not null default 'en',
+    email_verified_at timestamptz,                -- set by a verification link or a completed reset
+    created_at        timestamptz not null default now(),
+    last_login_at     timestamptz
+);
+
+alter table athletes add column if not exists account_id uuid
+    references accounts(id) on delete set null;
+create unique index if not exists athletes_account_id_idx on athletes (account_id);
+
+-- Opaque session tokens, stored hashed: a database dump cannot be replayed as a
+-- cookie. One row per signed-in device, so a session can be revoked on its own
+-- (sign out), all together (sign out everywhere, password reset).
+create table if not exists sessions (
+    id           uuid primary key default gen_random_uuid(),
+    account_id   uuid not null references accounts(id) on delete cascade,
+    token_hash   bytea not null unique,           -- sha256 of the token, never the token
+    created_at   timestamptz not null default now(),
+    expires_at   timestamptz not null,
+    last_seen_at timestamptz,
+    user_agent   text
+);
+
+create index if not exists sessions_account_idx on sessions (account_id);
+
+create table if not exists password_resets (
+    token_hash  bytea primary key,
+    account_id  uuid not null references accounts(id) on delete cascade,
+    expires_at  timestamptz not null,
+    used_at     timestamptz
+);
+
+-- Proof that the account holds its address. Gates what must not go to whoever
+-- merely typed an email first — today, the `master` role of MASTER_EMAIL.
+create table if not exists email_verifications (
+    token_hash  bytea primary key,
+    account_id  uuid not null references accounts(id) on delete cascade,
+    expires_at  timestamptz not null,
+    used_at     timestamptz
+);
+
+-- Fixed-window counters for the auth endpoints. In the database rather than in
+-- memory so the limit holds across replicas and restarts; no Redis at this scale.
+create table if not exists login_attempts (
+    key          text not null,                   -- 'login-email:<email>', 'login-ip:<ip>', ...
+    window_start timestamptz not null,
+    count        integer not null default 0,
+    primary key (key, window_start)
+);
+
+-- Saved plans belong to the account (design/tagg/access.md: saving needs an
+-- account, not Strava). `athlete_id` stays for plans saved before accounts; they
+-- move over when that athlete is attached (`link_athlete`).
+alter table race_plans add column if not exists account_id uuid
+    references accounts(id) on delete cascade;
+alter table race_plans alter column athlete_id drop not null;
+create index if not exists race_plans_account_updated_idx
+    on race_plans (account_id, updated_at desc);
+
+-- Level assessments (design/specs/level.md). Inputs and result as JSON: the
+-- three tests take different inputs, and the result is the LevelEstimate the
+-- tool showed — kept as shown, not recomputed, so "estimated on …" stays true.
+create table if not exists level_estimates (
+    id          uuid primary key default gen_random_uuid(),
+    account_id  uuid not null references accounts(id) on delete cascade,
+    method      text not null,
+    inputs      jsonb not null,
+    result      jsonb not null,
+    created_at  timestamptz not null default now()
+);
+
+create index if not exists level_estimates_account_created_idx
+    on level_estimates (account_id, created_at desc);
+
+-- --- Coaching (v2, design/specs/coaching.md) ---------------------------------
+
+-- A request to be coached. One pending per account (partial unique index); a
+-- decided request stays as a record — declining never deletes.
+create table if not exists coaching_requests (
+    id          uuid primary key default gen_random_uuid(),
+    account_id  uuid not null references accounts(id) on delete cascade,
+    message     text not null default '',
+    phone       text,                               -- as typed
+    phone_e164  text,                               -- normalized when possible
+    contact     text not null check (contact in ('email', 'phone')),
+    status      text not null default 'pending'
+                check (status in ('pending', 'accepted', 'declined', 'withdrawn')),
+    created_at  timestamptz not null default now(),
+    decided_at  timestamptz,
+    decided_by  uuid references accounts(id) on delete set null
+);
+
+create unique index if not exists coaching_requests_one_pending_idx
+    on coaching_requests (account_id) where status = 'pending';
+
+-- Who coaches whom. `is_coached` is "a row exists with athlete_id = me"; the
+-- rail's athlete switcher and the view-as check both read this table.
+create table if not exists coaching (
+    coach_id    uuid not null references accounts(id) on delete cascade,
+    athlete_id  uuid not null references accounts(id) on delete cascade,
+    since       timestamptz not null default now(),
+    primary key (coach_id, athlete_id)
+);
+
+create index if not exists coaching_athlete_idx on coaching (athlete_id);
+
 -- --- Row-level security -----------------------------------------------------
 
 -- No policies defined: this is a default-deny backstop for any role other than
@@ -383,3 +504,11 @@ alter table assets enable row level security;
 alter table activity_comments enable row level security;
 alter table blog_posts enable row level security;
 alter table race_plans enable row level security;
+alter table accounts enable row level security;
+alter table sessions enable row level security;
+alter table password_resets enable row level security;
+alter table email_verifications enable row level security;
+alter table level_estimates enable row level security;
+alter table coaching_requests enable row level security;
+alter table coaching enable row level security;
+alter table login_attempts enable row level security;

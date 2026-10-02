@@ -19,7 +19,7 @@ A table of coefficients and the model's confidence notes close the output.
 
 from dataclasses import replace
 from datetime import date
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -214,18 +214,12 @@ def _projection_chart(fitted, config: DurabilityConfig, lang: str):
     for group, model in fitted:
         color = group_color(group.index)
         label = group.label if len(fitted) > 1 else ""
-        u = _typical_intensity(model, config)
         longest = max((s.elapsed_s for s in model.segments), default=0.0) / 3600.0
         horizon = float(np.clip(np.ceil(longest + 1), _PROJECTION_MIN_H, _PROJECTION_MAX_H))
         hours = np.linspace(0.0, horizon, 97)
 
         def curve(coefficients: DurabilityCoefficients) -> np.ndarray:
-            elapsed = hours * 3600.0
-            n = len(elapsed) - 1
-            exposures = accumulate_exposures(elapsed, np.full(n, u), np.zeros(n),
-                                             np.zeros(n), config.exposure)
-            profile = durability_profile(exposures, coefficients, config.exposure)
-            return (profile.multiplier - 1) * 100
+            return projected_extra_cost(model, config, hours, coefficients)
 
         traces.append(Trace(
             name=_name(label, translate("durability.series.population", lang)),
@@ -262,6 +256,27 @@ def _projection_chart(fitted, config: DurabilityConfig, lang: str):
         height=420,
         caption=translate("durability.caption.projection", lang).format(intensity=u_text),
     )
+
+
+def projected_extra_cost(
+    model: AthleteDurabilityModel,
+    config: DurabilityConfig,
+    hours: np.ndarray,
+    coefficients: Optional[DurabilityCoefficients] = None,
+) -> np.ndarray:
+    """Extra cost of running (%) after ``hours`` at the athlete's typical long-run
+    intensity — the projection chart's curve, and the Durability tool's tiles.
+
+    ``hours`` must start at 0 and increase. ``coefficients`` defaults to the
+    athlete's own (or the population's, when there is no personal fit).
+    """
+    u = _typical_intensity(model, config)
+    elapsed = np.asarray(hours, dtype=float) * 3600.0
+    n = len(elapsed) - 1
+    exposures = accumulate_exposures(elapsed, np.full(n, u), np.zeros(n),
+                                     np.zeros(n), config.exposure)
+    profile = durability_profile(exposures, coefficients or model.coefficients, config.exposure)
+    return (profile.multiplier - 1) * 100
 
 
 def _typical_intensity(model: AthleteDurabilityModel, config: DurabilityConfig) -> float:

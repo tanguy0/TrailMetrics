@@ -26,7 +26,7 @@ export function RacePlanList({ strings }: { strings: Strings }) {
 
   return (
     <main className="container">
-      <PageHeader kicker={t("nav.race_plan")} title={t("race_plan.title")} sub={t("race_plan.intro")} />
+      <PageHeader kicker={t("tools.race_planning")} title={t("race_plan.title")} sub={t("race_plan.intro")} />
 
       {error && <Callout tone="terra">{error}</Callout>}
       {plans == null && !error ? (
@@ -36,7 +36,7 @@ export function RacePlanList({ strings }: { strings: Strings }) {
       ) : (
         <div className="card-grid">
           {(plans ?? []).map((plan) => (
-            <a className="card" key={plan.id} href={`/race-plan/${plan.id}`}>
+            <a className="card" key={plan.id} href={`/tools/race-planning/${plan.id}`}>
               <span className="card__title">{plan.title || t("race_plan.untitled")}</span>
               <span className="card__meta">
                 {[
@@ -58,7 +58,7 @@ export function RacePlanList({ strings }: { strings: Strings }) {
         </div>
       )}
 
-      <Link className="new-page" href="/race-plan/new">
+      <Link className="new-page" href="/tools/race-planning/new">
         <span className="new-page__plus" aria-hidden="true">+</span>
         <span className="new-page__text">
           <span className="new-page__label">{t("race_plan.new.button")}</span>

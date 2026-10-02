@@ -1,6 +1,6 @@
 /**
- * Write a new article. Server-gated on `athlete.is_master`, like `welcome/page.tsx`
- * gates on session — the API enforces the same check independently on every write.
+ * Write a new article. Server-gated on `is_master` (the account's role) — the API
+ * enforces the same check independently on every write.
  */
 
 import { redirect } from "next/navigation";

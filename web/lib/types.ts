@@ -402,7 +402,8 @@ export interface AssetUpload {
 }
 
 export interface Athlete {
-  id: number;
+  /** The Strava athlete id — null for an account with no Strava attached. */
+  id: number | null;
   firstname: string;
   lastname: string;
   display_name: string;
@@ -423,8 +424,6 @@ export interface Athlete {
   vma_pace_s_per_km: number | null;
   /** The athlete's chosen UI language — "en" or "fr". Always set. */
   lang: string;
-  /** Server's verdict on whether the email question has been answered. */
-  needs_email: boolean;
   age: number | null;
   activity_count: number;
   sport_types: string[];
@@ -435,8 +434,125 @@ export interface Athlete {
   is_coach: boolean;
   /** True when a coach is browsing this account rather than their own. */
   viewing_as: boolean;
-  /** Whether *this* account is the one allowed to write blog posts. */
+  /** Whether the signed-in account is the operator's (blog + coach). */
   is_master: boolean;
+  /** The signed-in account. `email` above is the *viewed* athlete's sign-in
+   * address, which differs only while a coach is viewing another athlete. */
+  account: {
+    id: string;
+    email: string;
+    role: "athlete" | "coach" | "master";
+    /** Proven by a verification link or a completed password reset. */
+    email_verified: boolean;
+    /** Whether a verification link can be sent at all (a mail provider is set). */
+    can_verify: boolean;
+  };
+  /** Whether a Strava athlete is attached. False: every Strava field above is
+   * empty, `id` is null, and Home renders its degraded variant. */
+  strava_connected: boolean;
+  /** Whether Strava still answers for it — false once disconnected (history
+   * kept). Absent when `strava_connected` is false. */
+  strava_authorized?: boolean;
+  /** The account's latest level estimate, for the Zones card's "estimated on"
+   * line. Null without one, and while a coach views another athlete. */
+  level_estimate: LevelEstimateMeta | null;
+}
+
+// --- Tools ------------------------------------------------------------------
+
+export type LevelMethod = "half_cooper" | "critical_speed" | "records";
+
+export interface LevelEstimateMeta {
+  method: LevelMethod;
+  created_at: string;
+  vma_pace_s_per_km: number | null;
+}
+
+export interface PaceZone {
+  key: string;
+  low_pct: number;
+  high_pct: number;
+  fast_s_per_km: number;
+  slow_s_per_km: number;
+}
+
+export interface LevelResult {
+  method: LevelMethod;
+  vma_kmh: number;
+  vma_pace_s_per_km: number;
+  vdot: number;
+  confidence: "high" | "medium" | "low";
+  extras: Record<string, number>;
+  zones: PaceZone[];
+  hr_max: number | null;
+  hr_zones: { key: string; bpm: number }[];
+  notes: string[];
+  saved_at: string | null;
+}
+
+export interface ZoneDefinitions {
+  vma_pace: { key: string; low_pct: number; high_pct: number }[];
+  hr_max_pct: { key: "z1" | "z2" | "z3" | "z4"; pct: number }[];
+  hr_pace: { key: string; low_pct: number; high_pct: number }[];
+}
+
+export interface GapSummary {
+  available: boolean;
+  reason?: string;
+  uphill_factor?: number;
+  downhill_factor?: number;
+  uphill_vs_reference_pct?: number;
+  downhill_vs_reference_pct?: number;
+  flat_pace_s_per_km?: number | null;
+  slope_pct?: number;
+}
+
+export interface DurabilitySummary {
+  confidence: "personalized" | "partially_personalized" | "population_only";
+  personal: boolean;
+  extra_cost_pct: Record<string, number>;
+  population_extra_cost_pct: Record<string, number>;
+  n_activities: number;
+}
+
+export interface CoachingRequest {
+  id: string;
+  account_id: string;
+  message: string;
+  phone: string | null;
+  phone_e164: string | null;
+  contact: "email" | "phone";
+  status: "pending" | "accepted" | "declined" | "withdrawn";
+  created_at: string;
+  decided_at: string | null;
+}
+
+export interface CoachingState {
+  coached: boolean;
+  request: CoachingRequest | null;
+  can_request_again_at: string | null;
+  email: string;
+  proof: { coached_count: number } | null;
+}
+
+export interface CoachBoard {
+  pending: (CoachingRequest & { email: string; display_name: string | null })[];
+  coached: {
+    account_id: string;
+    email: string;
+    athlete_id: number | null;
+    display_name: string;
+    profile_url: string | null;
+    since: string;
+    last_activity: string | null;
+  }[];
+}
+
+export interface PageTemplate {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
 }
 
 /** One entry in a coach's athlete switcher — not the full profile. */

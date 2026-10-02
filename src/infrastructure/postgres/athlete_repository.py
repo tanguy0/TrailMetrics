@@ -87,8 +87,7 @@ class PostgresAthleteRepository(AthleteRepository):
         )
 
     def set_email(self, athlete_id: int, email: Optional[str]) -> None:
-        # Empty string and NULL both mean "not answered"; store one of them so
-        # `needs_email` has a single case to check.
+        # Empty string and NULL both mean "not answered"; store one of them.
         cleaned = (email or "").strip() or None
         self.db.execute(
             "update athletes set email = %s, updated_at = now() where id = %s",
@@ -162,6 +161,11 @@ class PostgresAthleteRepository(AthleteRepository):
             refresh_token=refresh,
             expires_at=_aware(row["expires_at"]),
             scope=row["scope"] or "",
+        )
+
+    def delete_credentials(self, athlete_id: int) -> None:
+        self.db.execute(
+            "delete from strava_credentials where athlete_id = %s", (athlete_id,)
         )
 
     # --- Sync state --------------------------------------------------------

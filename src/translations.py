@@ -816,7 +816,6 @@ TRANSLATIONS = {
     # lives — see the module docstring.
     "ui.nav.home": {"en": "Home", "fr": "Accueil"},
     "ui.nav.analysis": {"en": "Analysis", "fr": "Analyses"},
-    "ui.nav.training": {"en": "Training", "fr": "Entraînement"},
     "ui.nav.blog": {"en": "Blog", "fr": "Blog"},
     "ui.nav.sign_in_required": {
         "en": "Sign in to access this",
@@ -825,21 +824,18 @@ TRANSLATIONS = {
     "ui.nav.sign_out": {"en": "Sign out", "fr": "Se déconnecter"},
     "ui.nav.group_open": {"en": "Open", "fr": "Ouvert"},
     "ui.nav.group_strava": {"en": "With Strava", "fr": "Avec Strava"},
-    "ui.nav.connect": {"en": "Connect Strava", "fr": "Connecter Strava"},
 
     # --- Visitor (no account): design/tagg/visitor.md -------------------------
     # Two free tiers, never sold as such: "Free · now" and "Free · with Strava".
     # No "Pro", "Premium" or "Unlock" anywhere.
     "ui.visitor.lede": {
         "en": "TAGG analyses your runs and helps you improve. Two tools are open to "
-              "everyone; the rest opens when you connect Strava.",
+              "everyone; the rest opens with a free account.",
         "fr": "TAGG analyse vos sorties et vous aide à progresser. Deux outils sont "
-              "ouverts à tous ; le reste s’ouvre en connectant Strava.",
+              "ouverts à tous ; le reste s’ouvre avec un compte gratuit.",
     },
     "ui.visitor.open.title": {"en": "Without an account", "fr": "Sans compte"},
     "ui.visitor.open.tier": {"en": "Free · now", "fr": "Gratuit · maintenant"},
-    "ui.visitor.strava.title": {"en": "With Strava", "fr": "Avec Strava"},
-    "ui.visitor.strava.tier": {"en": "Free · 1 click", "fr": "Gratuit · 1 clic"},
     "ui.visitor.race_plan": {
         "en": "The pace to hold on every stretch of your race, from its GPX.",
         "fr": "L’allure à tenir sur chaque portion de votre course, à partir de son GPX.",
@@ -860,13 +856,6 @@ TRANSLATIONS = {
     "ui.visitor.training": {
         "en": "Your week, your sessions and your goals on one calendar.",
         "fr": "Votre semaine, vos séances et vos objectifs sur un calendrier.",
-    },
-    "ui.visitor.connect": {"en": "Connect with Strava", "fr": "Se connecter avec Strava"},
-    "ui.visitor.trust": {
-        "en": "Free, no card. TAGG reads your Strava activities to analyse them; your "
-              "Strava tokens are encrypted and never leave the server.",
-        "fr": "Gratuit, sans carte. TAGG lit vos activités Strava pour les analyser ; vos "
-              "jetons Strava sont chiffrés et ne quittent jamais le serveur.",
     },
     "ui.visitor.fine": {
         "en": "Free, no card. TAGG only reads your activities.",
@@ -921,15 +910,505 @@ TRANSLATIONS = {
         "en": "Each week’s summary: volume, climbing, fitness",
         "fr": "Le bilan de chaque semaine : volume, dénivelé, forme",
     },
-    "ui.visitor.more.race_plan": {
-        "en": "With Strava, TAGG learns this plan from your own climbs.",
-        "fr": "Avec Strava, TAGG apprend ce plan à partir de vos propres montées.",
+    "ui.visitor.teaser.gap.title": {
+        "en": "What a slope costs you, specifically",
+        "fr": "Ce que la pente vous coûte, à vous",
+    },
+    "ui.visitor.teaser.gap.1": {
+        "en": "Your own GAP curve, fitted on your runs",
+        "fr": "Votre propre courbe GAP, ajustée sur vos sorties",
+    },
+    "ui.visitor.teaser.gap.2": {
+        "en": "Your cost uphill and downhill, against a reference runner",
+        "fr": "Votre coût en montée et en descente, face à un coureur de référence",
+    },
+    "ui.visitor.teaser.gap.3": {
+        "en": "Your flat-equivalent pace over the last weeks",
+        "fr": "Votre allure plat équivalente sur les dernières semaines",
+    },
+    "ui.visitor.teaser.durability.title": {
+        "en": "How you hold up on long efforts",
+        "fr": "Comment vous tenez sur l’effort long",
+    },
+    "ui.visitor.teaser.durability.1": {
+        "en": "Your extra cost after two and four hours",
+        "fr": "Votre surcoût après deux et quatre heures",
+    },
+    "ui.visitor.teaser.durability.2": {
+        "en": "Measured on your long runs of the past year",
+        "fr": "Mesuré sur vos sorties longues de l’année écoulée",
+    },
+    "ui.visitor.teaser.durability.3": {
+        "en": "The same model your race plans pace along",
+        "fr": "Le même modèle que suivent vos plans de course",
     },
     "ui.visitor.more.blog": {
         "en": "With Strava, TAGG applies these methods to your own runs.",
         "fr": "Avec Strava, TAGG applique ces méthodes à vos propres sorties.",
     },
     "ui.visitor.more.link": {"en": "Connect Strava", "fr": "Connecter Strava"},
+    "ui.visitor.account.title": {"en": "With an account", "fr": "Avec un compte"},
+    "ui.visitor.account.tier": {"en": "Free · with an account", "fr": "Gratuit · avec un compte"},
+    "ui.visitor.register": {"en": "Create an account", "fr": "Créer un compte"},
+    "ui.visitor.login": {"en": "Sign in", "fr": "Se connecter"},
+    "ui.visitor.account_trust": {
+        "en": "Free, no card. An email and a password, nothing else; Strava connects "
+              "afterwards, from your Home.",
+        "fr": "Gratuit, sans carte. Un e-mail et un mot de passe, rien d’autre ; Strava "
+              "se connecte ensuite, depuis votre Accueil.",
+    },
+    "ui.visitor.account_fine": {
+        "en": "Free, no card. Strava connects afterwards, from your Home.",
+        "fr": "Gratuit, sans carte. Strava se connecte ensuite, depuis votre Accueil.",
+    },
+    "ui.nav.group_account": {"en": "With an account", "fr": "Avec un compte"},
+
+    # --- Accounts (v2): design/specs/auth.md ----------------------------------
+    "ui.auth.login.title": {"en": "Sign in", "fr": "Se connecter"},
+    "ui.auth.register.title": {"en": "Create an account", "fr": "Créer un compte"},
+    "ui.auth.email": {"en": "Email", "fr": "E-mail"},
+    "ui.auth.password": {"en": "Password", "fr": "Mot de passe"},
+    "ui.auth.password_hint": {"en": "At least 10 characters", "fr": "10 caractères minimum"},
+    "ui.auth.forgot": {"en": "Forgot your password?", "fr": "Mot de passe oublié ?"},
+    "ui.auth.submit.login": {"en": "Sign in", "fr": "Se connecter"},
+    "ui.auth.submit.register": {"en": "Create my account", "fr": "Créer mon compte"},
+    "ui.auth.fine": {
+        "en": "Creating an account means accepting the Terms of Service and the Privacy Policy.",
+        "fr": "Créer un compte vaut acceptation des conditions d’utilisation et de la "
+              "politique de confidentialité.",
+    },
+    "ui.auth.reset.title": {"en": "Reset your password", "fr": "Réinitialiser le mot de passe"},
+    "ui.auth.reset.lede": {
+        "en": "Enter your account’s email: you will receive a link, valid for 30 minutes.",
+        "fr": "Indiquez l’e-mail du compte : vous recevrez un lien valable 30 minutes.",
+    },
+    "ui.auth.reset.submit": {"en": "Send the link", "fr": "Envoyer le lien"},
+    "ui.auth.reset.sent": {
+        "en": "If an account exists for this address, a link is on its way. It is valid "
+              "for 30 minutes.",
+        "fr": "Si un compte existe pour cette adresse, un lien vient de partir. Il est "
+              "valable 30 minutes.",
+    },
+    "ui.auth.reset.write_to": {
+        "en": "Write to {email} from your account’s address, and we will reset your password.",
+        "fr": "Écrivez à {email} depuis l’adresse de votre compte : nous réinitialiserons "
+              "votre mot de passe.",
+    },
+    "ui.auth.reset.new_title": {"en": "Choose a new password", "fr": "Nouveau mot de passe"},
+    "ui.auth.reset.new_lede": {
+        "en": "Every device signed in to this account will be signed out.",
+        "fr": "Tous les appareils connectés à ce compte seront déconnectés.",
+    },
+    "ui.auth.reset.new_submit": {"en": "Save and sign in", "fr": "Enregistrer et se connecter"},
+    "ui.auth.reset.back": {"en": "Back to sign in", "fr": "Retour à la connexion"},
+    "ui.auth.reset.mail.subject": {
+        "en": "TAGG — reset your password",
+        "fr": "TAGG — réinitialiser votre mot de passe",
+    },
+    "ui.auth.reset.mail.body": {
+        "en": "Hello,\n\nTo choose a new TAGG password, open this link (valid for 30 "
+              "minutes):\n{link}\n\nIf you did not ask for this, ignore this message: "
+              "your password does not change.\n\nTAGG",
+        "fr": "Bonjour,\n\nPour choisir un nouveau mot de passe TAGG, ouvrez ce lien "
+              "(valable 30 minutes) :\n{link}\n\nSi vous n’avez rien demandé, ignorez ce "
+              "message : votre mot de passe ne change pas.\n\nTAGG",
+    },
+    "ui.auth.logout_all": {
+        "en": "Sign out of all my devices",
+        "fr": "Déconnecter tous mes appareils",
+    },
+    "ui.auth.error.credentials": {
+        "en": "Incorrect email or password.",
+        "fr": "E-mail ou mot de passe incorrect.",
+    },
+    "ui.auth.error.too_many": {
+        "en": "Too many attempts. Try again in a few minutes.",
+        "fr": "Trop de tentatives. Réessayez dans quelques minutes.",
+    },
+    "ui.auth.error.exists": {
+        "en": "This address already has an account. Sign in, or reset the password.",
+        "fr": "Cette adresse a déjà un compte. Connectez-vous, ou réinitialisez le mot de passe.",
+    },
+    "ui.auth.error.email_invalid": {
+        "en": "This email address does not look valid.",
+        "fr": "Cette adresse e-mail ne semble pas valide.",
+    },
+    "ui.auth.error.password_too_short": {
+        "en": "The password needs at least 10 characters.",
+        "fr": "Le mot de passe doit faire au moins 10 caractères.",
+    },
+    "ui.auth.error.password_too_long": {
+        "en": "The password can have at most 128 characters.",
+        "fr": "Le mot de passe doit faire au plus 128 caractères.",
+    },
+    "ui.auth.error.password_too_common": {
+        "en": "This password is too common. Choose another one.",
+        "fr": "Ce mot de passe est trop courant. Choisissez-en un autre.",
+    },
+    "ui.auth.error.reset_invalid": {
+        "en": "This link is no longer valid. Ask for a new one.",
+        "fr": "Ce lien n’est plus valide. Demandez-en un nouveau.",
+    },
+    "ui.auth.error.strava_taken": {
+        "en": "This Strava is already linked to another TAGG account.",
+        "fr": "Ce Strava est déjà lié à un autre compte TAGG.",
+    },
+    "ui.auth.error.strava_other": {
+        "en": "Your account is already linked to another Strava account.",
+        "fr": "Votre compte est déjà lié à un autre compte Strava.",
+    },
+    "ui.auth.error.verify_invalid": {
+        "en": "This link is no longer valid. Sign in and ask for a new one from your Home.",
+        "fr": "Ce lien n’est plus valide. Connectez-vous et demandez-en un nouveau depuis "
+              "votre Accueil.",
+    },
+    "ui.auth.verify.mail.subject": {
+        "en": "TAGG — confirm your email address",
+        "fr": "TAGG — confirmez votre adresse e-mail",
+    },
+    "ui.auth.verify.mail.body": {
+        "en": "Hello,\n\nTo confirm this address for your TAGG account, open this link "
+              "(valid for 48 hours):\n{link}\n\nIf you did not create a TAGG account, "
+              "ignore this message.\n\nTAGG",
+        "fr": "Bonjour,\n\nPour confirmer cette adresse pour votre compte TAGG, ouvrez ce "
+              "lien (valable 48 heures) :\n{link}\n\nSi vous n’avez pas créé de compte "
+              "TAGG, ignorez ce message.\n\nTAGG",
+    },
+    "ui.auth.verify.pending": {
+        "en": "Confirm your email address: the link is in your inbox.",
+        "fr": "Confirmez votre adresse e-mail : le lien vous attend dans votre boîte.",
+    },
+    "ui.auth.verify.resend": {"en": "Send the link again", "fr": "Renvoyer le lien"},
+    "ui.auth.verify.resent": {
+        "en": "A new link is on its way.",
+        "fr": "Un nouveau lien vient de partir.",
+    },
+    "ui.auth.verify.done.title": {"en": "Address confirmed", "fr": "Adresse confirmée"},
+    "ui.auth.verify.done.body": {
+        "en": "{email} is confirmed for your TAGG account.",
+        "fr": "{email} est confirmée pour votre compte TAGG.",
+    },
+    "ui.auth.verify.failed.title": {
+        "en": "Link not valid",
+        "fr": "Lien non valide",
+    },
+    "ui.auth.verify.continue": {"en": "Go to my Home", "fr": "Aller à mon Accueil"},
+    "ui.auth.error.generic": {
+        "en": "Something went wrong. Try again.",
+        "fr": "Une erreur est survenue. Réessayez.",
+    },
+
+    # --- Navigation and Tools (v2): design/tagg/access.md ----------------------
+    "ui.nav.tools": {"en": "Tools", "fr": "Outils"},
+    "ui.nav.coaching": {"en": "Coaching", "fr": "Coaching"},
+    "ui.nav.group_coached": {"en": "Coached by TAGG", "fr": "Coaché par TAGG"},
+    "ui.tools.race_planning": {"en": "Race Planning", "fr": "Planification de course"},
+    "ui.tools.level": {"en": "Level Assessment", "fr": "Évaluation du niveau"},
+    "ui.tools.gap_profile": {"en": "Slope Profile", "fr": "Profil de pente"},
+    "ui.tools.durability": {"en": "Durability", "fr": "Durabilité"},
+    "ui.tools.keep_plans": {
+        "en": "Create an account to keep your plans.",
+        "fr": "Créez un compte pour garder vos plans.",
+    },
+    "ui.tools.keep_zones": {
+        "en": "Create an account to keep your zones.",
+        "fr": "Créez un compte pour garder vos zones.",
+    },
+    "ui.tools.saved_zones": {
+        "en": "Saved: your Home zones now use this VMA.",
+        "fr": "Enregistré : les zones de votre Accueil utilisent maintenant cette VMA.",
+    },
+    "ui.visitor.level": {
+        "en": "Your VMA and training zones from a field test or your records.",
+        "fr": "Votre VMA et vos zones d’entraînement, à partir d’un test ou de vos records.",
+    },
+    "ui.visitor.tools": {
+        "en": "Slope profile and durability, read from your own runs.",
+        "fr": "Profil de pente et durabilité, lus dans vos propres sorties.",
+    },
+    "ui.visitor.coaching": {
+        "en": "A weekly plan built on your data, with a coach.",
+        "fr": "Un plan hebdomadaire construit sur vos données, avec un coach.",
+    },
+
+    # Level tool page
+    "ui.level.hero.kicker": {"en": "Level Assessment", "fr": "Évaluation du niveau"},
+    "ui.level.hero.title": {"en": "Where do you stand?", "fr": "Où en êtes-vous ?"},
+    "ui.level.hero.lede": {
+        "en": "Three ways in, one result: your VMA, and the zones that follow from it.",
+        "fr": "Trois façons d’entrer, un seul résultat : votre VMA, et les zones qui en découlent.",
+    },
+    "ui.level.method.half_cooper": {"en": "Half-Cooper", "fr": "Demi-Cooper"},
+    "ui.level.method.critical_speed": {"en": "Critical speed", "fr": "Vitesse critique"},
+    "ui.level.method.records": {"en": "Records", "fr": "Records"},
+    "ui.level.help.half_cooper": {
+        "en": "Run six minutes as fast as you can hold, on a track or a flat loop. "
+              "Enter the distance covered.",
+        "fr": "Courez six minutes aussi vite que vous pouvez tenir, sur piste ou boucle "
+              "plate. Indiquez la distance parcourue.",
+    },
+    "ui.level.help.critical_speed": {
+        "en": "Two all-out efforts on separate days, or 30 minutes apart: 3 minutes, then "
+              "12 minutes. Enter both distances.",
+        "fr": "Deux efforts à fond, des jours différents ou à 30 minutes d’écart : 3 minutes, "
+              "puis 12 minutes. Indiquez les deux distances.",
+    },
+    "ui.level.help.records": {
+        "en": "One or more recent bests, between 3 minutes and 6 hours.",
+        "fr": "Un ou plusieurs records récents, entre 3 minutes et 6 heures.",
+    },
+    "ui.level.field.distance_6": {"en": "Distance in 6 min (m)", "fr": "Distance en 6 min (m)"},
+    "ui.level.field.d3": {"en": "Distance in 3 min (m)", "fr": "Distance en 3 min (m)"},
+    "ui.level.field.d12": {"en": "Distance in 12 min (m)", "fr": "Distance en 12 min (m)"},
+    "ui.level.field.record_distance": {"en": "Distance (m)", "fr": "Distance (m)"},
+    "ui.level.field.record_time": {"en": "Time (h:mm:ss)", "fr": "Temps (h:mm:ss)"},
+    "ui.level.field.hr_max": {"en": "Max heart rate (optional)", "fr": "FCmax (facultatif)"},
+    "ui.level.add_record": {"en": "Add a record", "fr": "Ajouter un record"},
+    "ui.level.remove_record": {"en": "Remove", "fr": "Retirer"},
+    "ui.level.submit": {"en": "Estimate", "fr": "Estimer"},
+    "ui.level.result.title": {"en": "Your estimate", "fr": "Votre estimation"},
+    "ui.level.result.vma": {"en": "VMA", "fr": "VMA"},
+    "ui.level.result.vma_pace": {"en": "VMA pace", "fr": "Allure VMA"},
+    "ui.level.result.vdot": {"en": "VDOT", "fr": "VDOT"},
+    "ui.level.result.critical_pace": {"en": "Critical pace", "fr": "Seuil critique"},
+    "ui.level.result.d_prime": {"en": "Anaerobic reserve (D′)", "fr": "Réserve anaérobie (D′)"},
+    "ui.level.result.sentence": {
+        "en": "Your VMA is {vma}: your endurance runs sit around {endurance} per km.",
+        "fr": "Votre VMA est de {vma} : vos sorties d’endurance se situent autour de "
+              "{endurance} au km.",
+    },
+    "ui.level.result.zones": {"en": "Pace zones", "fr": "Zones d’allure"},
+    "ui.level.result.hr_zones": {"en": "Heart-rate zones", "fr": "Zones cardiaques"},
+    "ui.level.confidence.high": {"en": "Confidence: high", "fr": "Confiance : élevée"},
+    "ui.level.confidence.medium": {"en": "Confidence: medium", "fr": "Confiance : moyenne"},
+    "ui.level.confidence.low": {"en": "Confidence: low", "fr": "Confiance : faible"},
+    "ui.home.zones.estimated": {
+        "en": "Estimated {date} · method: {method}",
+        "fr": "Estimée le {date} · méthode : {method}",
+    },
+    "ui.home.zones.estimate_link": {
+        "en": "Estimate your zones without Strava →",
+        "fr": "Estimez vos zones sans Strava →",
+    },
+    "ui.home.zones.reestimate": {"en": "New estimate →", "fr": "Nouvelle estimation →"},
+
+    # Slope profile tool page
+    "ui.gap_tool.kicker": {"en": "Slope Profile", "fr": "Profil de pente"},
+    "ui.gap_tool.title": {"en": "What climbing costs you", "fr": "Votre coût du dénivelé"},
+    "ui.gap_tool.uphill": {"en": "Cost at +{slope} %", "fr": "Coût à +{slope} %"},
+    "ui.gap_tool.downhill": {"en": "Cost at −{slope} %", "fr": "Coût à −{slope} %"},
+    "ui.gap_tool.flat": {"en": "Flat-equivalent pace", "fr": "Allure plat équivalente"},
+    "ui.gap_tool.flat_note": {"en": "last 12 weeks", "fr": "12 dernières semaines"},
+    "ui.gap_tool.vs_ref": {"en": "{value} vs reference", "fr": "{value} vs référence"},
+    "ui.gap_tool.less_up": {
+        "en": "Uphill, you lose {value} less than the reference runner.",
+        "fr": "En montée, vous perdez {value} de moins que le coureur de référence.",
+    },
+    "ui.gap_tool.more_up": {
+        "en": "Uphill, you lose {value} more than the reference runner.",
+        "fr": "En montée, vous perdez {value} de plus que le coureur de référence.",
+    },
+    "ui.gap_tool.chart": {"en": "Your GAP curve", "fr": "Votre courbe GAP"},
+    "ui.gap_tool.more": {
+        "en": "To tune the model or compare periods, the GAP curves panel is in Analysis.",
+        "fr": "Pour régler le modèle ou comparer des périodes, le panneau Courbes GAP est "
+              "dans Analyses.",
+    },
+
+    # Durability tool page
+    "ui.durability_tool.kicker": {"en": "Durability", "fr": "Durabilité"},
+    "ui.durability_tool.title": {
+        "en": "Your drift on long efforts",
+        "fr": "Votre dérive sur l’effort long",
+    },
+    "ui.durability_tool.at": {"en": "Extra cost after {hours} h", "fr": "Surcoût après {hours} h"},
+    "ui.durability_tool.confidence": {"en": "Confidence", "fr": "Confiance"},
+    "ui.durability_tool.confidence.personalized": {"en": "personal", "fr": "personnelle"},
+    "ui.durability_tool.confidence.partially_personalized": {"en": "partial", "fr": "partielle"},
+    "ui.durability_tool.confidence.population_only": {"en": "population", "fr": "population"},
+    "ui.durability_tool.runs": {"en": "{count} long runs", "fr": "{count} sorties longues"},
+    "ui.durability_tool.sentence": {
+        "en": "After 4 hours, running costs you {value} more than at the start.",
+        "fr": "Après 4 heures, courir vous coûte {value} de plus qu’au départ.",
+    },
+    "ui.durability_tool.vs_population": {
+        "en": "Typical runner: {value}.", "fr": "Coureur type : {value}.",
+    },
+
+    # Analyses: templates
+    "ui.pages.new.blank": {"en": "Blank analysis", "fr": "Analyse vide"},
+    "ui.pages.new.blank_hint": {
+        "en": "One empty panel over your whole history.",
+        "fr": "Un panneau vide sur tout votre historique.",
+    },
+    "ui.pages.new.from_template": {"en": "From a template", "fr": "À partir d’un modèle"},
+    "ui.pages.new.title": {"en": "New analysis", "fr": "Nouvelle analyse"},
+
+    # --- Coaching (v2): design/specs/coaching.md --------------------------------
+    "ui.coaching.offer.kicker": {"en": "Coached by TAGG", "fr": "Coaché par TAGG"},
+    "ui.coaching.offer.title": {
+        "en": "A plan built on your data, not on a template",
+        "fr": "Un plan construit sur vos données, pas sur un modèle",
+    },
+    "ui.coaching.offer.1": {
+        "en": "A weekly plan fitted to your Strava history",
+        "fr": "Un plan hebdomadaire adapté à votre historique Strava",
+    },
+    "ui.coaching.offer.2": {
+        "en": "Exchanges with your coach, right in the diary",
+        "fr": "Des échanges avec le coach, directement dans le carnet",
+    },
+    "ui.coaching.offer.3": {
+        "en": "Adjustments every week, from what you actually ran",
+        "fr": "Des ajustements chaque semaine, à partir de ce que vous avez couru",
+    },
+    "ui.coaching.offer.proof": {"en": "athletes coached", "fr": "athlètes coachés"},
+    "ui.coaching.offer.preview": {"en": "Your diary", "fr": "Votre carnet"},
+    "ui.coaching.offer.planned": {"en": "Planned", "fr": "Prévu"},
+    "ui.coaching.offer.done": {"en": "Done", "fr": "Réalisé"},
+    "ui.coaching.form.title": {"en": "Ask for coaching", "fr": "Demander un coaching"},
+    "ui.coaching.form.message": {
+        "en": "Your goal, your current training, what you expect",
+        "fr": "Votre objectif, votre entraînement actuel, ce que vous attendez",
+    },
+    "ui.coaching.form.contact": {"en": "How should the coach reach you?", "fr": "Comment le coach vous joint-il ?"},
+    "ui.coaching.form.by_email": {"en": "By email", "fr": "Par e-mail"},
+    "ui.coaching.form.by_phone": {"en": "By phone", "fr": "Par téléphone"},
+    "ui.coaching.form.phone": {"en": "Phone", "fr": "Téléphone"},
+    "ui.coaching.form.send": {"en": "Send my request", "fr": "Envoyer ma demande"},
+    "ui.coaching.form.save": {"en": "Save changes", "fr": "Enregistrer"},
+    "ui.coaching.state.sent": {
+        "en": "Request sent on {date} — the coach will reply by email or phone.",
+        "fr": "Demande envoyée le {date} — le coach vous répond par e-mail ou téléphone.",
+    },
+    "ui.coaching.state.edit": {"en": "Edit", "fr": "Modifier"},
+    "ui.coaching.state.withdraw": {"en": "Withdraw", "fr": "Retirer"},
+    "ui.coaching.state.declined": {
+        "en": "The coach cannot take you on for the moment.",
+        "fr": "Le coach ne peut pas vous prendre pour le moment.",
+    },
+    "ui.coaching.state.again_on": {
+        "en": "You can ask again from {date}.",
+        "fr": "Vous pourrez redemander à partir du {date}.",
+    },
+    "ui.coaching.needs_strava": {
+        "en": "Your diary fills in from your activities: connect Strava.",
+        "fr": "Votre carnet se remplit à partir de vos activités : connectez Strava.",
+    },
+    "ui.coaching.error.coached": {
+        "en": "You are already coached.", "fr": "Vous êtes déjà coaché.",
+    },
+    "ui.coaching.error.phone_needed": {
+        "en": "Enter a phone number, or choose email.",
+        "fr": "Indiquez un numéro, ou choisissez l’e-mail.",
+    },
+    "ui.coaching.error.phone_invalid": {
+        "en": "This does not look like a phone number.",
+        "fr": "Cela ne ressemble pas à un numéro de téléphone.",
+    },
+    "ui.coaching.error.too_soon": {
+        "en": "A new request is possible 30 days after a decline.",
+        "fr": "Une nouvelle demande est possible 30 jours après un refus.",
+    },
+    "ui.coaching.mail.subject": {
+        "en": "TAGG — coaching request from {email}",
+        "fr": "TAGG — demande de coaching de {email}",
+    },
+    "ui.coaching.mail.body": {
+        "en": "New coaching request.\n\nFrom: {email}\nContact: {contact}\n\n{message}\n\n"
+              "Answer it from the Coaching page.",
+        "fr": "Nouvelle demande de coaching.\n\nDe : {email}\nContact : {contact}\n\n{message}\n\n"
+              "Répondez-y depuis la page Coaching.",
+    },
+    "ui.coaching.board.title": {"en": "Athletes", "fr": "Athlètes"},
+    "ui.coaching.board.pending": {"en": "Pending", "fr": "En attente"},
+    "ui.coaching.board.coached": {"en": "Coached", "fr": "Coachés"},
+    "ui.coaching.board.accept": {"en": "Accept", "fr": "Accepter"},
+    "ui.coaching.board.decline": {"en": "Decline", "fr": "Décliner"},
+    "ui.coaching.board.view_as": {"en": "View as", "fr": "Voir comme"},
+    "ui.coaching.board.last_activity": {"en": "Last activity", "fr": "Dernière activité"},
+    "ui.coaching.board.none_pending": {"en": "No pending request.", "fr": "Aucune demande en attente."},
+    "ui.coaching.board.none_coached": {"en": "No athlete yet.", "fr": "Aucun athlète pour l’instant."},
+    "ui.coaching.board.no_strava": {"en": "Strava not connected", "fr": "Strava non connecté"},
+    "ui.coaching.my_athletes": {"en": "My athletes", "fr": "Mes athlètes"},
+
+    # --- Level assessment (v2): design/specs/level.md ------------------------
+    "ui.level.error.half_cooper_range": {
+        "en": "Six minutes all out lands between {low} and {high} m — check the distance.",
+        "fr": "Six minutes à fond, c’est entre {low} et {high} m — vérifiez la distance.",
+    },
+    "ui.level.error.cs_inconsistent": {
+        "en": "The two distances are not consistent with each other.",
+        "fr": "Les deux distances ne sont pas cohérentes.",
+    },
+    "ui.level.error.records_empty": {
+        "en": "Add at least one record.", "fr": "Ajoutez au moins un record.",
+    },
+    "ui.level.error.record_invalid": {
+        "en": "Each record needs a distance and a time.",
+        "fr": "Chaque record a besoin d’une distance et d’un temps.",
+    },
+    "ui.level.error.record_pace": {
+        "en": "A record’s pace must be between 2:00 and 12:00 /km.",
+        "fr": "L’allure d’un record doit être entre 2:00 et 12:00 /km.",
+    },
+    "ui.level.error.record_duration": {
+        "en": "A record must last between 3 minutes and 6 hours: outside that, the model "
+              "says nothing reliable.",
+        "fr": "Un record doit durer entre 3 minutes et 6 heures : en dehors, le modèle ne "
+              "dit rien de fiable.",
+    },
+    "ui.level.error.hr_max": {
+        "en": "Max heart rate must be between 120 and 230 bpm.",
+        "fr": "La FCmax doit être entre 120 et 230 bpm.",
+    },
+    "ui.level.error.invalid": {
+        "en": "Some values are missing or not numbers.",
+        "fr": "Des valeurs manquent ou ne sont pas des nombres.",
+    },
+    "ui.level.error.method": {"en": "Unknown test.", "fr": "Test inconnu."},
+    "ui.level.note.field_vma": {
+        "en": "Field test rule (distance ÷ 100): {vma} km/h.",
+        "fr": "Test de terrain (distance ÷ 100) : {vma} km/h.",
+    },
+    "ui.level.note.cs_ratio": {
+        "en": "Your critical speed is {ratio} % of your VMA (around 90 % is typical).",
+        "fr": "Votre vitesse critique vaut {ratio} % de votre VMA (autour de 90 % en général).",
+    },
+    "ui.level.note.records_consistent": {
+        "en": "Your records are consistent (±{spread} VDOT).",
+        "fr": "Vos records sont cohérents (±{spread} VDOT).",
+    },
+    "ui.level.note.records_short_better": {
+        "en": "Your {short_m} m is clearly better than your {long_m} m: the VMA comes from "
+              "the middle of your records, and your endurance zones may be optimistic.",
+        "fr": "Votre {short_m} m est nettement meilleur que votre {long_m} m : la VMA retenue "
+              "vient du milieu de vos records, et vos zones d’endurance sont peut-être "
+              "optimistes.",
+    },
+    "ui.level.note.records_long_better": {
+        "en": "Your {long_m} m is clearly better than your {short_m} m: your speed has room "
+              "to grow, and your fast zones may be conservative.",
+        "fr": "Votre {long_m} m est nettement meilleur que votre {short_m} m : votre vitesse "
+              "a de la marge, et vos zones rapides sont peut-être prudentes.",
+    },
+
+    # --- Home without Strava (v2): design/tagg/access.md § Accueil dégradé ------
+    "ui.home.account.kicker": {"en": "TAGG account", "fr": "Compte TAGG"},
+    "ui.home.account.since": {"en": "Account created {date}", "fr": "Compte créé le {date}"},
+    "ui.home.empty.strava": {
+        "en": "Fills in once Strava is connected",
+        "fr": "Se remplit dès que Strava est connecté",
+    },
+    "ui.home.strava.connect": {"en": "Connect Strava", "fr": "Connecter Strava"},
+    "ui.home.strava.reconnect": {"en": "Reconnect Strava", "fr": "Reconnecter Strava"},
+    "ui.home.strava.disconnect": {"en": "Disconnect Strava", "fr": "Déconnecter Strava"},
+    "ui.home.strava.disconnected": {
+        "en": "Strava is disconnected: your history stays here, but nothing new is "
+              "imported until you reconnect.",
+        "fr": "Strava est déconnecté : votre historique reste là, mais rien de nouveau "
+              "n’est importé tant que vous ne le reconnectez pas.",
+    },
 
     "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},
     # The BCP 47 locale dates and numbers are formatted in (design/tagg/density.md).
@@ -1216,30 +1695,6 @@ TRANSLATIONS = {
     "ui.pages.plot_count.one": {"en": "{count} plot", "fr": "{count} graphique"},
     "ui.pages.plot_count.many": {"en": "{count} plots", "fr": "{count} graphiques"},
 
-    # Email — asked for once, right after the first sign-in.
-    "ui.email.title": {
-        "en": "One last thing: your email", "fr": "Une dernière chose : votre email",
-    },
-    "ui.email.body": {
-        "en": "Strava does not share email addresses, so we have to ask. It is how "
-              "we reach you about your account and about what changes in the app.",
-        "fr": "Strava ne communique pas les adresses email, nous devons donc vous la "
-              "demander. C'est ainsi que nous vous joignons au sujet de votre compte "
-              "et des évolutions de l'application.",
-    },
-    "ui.email.label": {"en": "Email address", "fr": "Adresse email"},
-    "ui.email.placeholder": {"en": "you@example.com", "fr": "vous@exemple.com"},
-    "ui.email.submit": {"en": "Continue", "fr": "Continuer"},
-    "ui.email.invalid": {
-        "en": "That does not look like an email address.",
-        "fr": "Cela ne ressemble pas à une adresse email.",
-    },
-    "ui.email.missing": {
-        "en": "We still need your email address.",
-        "fr": "Il nous manque encore votre adresse email.",
-    },
-    "ui.email.provide": {"en": "Add it now", "fr": "L'ajouter maintenant"},
-    "ui.home.health.email": {"en": "Email", "fr": "Email"},
 
     # Import — the automatic pass that runs when you connect.
     "ui.home.import.auto": {
@@ -1431,7 +1886,6 @@ TRANSLATIONS = {
         "en": "Enter a target finish time.", "fr": "Indiquez un temps d'arrivée visé.",
     },
 
-    "ui.nav.race_plan": {"en": "Race plan", "fr": "Plan de course"},
     # --- Durability (cost drift over a long effort) ---------------------------
     # "Durability", never "fatigue": fatigue is the Banister acute-load series.
     "race_plan.series.gap_pace_durability": {

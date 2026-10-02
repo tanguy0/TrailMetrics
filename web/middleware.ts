@@ -16,6 +16,14 @@ import { NextRequest, NextResponse } from "next/server";
  * so nothing else has to change.
  */
 export function middleware(request: NextRequest) {
+  // A returning visitor with a session skips the landing (design/tagg/access.md
+  // § Arrivée sur le site). Only the cookie's presence is checked here — the
+  // Edge has no database — so a dead session lands on /home and gets its
+  // visitor variant there, never a loop back to `/`.
+  if (request.nextUrl.pathname === "/" && request.cookies.get("tm_session")?.value) {
+    return NextResponse.redirect(new URL("/home", request.url), 307);
+  }
+
   // `btoa`, not `Buffer.from(...).toString("base64")`: middleware runs on the
   // Edge Runtime, which has no Node.js globals — `Buffer` is undefined there.
   // This crashed in real Vercel deployment despite working in `next dev`, which

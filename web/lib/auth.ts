@@ -1,8 +1,16 @@
 /**
- * Where "Connect with Strava" goes: the OAuth start route, which sends the athlete
- * back to `next` once connected — a visitor lands back on the page they were on.
+ * Where the account and Strava links go. Each carries `next` so the reader lands
+ * back on the page they were on.
+ *
+ * "Connect Strava" works from anywhere: its start route sends a visitor through
+ * account creation first, then straight on to Strava (design/specs/auth.md —
+ * Strava attaches to an account, it no longer signs anyone in).
  */
-export function signInHref(next?: string): string {
-  const start = "/api/auth/strava/start";
-  return next ? `${start}?next=${encodeURIComponent(next)}` : start;
+
+function withNext(path: string, next?: string): string {
+  return next ? `${path}?next=${encodeURIComponent(next)}` : path;
 }
+
+export const connectStravaHref = (next?: string) => withNext("/api/auth/strava/start", next);
+export const registerHref = (next?: string) => withNext("/register", next);
+export const loginHref = (next?: string) => withNext("/login", next);

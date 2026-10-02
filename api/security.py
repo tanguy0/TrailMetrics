@@ -1,54 +1,33 @@
-"""Session tokens.
+"""Session and reset tokens.
 
-The API issues its own short signed token identifying an athlete; the web app
-stores it in a first-party ``httpOnly`` cookie and presents it as a bearer token
-on each proxied call. Strava's tokens never reach the browser.
+A session is an **opaque** random token, not a signed one: the web app stores it
+in a first-party ``httpOnly`` cookie and presents it as a bearer token on each
+proxied call, and the API looks its hash up in ``sessions``. Unlike the JWT it
+replaces, a session can be revoked — sign out, sign out everywhere, a password
+reset — because it only means something while its row exists.
 
-Keeping sessions separate from Strava credentials matters: a Strava access token
-lives six hours and is a capability against a third party, while a session is ours
-to expire and revoke.
+Only the sha256 of a token is ever stored. 32 random bytes need no salt or slow
+hash: there is nothing to brute-force, and the database dump that would leak the
+hashes cannot be turned back into a cookie.
+
+Strava's tokens never reach the browser, and are not sessions: a Strava access
+token is a capability against a third party; a session is ours to expire.
 """
 
+import hashlib
 import secrets
-from datetime import datetime, timedelta, timezone
-from typing import Optional
 
-import jwt
 from cryptography.fernet import Fernet
 
-ALGORITHM = "HS256"
-AUDIENCE = "trailmetrics-web"
+TOKEN_BYTES = 32
 
 
-def create_session_token(
-    athlete_id: int, secret: str, ttl_days: int = 30
-) -> str:
-    now = datetime.now(timezone.utc)
-    payload = {
-        "sub": str(int(athlete_id)),
-        "aud": AUDIENCE,
-        "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(days=ttl_days)).timestamp()),
-    }
-    return jwt.encode(payload, secret, algorithm=ALGORITHM)
+def new_token() -> str:
+    return secrets.token_urlsafe(TOKEN_BYTES)
 
 
-def read_session_token(token: str, secret: str) -> Optional[int]:
-    """The athlete id in a valid token, or ``None`` for anything invalid.
-
-    Every failure mode — bad signature, expired, wrong audience, malformed — is
-    deliberately collapsed to ``None`` so callers can't accidentally distinguish
-    them and leak that difference to a client.
-    """
-    if not token or not secret:
-        return None
-    try:
-        payload = jwt.decode(
-            token, secret, algorithms=[ALGORITHM], audience=AUDIENCE
-        )
-        return int(payload["sub"])
-    except (jwt.InvalidTokenError, KeyError, TypeError, ValueError):
-        return None
+def hash_token(token: str) -> bytes:
+    return hashlib.sha256(token.encode("utf-8")).digest()
 
 
 def constant_time_equals(left: str, right: str) -> bool:
@@ -61,7 +40,6 @@ def constant_time_equals(left: str, right: str) -> bool:
 def generate_keys() -> dict:
     """Fresh secrets, for filling in a new deployment's environment."""
     return {
-        "SESSION_SECRET": secrets.token_urlsafe(48),
         "SERVICE_TOKEN": secrets.token_urlsafe(48),
         "ENCRYPTION_KEY": Fernet.generate_key().decode(),
     }

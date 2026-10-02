@@ -17,21 +17,30 @@
  * Strava import and the model precompute — because it is the first thing an athlete
  * opens. Both are started here rather than at sign-in so they also run for a
  * returning session, which never passes through the OAuth callback again.
+ *
+ * An account with no Strava attached gets the same page, emptied — the degraded
+ * Home of design/tagg/access.md: dashes for numbers, empty chart grids, one line
+ * per card saying Strava fills it, and "Connect Strava" as the hero's primary
+ * action. Not a Teaser: the real structure, with one invitation at the top.
  */
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 
 import { Callout } from "@/components/Callout";
 import { ChartView } from "@/components/ChartView";
-import { EmailForm } from "@/components/EmailForm";
 import { Icon, type IconName } from "@/components/Icon";
 import { ProgressBar } from "@/components/ProgressBar";
 import { SessionDetail } from "@/components/SessionDetail";
 import { Sparkline } from "@/components/Sparkline";
 import {
   ApiError,
+  disconnectStrava,
   getAthlete,
+  getZoneDefinitions,
+  resendVerification,
   getHomeSummary,
   getSyncStatus,
   renderPanel,
@@ -43,6 +52,7 @@ import {
   formatDate, formatDateRange, formatHms, formatNumber, formatPaceInput, formatPaceRange,
   kpiNumClass, parsePaceInput,
 } from "@/lib/format";
+import { connectStravaHref } from "@/lib/auth";
 import { RUNNING_SPORT_TYPES } from "@/lib/sport";
 import { TREND_TONE, chipClass } from "@/lib/tone";
 import { translator, type Strings, type Translate } from "@/lib/strings";
@@ -54,6 +64,7 @@ import type {
   HomeSummary,
   PanelSpec,
   Trace,
+  ZoneDefinitions,
 } from "@/lib/types";
 
 const POLL_MS = 2000;
@@ -72,7 +83,37 @@ const AUTO_SYNC_STALE_MS = 15 * 60 * 1000;
 
 type T = Translate;
 
-export function HomeScreen({ strings }: { strings: Strings }) {
+/** True on the degraded Home: no Strava attached, so every card is its empty
+ *  structure. Read by the pieces every card shares (charts, editable tiles, the
+ *  "fills in" line) rather than threaded through each card's props. */
+const NoStrava = createContext(false);
+
+/** What Home shows before Strava: the summary of an athlete with no activity. */
+const EMPTY_SUMMARY: HomeSummary = {
+  profile: {
+    activity_count: 0,
+    oldest_activity: null,
+    newest_activity: null,
+    total_distance_m: 0,
+    total_elevation_gain_m: 0,
+    total_moving_s: 0,
+    furthest_activity: null,
+    longest_activity: null,
+  },
+  health: {
+    age: null, birthdate: null, weight_kg: null, height_cm: null,
+    experience_years: null, first_activity: null,
+  },
+  records: [],
+  last_activity: null,
+};
+
+async function signOutEverywhere() {
+  await fetch("/api/auth/logout-all", { method: "POST" }).catch(() => undefined);
+  window.location.assign("/");
+}
+
+export function HomeScreen({ strings, notice = null }: { strings: Strings; notice?: string | null }) {
   const t = translator(strings);
   const router = useRouter();
 
@@ -91,13 +132,21 @@ export function HomeScreen({ strings }: { strings: Strings }) {
 
   const load = useCallback(async () => {
     try {
-      const [me, home] = await Promise.all([getAthlete(), getHomeSummary()]);
+      // In parallel; the summary 409s for an account without Strava, which is
+      // only an error once `me` says Strava is attached.
+      const [me, home] = await Promise.all([
+        getAthlete(),
+        getHomeSummary().catch((caught: unknown) => caught as Error),
+      ]);
+      if (me.strava_connected && home instanceof Error) throw home;
       setAthlete(me);
-      setSummary(home);
+      setSummary(me.strava_connected ? (home as HomeSummary) : EMPTY_SUMMARY);
       setError(null);
     } catch (caught) {
       if (caught instanceof ApiError && caught.isUnauthorized) {
-        router.push("/");
+        // A session the API no longer honours: drop the cookie, then sign in.
+        await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
+        router.push("/login");
         return;
       }
       setError((caught as Error).message);
@@ -181,6 +230,8 @@ export function HomeScreen({ strings }: { strings: Strings }) {
   useEffect(() => {
     if (!athlete || autoStarted.current) return;
     autoStarted.current = true;
+    // Nothing to import from, or tokens gone: the page says so, it doesn't retry.
+    if (!athlete.strava_connected || athlete.strava_authorized === false) return;
 
     const lastSynced = athlete.sync.last_synced_at
       ? Date.parse(athlete.sync.last_synced_at)
@@ -224,8 +275,16 @@ export function HomeScreen({ strings }: { strings: Strings }) {
     );
   }
 
+  const offline = !athlete.strava_connected;
+
   return (
+    <NoStrava.Provider value={offline}>
     <main className="container">
+      {notice && <Callout tone="terra">{notice}</Callout>}
+      {!athlete.viewing_as && !athlete.account.email_verified && athlete.account.can_verify && (
+        <VerifyPrompt t={t} />
+      )}
+
       <HomeHero
         athlete={athlete}
         summary={summary}
@@ -233,37 +292,8 @@ export function HomeScreen({ strings }: { strings: Strings }) {
         formCharts={formCharts}
         busy={busy}
         onImport={() => importActivities(false)}
-        email={
-          <EditableTile
-            label={t("home.health.email")}
-            value={athlete.email}
-            input={{ type: "email", value: athlete.email ?? "" }}
-            onCommit={async (raw) =>
-              setAthlete(await updateProfile({ email: raw.trim() === "" ? null : raw.trim() }))
-            }
-            t={t}
-          />
-        }
         t={t}
       />
-
-      {/* Someone who reached this screen without answering the email question —
-          an account created before it existed, or a skipped `/welcome`. */}
-      {athlete.needs_email && (
-        <section className="card-block card-block--welcome">
-          <SectionTitle icon="mail" kicker={t("home.kicker.you")} role="terra">{t("email.missing")}</SectionTitle>
-          <p className="muted">{t("email.body")}</p>
-          <EmailForm
-            strings={strings}
-            submitLabel={t("email.provide")}
-            onSaved={(email) =>
-              setAthlete((current) =>
-                current ? { ...current, email, needs_email: false } : current,
-              )
-            }
-          />
-        </section>
-      )}
 
       <div className="home-grid">
         <ProfileCard summary={summary} volumeCharts={volumeCharts} t={t} />
@@ -283,13 +313,16 @@ export function HomeScreen({ strings }: { strings: Strings }) {
       <section className="card-block card-block--sync">
         <SectionTitle icon="refresh" kicker={summary.last_activity ? formatDate(summary.last_activity.date, "relative", t("locale")) : null}>{t("home.last.title")}</SectionTitle>
 
-        <SyncControls
-          athlete={athlete}
-          busy={busy}
-          onImport={importActivities}
-          viewingAs={athlete.viewing_as}
-          t={t}
-        />
+        {!offline && (
+          <SyncControls
+            athlete={athlete}
+            busy={busy}
+            onImport={importActivities}
+            onDisconnected={load}
+            viewingAs={athlete.viewing_as}
+            t={t}
+          />
+        )}
 
         <div className="data-stack">
           <LastActivityBlock
@@ -313,6 +346,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
       <RecentFormCard charts={formCharts} hasData={activityCount > 0} t={t} />
       <RecentFeelCard charts={feelCharts} hasData={activityCount > 0} t={t} />
     </main>
+    </NoStrava.Provider>
   );
 }
 
@@ -526,6 +560,9 @@ function ProfileCard({
 }) {
   const { profile } = summary;
   const weekly = volumeTraces(volumeCharts).distance?.y.slice(-SPARK_WEEKS);
+  // Without Strava a total is unknown, not zero.
+  const offline = useContext(NoStrava);
+  const total = (value: string) => (offline ? "—" : value);
   return (
     <section className="card-block card-block--profile">
       <SectionTitle icon="run" kicker={t("home.kicker.all_time")}>{t("home.profile.title")}</SectionTitle>
@@ -533,23 +570,23 @@ function ProfileCard({
       <div className="kpi-grid kpi-grid--four">
         <Tile
           label={t("home.profile.activities")}
-          value={String(profile.activity_count)}
+          value={total(String(profile.activity_count))}
         />
         <Tile
           label={t("home.profile.total_distance")}
-          value={formatNumber(profile.total_distance_m / 1000, 0)}
+          value={total(formatNumber(profile.total_distance_m / 1000, 0))}
           unit={t("common.km")}
           tone="forest"
           spark={weekly}
         />
         <Tile
           label={t("home.profile.total_elevation")}
-          value={formatNumber(profile.total_elevation_gain_m, 0)}
+          value={total(formatNumber(profile.total_elevation_gain_m, 0))}
           unit={t("common.metres")}
         />
         <Tile
           label={t("home.profile.total_time")}
-          value={formatNumber(profile.total_moving_s / 3600, 0)}
+          value={total(formatNumber(profile.total_moving_s / 3600, 0))}
           unit={t("common.hours")}
         />
         <Tile
@@ -576,7 +613,7 @@ function ProfileCard({
           footnote={formatDate(profile.longest_activity?.date ?? null, "short", t("locale"))}
         />
       </div>
-
+      <PendingNote t={t} />
     </section>
   );
 }
@@ -589,6 +626,7 @@ function ProfileCard({
  * stacked list in a half-width column does not.
  */
 function RecordsCard({ records, t }: { records: HomeRecord[]; t: T }) {
+  const offline = useContext(NoStrava);
   const newest = newestRecord(records);
   return (
     <section className="card-block card-block--records">
@@ -610,6 +648,8 @@ function RecordsCard({ records, t }: { records: HomeRecord[]; t: T }) {
             </div>
           ))}
         </div>
+      ) : offline ? (
+        <PendingNote t={t} />
       ) : (
         <p className="muted">{t("home.profile.records_empty")}</p>
       )}
@@ -701,25 +741,17 @@ function HealthCard({
           t={t}
         />
       </div>
+      <PendingNote t={t} />
     </section>
   );
 }
 
 /**
- * Training zones and VMA pace — self-reported, shown back to the athlete, and
- * read by nothing else in the app. A reference to have written down in one
- * place, not an input to any computation.
+ * Training zones and VMA pace — self-reported or estimated (Tools → Level
+ * Assessment), shown back to the athlete. The zone tables themselves come from
+ * the API (`/tools/zones`, src/domain/level/zones.py): one definition shared
+ * with the level tool, so the two can never disagree.
  */
-/** Reference paces at a %VMA range, in the order (and table) most training
- * plans quote them. The pace shown for the low end of the range comes first —
- * lower %VMA is the slower pace. */
-const VMA_PACE_ZONES: { key: string; lowPct: number; highPct: number }[] = [
-  { key: "z2", lowPct: 60, highPct: 65 },
-  { key: "endurance", lowPct: 70, highPct: 75 },
-  { key: "threshold", lowPct: 85, highPct: 90 },
-  { key: "intervals", lowPct: 95, highPct: 100 },
-  { key: "reps", lowPct: 105, highPct: 115 },
-];
 
 /** The zone's pace interval, fastest first (density.md): `6:17–6:48`. */
 function vmaPaceRange(vmaSecondsPerKm: number, lowPct: number, highPct: number): string {
@@ -727,28 +759,6 @@ function vmaPaceRange(vmaSecondsPerKm: number, lowPct: number, highPct: number):
   const fast = vmaSecondsPerKm / (highPct / 100);
   return formatPaceRange(fast, slow);
 }
-
-/**
- * Each heart-rate zone's ceiling as a %HRmax — replaces what used to be four
- * separately self-reported bpm values with one derived from HRmax alone, so
- * there is only ever one number to keep up to date.
- */
-const HR_ZONE_MAX_PCT: { key: "z1" | "z2" | "z3" | "z4"; pct: number }[] = [
-  { key: "z1", pct: 0.70 },
-  { key: "z2", pct: 0.77 },
-  { key: "z3", pct: 0.87 },
-  { key: "z4", pct: 0.91 },
-];
-
-/** Where each named pace zone's effort sits on the same %HRmax scale — the
- * boundaries `HrZoneMap` draws, kept beside the tiles that read from it. */
-const HR_PACE_ZONES: { key: string; lowPct: number; highPct: number }[] = [
-  { key: "z2", lowPct: 68, highPct: 73 },
-  { key: "endurance", lowPct: 75, highPct: 81 },
-  { key: "threshold", lowPct: 84, highPct: 89 },
-  { key: "intervals", lowPct: 91, highPct: 94 },
-  { key: "reps", lowPct: 96, highPct: 100 },
-];
 
 /** `pct` as a 0–1 fraction of HRmax, truncated like a real monitor reads bpm. */
 function bpmAtPct(hrMax: number, pct: number): number {
@@ -766,11 +776,32 @@ function ZonesCard({
 }) {
   const vma = athlete.vma_pace_s_per_km;
   const hrMax = athlete.hr_max;
+  const offline = useContext(NoStrava);
+  const [zones, setZones] = useState<ZoneDefinitions | null>(null);
+  useEffect(() => {
+    getZoneDefinitions().then(setZones).catch(() => undefined);
+  }, []);
+
+  // "Estimated on … · method" while the VMA shown is still the estimate's — an
+  // edit by hand afterwards makes it the athlete's own again.
+  const estimate = athlete.level_estimate;
+  const estimated =
+    estimate && vma != null && estimate.vma_pace_s_per_km != null &&
+    Math.round(estimate.vma_pace_s_per_km) === Math.round(vma);
 
   return (
     <section className="card-block card-block--zones">
       <SectionTitle icon="target" kicker={t("home.kicker.you")} role="terra">{t("home.zones.title")}</SectionTitle>
       <p className="data-block__lede">{t("home.zones.subtitle")}</p>
+      {estimated && (
+        <p className="body-sm muted">
+          {t("home.zones.estimated", {
+            date: formatDate(estimate.created_at, "short", t("locale")),
+            method: t(`level.method.${estimate.method}`),
+          })}{" "}
+          <a href="/tools/level">{t("home.zones.reestimate")}</a>
+        </p>
+      )}
 
       <div className="kpi-grid">
         <EditableTile
@@ -790,19 +821,19 @@ function ZonesCard({
           t={t}
         />
 
-        {VMA_PACE_ZONES.map((zone) => (
+        {(zones?.vma_pace ?? []).map((zone) => (
           <Tile
             key={zone.key}
             // An interval: the unit moves up into the label, out of the value.
             label={`${t(`home.zones.pace_${zone.key}`)} (${t("common.per_km")})`}
-            value={vma != null ? vmaPaceRange(vma, zone.lowPct, zone.highPct) : "—"}
+            value={vma != null ? vmaPaceRange(vma, zone.low_pct, zone.high_pct) : "—"}
             footnote={t("home.zones.unlocked_by_vma")}
           />
         ))}
       </div>
 
       <div className="kpi-grid kpi-grid--two">
-        {HR_ZONE_MAX_PCT.map((zone) => (
+        {(zones?.hr_max_pct ?? []).map((zone) => (
           <Tile
             key={zone.key}
             label={t(`home.zones.${zone.key}`)}
@@ -823,7 +854,15 @@ function ZonesCard({
         />
       </div>
 
-      <HrZoneMap hrMax={hrMax} t={t} />
+      {/* Without Strava this is the one card that can be full: from a level
+          estimate, or an invitation to make one (access.md § Accueil dégradé). */}
+      {offline && !estimate ? (
+        <p className="body-sm">
+          <a href="/tools/level">{t("home.zones.estimate_link")}</a>
+        </p>
+      ) : (
+        zones && <HrZoneMap hrMax={hrMax} zones={zones} t={t} />
+      )}
     </section>
   );
 }
@@ -838,24 +877,27 @@ function hrMapPosition(pct: number): number {
   return ((pct - HR_MAP_MIN_PCT) / (HR_MAP_MAX_PCT - HR_MAP_MIN_PCT)) * 100;
 }
 
-/** The heart-rate zone bands the map's background shows — derived from
- * `HR_ZONE_MAX_PCT` itself (plus the open-ended top zone above Z4max) so the
- * tiles and the graph can never drift out of step with each other again. */
-const HR_MAP_BANDS: { key: string; label: string; endPct: number }[] = [
-  ...HR_ZONE_MAX_PCT.map((zone) => ({
-    key: zone.key,
-    label: zone.key.toUpperCase(),
-    endPct: zone.pct * 100,
-  })),
-  { key: "z5", label: "Z5", endPct: 100 },
-];
+/** The heart-rate zone bands the map's background shows — derived from the
+ * zone ceilings themselves (plus the open-ended top zone above Z4max) so the
+ * tiles and the graph can never drift out of step with each other. */
+function hrMapBands(zones: ZoneDefinitions): { key: string; label: string; endPct: number }[] {
+  return [
+    ...zones.hr_max_pct.map((zone) => ({
+      key: zone.key,
+      label: zone.key.toUpperCase(),
+      endPct: zone.pct * 100,
+    })),
+    { key: "z5", label: "Z5", endPct: 100 },
+  ];
+}
 
 /**
  * Where each named pace zone's effort falls in heart rate — a picture, not
  * another table, so the relationship between the two KPI grids above reads
  * at a glance instead of being cross-referenced by hand.
  */
-function HrZoneMap({ hrMax, t }: { hrMax: number | null; t: T }) {
+function HrZoneMap({ hrMax, zones, t }: { hrMax: number | null; zones: ZoneDefinitions; t: T }) {
+  const bands = hrMapBands(zones);
   return (
     <div className="hr-map">
       <h3 className="card-block__subtitle">{t("home.zones.hr_map_title")}</h3>
@@ -865,8 +907,8 @@ function HrZoneMap({ hrMax, t }: { hrMax: number | null; t: T }) {
         <div className="hr-map__scroll">
           <div className="hr-map__chart">
             <div className="hr-map__zones">
-              {HR_MAP_BANDS.map((band, index) => {
-                const startPct = index === 0 ? HR_MAP_MIN_PCT : HR_MAP_BANDS[index - 1].endPct;
+              {bands.map((band, index) => {
+                const startPct = index === 0 ? HR_MAP_MIN_PCT : bands[index - 1].endPct;
                 const left = hrMapPosition(startPct);
                 return (
                   <div
@@ -880,19 +922,19 @@ function HrZoneMap({ hrMax, t }: { hrMax: number | null; t: T }) {
               })}
             </div>
             <div className="hr-map__paces">
-              {HR_PACE_ZONES.map((zone) => {
-                const left = hrMapPosition(zone.lowPct);
+              {zones.hr_pace.map((zone) => {
+                const left = hrMapPosition(zone.low_pct);
                 return (
                   <div
                     key={zone.key}
                     className="hr-map__pace"
-                    style={{ left: `${left}%`, width: `${hrMapPosition(zone.highPct) - left}%` }}
+                    style={{ left: `${left}%`, width: `${hrMapPosition(zone.high_pct) - left}%` }}
                   >
                     <span className="hr-map__pace-label">
                       {t(`home.zones.pace_${zone.key}`)}
                     </span>
                     <span className="hr-map__pace-range">
-                      {bpmAtPct(hrMax, zone.lowPct / 100)}–{bpmAtPct(hrMax, zone.highPct / 100)}
+                      {bpmAtPct(hrMax, zone.low_pct / 100)}–{bpmAtPct(hrMax, zone.high_pct / 100)}
                     </span>
                   </div>
                 );
@@ -915,10 +957,13 @@ function LastActivityBlock({
   activity: ActivityCard | null;
   t: T;
 }) {
+  const offline = useContext(NoStrava);
   return (
     <div className="data-block">
       {activity ? (
         <SessionDetail activity={activity} t={t} />
+      ) : offline ? (
+        <PendingNote t={t} />
       ) : (
         <p className="muted">{t("home.last.empty")}</p>
       )}
@@ -994,6 +1039,10 @@ function formValues(charts: ChartData[] | null) {
  * current week, and its three numbers — volume, climb and form, form being the
  * key figure in sun. The import action is secondary here; the page's primary
  * button stays in the Last Run card.
+ *
+ * Without Strava it keeps that shape: the account as the title under a "TAGG
+ * account" kicker, the three numbers as dashes, and "Connect Strava" — the
+ * page's one invitation — as its primary action.
  */
 function HomeHero({
   athlete,
@@ -1002,7 +1051,6 @@ function HomeHero({
   formCharts,
   busy,
   onImport,
-  email,
   t,
 }: {
   athlete: Athlete;
@@ -1011,9 +1059,9 @@ function HomeHero({
   formCharts: ChartData[] | null;
   busy: boolean;
   onImport: () => void;
-  email: ReactNode;
   t: T;
 }) {
+  const offline = useContext(NoStrava);
   const monday = currentWeekStart();
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
@@ -1023,7 +1071,7 @@ function HomeHero({
   const gain = currentWeekValue(climb);
   const { form } = formValues(formCharts);
 
-  const meta = [
+  const meta = offline ? "" : [
     athlete.sync.last_synced_at
       ? `${t("home.import.last")} ${formatDate(athlete.sync.last_synced_at, "relative", t("locale"))}`
       : null,
@@ -1045,11 +1093,20 @@ function HomeHero({
       )}
       <div className="tm-hero__body">
         <span className="tm-hero__kicker">
-          {t("home.hero.week", { number: isoWeekNumber(monday), range: formatDateRange(monday, sunday, t("locale")) })}
+          {offline
+            ? t("home.account.kicker")
+            : t("home.hero.week", { number: isoWeekNumber(monday), range: formatDateRange(monday, sunday, t("locale")) })}
         </span>
         <h1 className="tm-hero__title">{athlete.display_name}</h1>
-        <div className="hero-email">{email}</div>
-        <span className="tm-hero__meta">{meta}</span>
+        {/* The sign-in address; changing it is an account operation, not a
+            profile field, so it is shown, not edited, here. */}
+        {!offline && athlete.email && <span className="tm-hero__meta">{athlete.email}</span>}
+        {meta && <span className="tm-hero__meta">{meta}</span>}
+        {!athlete.viewing_as && (
+          <button type="button" className="hero-link" onClick={signOutEverywhere}>
+            {t("auth.logout_all")}
+          </button>
+        )}
       </div>
       <div className="tm-hero__stats">
         {stats.map((stat) => (
@@ -1062,8 +1119,22 @@ function HomeHero({
           </div>
         ))}
       </div>
-      {/* Hidden, not disabled, for a coach: only the athlete can import. */}
-      {!athlete.viewing_as && athlete.sync.status !== "running" && (
+      {offline ? (
+        <div className="home-hero__action">
+          <a className="tm-btn" href={connectStravaHref("/home")}>
+            {t("home.strava.connect")}
+          </a>
+        </div>
+      ) : athlete.strava_authorized === false ? (
+        !athlete.viewing_as && (
+          <div className="home-hero__action">
+            <a className="tm-btn tm-btn--secondary" href={connectStravaHref("/home")}>
+              {t("home.strava.reconnect")}
+            </a>
+          </div>
+        )
+      ) : /* Hidden, not disabled, for a coach: only the athlete can import. */
+      !athlete.viewing_as && athlete.sync.status !== "running" && (
         <div className="home-hero__action">
           <button type="button" className="tm-btn tm-btn--secondary" onClick={onImport} disabled={busy}>
             <Icon name="refresh" /> {t("home.hero.import")}
@@ -1095,6 +1166,15 @@ function ChartBody({
   empty?: ReactNode;
   t: T;
 }) {
+  const offline = useContext(NoStrava);
+  if (offline) {
+    return (
+      <>
+        <div className="tm-empty-chart home-empty-chart" aria-hidden="true" />
+        <PendingNote t={t} />
+      </>
+    );
+  }
   if (!hasData) return <p className="muted">{t("home.last.empty")}</p>;
   if (charts === null) {
     return (
@@ -1114,6 +1194,45 @@ function ChartBody({
       ))}
     </>
   );
+}
+
+/**
+ * Until the address is confirmed: one quiet line, and a way to get the link
+ * again. Nothing in the app waits on it except role promotion, so this informs
+ * rather than blocks.
+ */
+function VerifyPrompt({ t }: { t: T }) {
+  const [state, setState] = useState<"idle" | "sent" | "error">("idle");
+  return (
+    <Callout>
+      {t("auth.verify.pending")}{" "}
+      {state === "sent" ? (
+        t("auth.verify.resent")
+      ) : (
+        <button
+          type="button"
+          className="tm-btn tm-btn--ghost tm-btn--sm"
+          onClick={async () => {
+            try {
+              const result = await resendVerification();
+              setState(result.sent ? "sent" : "error");
+            } catch {
+              setState("error");
+            }
+          }}
+        >
+          {t("auth.verify.resend")}
+        </button>
+      )}
+      {state === "error" && ` ${t("auth.error.generic")}`}
+    </Callout>
+  );
+}
+
+/** The degraded Home's one line per card (access.md): what will fill it. */
+function PendingNote({ t }: { t: T }) {
+  if (!useContext(NoStrava)) return null;
+  return <p className="body-sm muted">{t("home.empty.strava")}</p>;
 }
 
 /** A card's heading row: the section title, and the trend badges beside it. */
@@ -1450,18 +1569,32 @@ function SyncControls({
   athlete,
   busy,
   onImport,
+  onDisconnected,
   viewingAs,
   t,
 }: {
   athlete: Athlete;
   busy: boolean;
   onImport: (force: boolean) => void;
+  onDisconnected: () => void;
   /** A coach browsing this athlete's account: only they can import their own
    *  Strava data, so the buttons that would trigger it are hidden, not disabled. */
   viewingAs: boolean;
   t: T;
 }) {
   const syncing = athlete.sync.status === "running";
+
+  // Disconnected: the history stays, nothing new comes in until reconnected.
+  if (athlete.strava_authorized === false && !viewingAs) {
+    return (
+      <div className="sync__actions">
+        <Callout>{t("home.strava.disconnected")}</Callout>
+        <a className="tm-btn" href={connectStravaHref("/home")}>
+          {t("home.strava.reconnect")}
+        </a>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -1520,6 +1653,16 @@ function SyncControls({
               {t("home.import.last")} {formatDate(athlete.sync.last_synced_at, "relative", t("locale"))}
             </span>
           )}
+          <button
+            type="button"
+            className="tm-btn tm-btn--ghost tm-btn--sm"
+            onClick={async () => {
+              await disconnectStrava().catch(() => undefined);
+              onDisconnected();
+            }}
+          >
+            {t("home.strava.disconnect")}
+          </button>
         </div>
       )}
 
@@ -1612,8 +1755,15 @@ function EditableTile({
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
 
+  const offline = useContext(NoStrava);
+
   // Re-sync when a save elsewhere replaces the athlete.
   useEffect(() => setDraft(input.value), [input.value]);
+
+  // Profile fields belong to the Strava athlete; with none attached there is
+  // nothing to save them to yet, so the tile is read-only — a dash, or the
+  // value a level estimate supplied.
+  if (offline) return <Tile label={label} value={value ?? "—"} unit={value != null ? unit : undefined} tone={tone} />;
 
   const commit = async () => {
     setEditing(false);

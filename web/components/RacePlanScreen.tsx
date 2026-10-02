@@ -6,9 +6,9 @@
  * The same screen serves three cases:
  *
  *  - a visitor (`signedIn` false): computes on the reference curves only, cannot
- *    save, and is told — once, above the form — what signing in would change;
+ *    save, and is told — once, with the result — that an account keeps it;
  *  - a new plan (`planId` null): computes from the chosen file, and the first save
- *    creates it and moves the URL to `/race-plan/{id}` without a reload;
+ *    creates it and moves the URL to `/tools/race-planning/{id}` without a reload;
  *  - a saved plan: loads its inputs and computes straight away from the stored
  *    GPX, so a plan opens already drawn. Choosing a new file replaces the stored
  *    one on the next save.
@@ -23,7 +23,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Callout } from "@/components/Callout";
 import { ChartView } from "@/components/ChartView";
 import { PageHeader } from "@/components/PageHeader";
-import { StravaMore } from "@/components/Teaser";
 import { TableView } from "@/components/TableView";
 import {
   deleteRacePlan,
@@ -32,6 +31,7 @@ import {
   planRace,
   saveRacePlan,
 } from "@/lib/api";
+import { registerHref } from "@/lib/auth";
 import { formatHms, formatNumber, formatPaceInput, kpiNumClass } from "@/lib/format";
 import { plural, translator, type Strings, type Translate } from "@/lib/strings";
 import type {
@@ -230,7 +230,7 @@ export function RacePlanScreen({
       const saved = await saveRacePlan(planId, title.trim(), params, file);
       if (!planId) {
         // Now a saved plan: give it its own URL without remounting the screen.
-        window.history.replaceState(null, "", `/race-plan/${saved.id}`);
+        window.history.replaceState(null, "", `/tools/race-planning/${saved.id}`);
       }
       setPlanId(saved.id);
       setStoredGpxName(saved.gpx_name || storedGpxName);
@@ -249,7 +249,7 @@ export function RacePlanScreen({
     if (!window.confirm(t("race_plan.delete_confirm", { title: name }))) return;
     try {
       await deleteRacePlan(planId);
-      window.location.href = "/race-plan";
+      window.location.href = "/tools/race-planning";
     } catch (e) {
       setError((e as Error).message);
     }
@@ -280,12 +280,12 @@ export function RacePlanScreen({
   return (
     <main className="container race-plan">
       {signedIn && (
-        <Link className="race-plan__back" href="/race-plan">
+        <Link className="race-plan__back" href="/tools/race-planning">
           {t("race_plan.back")}
         </Link>
       )}
       <PageHeader
-        kicker={t("nav.race_plan")}
+        kicker={t("tools.race_planning")}
         title={
           <input
             className="page-title-input"
@@ -487,12 +487,15 @@ export function RacePlanScreen({
         {error && <Callout tone="terra">{error}</Callout>}
       </form>
 
-      {result && <RacePlanResultView result={result} t={t} />}
-      {/* Open page: say what Strava adds in one quiet line, never a banner
-          (visitor.md § Pages ouvertes). */}
-      {!signedIn && (
-        <StravaMore message={t("visitor.more.race_plan")} next="/race-plan" t={t} />
+      {/* A visitor gets the result, and one line on what an account keeps
+          (access.md § Visiteur) — under the result, once there is one to keep. */}
+      {result && !signedIn && (
+        <Callout tone="forest">
+          {t("tools.keep_plans")}{" "}
+          <a href={registerHref("/tools/race-planning/new")}>{t("visitor.register")}</a>
+        </Callout>
       )}
+      {result && <RacePlanResultView result={result} t={t} />}
     </main>
   );
 }

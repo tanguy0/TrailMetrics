@@ -1,81 +1,121 @@
 "use client";
 
 /**
- * The navigation rail — always on screen, signed in or not
- * (design/tagg/components/NavRail.md).
+ * The navigation rail — always on screen (design/tagg/components/NavRail.md).
  *
  * A client component only because the active item depends on the current path;
- * the labels arrive already translated from the server, so nothing is fetched here.
+ * the labels arrive already translated from the server, and so does the viewer's
+ * access tier, so nothing is fetched here.
  *
- * Signed in, it is one list. For a visitor it is two groups (visitor.md § Rail):
- * what is open now (Race plan, Blog), then what opens with Strava — those still
- * link to their page, which shows its teaser, and carry a lock rather than being
- * greyed out — with the Strava button at the foot of the rail.
+ * The rail follows the tier (design/tagg/access.md § Navigation): Home · Tools ·
+ * Analysis · Coaching · Blog. What the viewer's tier opens comes first; what it
+ * does not is grouped under the tier that opens it ("With an account", "With
+ * Strava", "Coached by TAGG"). Those items still link to their page — which shows
+ * its teaser — and carry a lock rather than being greyed out. On the auth pages
+ * the rail is reduced to the lockup.
  */
 
 import { usePathname } from "next/navigation";
 
 import { CoachSwitcher } from "@/components/CoachSwitcher";
 import { Icon, type IconName } from "@/components/Icon";
-import { signInHref } from "@/lib/auth";
+import { loginHref } from "@/lib/auth";
+import type { Viewer } from "@/lib/session";
 import { translator, type Strings, type Translate } from "@/lib/strings";
+
+type Tier = "visitor" | "account" | "strava" | "coached";
 
 interface Item {
   href: string;
   label: string;
   icon: IconName;
-  public: boolean;
+  needs: Tier;
 }
 
-export function Sidebar({
-  strings,
-  authenticated,
-}: {
-  strings: Strings;
-  authenticated: boolean;
-}) {
+const GROUP: Record<Exclude<Tier, "visitor">, string> = {
+  account: "nav.group_account",
+  strava: "nav.group_strava",
+  coached: "nav.group_coached",
+};
+const AUTH_PATHS = ["/login", "/register", "/reset", "/verify"];
+
+async function signOut() {
+  await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
+  window.location.assign("/");
+}
+
+export function Sidebar({ strings, viewer }: { strings: Strings; viewer: Viewer | null }) {
   const t = translator(strings);
   const pathname = usePathname() ?? "";
+  const tier = viewer?.tier ?? "visitor";
+  // Not a ladder: coaching is a service, so a coached account without Strava
+  // still opens Coaching, and a coach opens it to answer requests.
+  const opens = (needs: Tier) =>
+    needs === "visitor" ||
+    (needs === "account" && viewer != null) ||
+    (needs === "strava" && tier === "strava") ||
+    (needs === "coached" && Boolean(viewer?.isCoached || viewer?.isCoach));
+
+  const brand = (
+    <a className="tm-rail__brand" href={viewer ? "/home" : "/"}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a static SVG gains nothing from next/image */}
+      <img src="/logo/tagg-lockup-on-rail.svg" alt="TAGG" height={28} />
+    </a>
+  );
+
+  if (AUTH_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
+    return <nav className="tm-rail shell__rail shell__rail--bare" aria-label="TAGG">{brand}</nav>;
+  }
 
   const items: Item[] = [
-    { href: "/home", label: t("nav.home"), icon: "home", public: false },
-    { href: "/pages", label: t("nav.analysis"), icon: "chart", public: false },
-    { href: "/training", label: t("nav.training"), icon: "calendar", public: false },
-    { href: "/race-plan", label: t("nav.race_plan"), icon: "flag", public: true },
-    { href: "/blog", label: t("nav.blog"), icon: "newspaper", public: true },
+    { href: "/home", label: t("nav.home"), icon: "home", needs: "account" },
+    { href: "/tools", label: t("nav.tools"), icon: "ruler", needs: "visitor" },
+    { href: "/pages", label: t("nav.analysis"), icon: "chart", needs: "strava" },
+    { href: "/coaching", label: t("nav.coaching"), icon: "calendar", needs: "coached" },
+    { href: "/blog", label: t("nav.blog"), icon: "newspaper", needs: "visitor" },
   ];
+  const open = items.filter((item) => opens(item.needs));
+  const lockedTiers = (["account", "strava", "coached"] as const).filter(
+    (needs) => !opens(needs) && items.some((item) => item.needs === needs),
+  );
 
   return (
     <nav className="tm-rail shell__rail" aria-label={t("nav.analysis")}>
-      <a className="tm-rail__brand" href={authenticated ? "/home" : "/"}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- a static SVG gains nothing from next/image */}
-        <img src="/logo/tagg-lockup-on-rail.svg" alt="TAGG" height={28} />
-      </a>
+      {brand}
 
-      {authenticated && <CoachSwitcher />}
+      {viewer?.isCoach && <CoachSwitcher />}
 
-      {authenticated ? (
-        <RailList items={items} pathname={pathname} t={t} />
+      {lockedTiers.length === 0 ? (
+        <RailList items={open} pathname={pathname} t={t} />
       ) : (
         <div className="shell__groups">
-          <div className="tm-rail__group">{t("nav.group_open")}</div>
-          <RailList items={items.filter((item) => item.public)} pathname={pathname} t={t} />
-          <div className="tm-rail__group">{t("nav.group_strava")}</div>
-          <RailList items={items.filter((item) => !item.public)} pathname={pathname} locked t={t} />
+          {tier === "visitor" && <div className="tm-rail__group">{t("nav.group_open")}</div>}
+          <RailList items={open} pathname={pathname} t={t} />
+          {lockedTiers.map((needs) => (
+            <div key={needs}>
+              <div className="tm-rail__group">{t(GROUP[needs])}</div>
+              <RailList
+                items={items.filter((item) => item.needs === needs)}
+                pathname={pathname}
+                locked
+                t={t}
+              />
+            </div>
+          ))}
         </div>
       )}
 
-      {authenticated ? (
-        <a className="tm-rail__link shell__signout" href="/api/auth/logout">
+      {viewer ? (
+        <button type="button" className="tm-rail__link shell__signout" onClick={signOut}>
           <Icon name="logout" size={17} />
           <span>{t("nav.sign_out")}</span>
-        </a>
+        </button>
       ) : (
         <a
-          className="tm-btn tm-btn--strava tm-btn--sm tm-btn--wide shell__signout"
-          href={signInHref(pathname || undefined)}
+          className="tm-btn tm-btn--secondary tm-btn--sm tm-btn--wide shell__signout"
+          href={loginHref(pathname && pathname !== "/" ? pathname : undefined)}
         >
-          {t("nav.connect")}
+          {t("visitor.login")}
         </a>
       )}
     </nav>

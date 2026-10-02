@@ -30,15 +30,17 @@ from api.routers import (
     auth,
     blog,
     coach,
+    coaching,
     home,
     pages,
     precompute,
     race_plan,
     registry,
     render,
+    tools,
     training,
 )
-from api.security import read_session_token
+from api.security import constant_time_equals, hash_token
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -141,14 +143,19 @@ async def security_headers(request: Request, call_next):
 # for — scaling to several replicas would just make the limit per-replica rather
 # than global, which is an acceptable trade at this scale.
 #
-# Keyed by athlete id when the caller has a valid session, not by IP: every browser
-# call is proxied through the Next.js app (see web/app/api/proxy), so every athlete
-# would otherwise appear to share whatever IP that proxy calls out from. Falling
-# back to IP only covers the pre-session auth endpoints.
+# Keyed by session when the caller presents one, not by IP: every browser call is
+# proxied through the Next.js app (see web/app/api/proxy), so every athlete would
+# otherwise appear to share whatever IP that proxy calls out from. The key is the
+# token's hash, not a lookup — this runs before any route, on every request, and
+# a forged token only buys its own bucket. The pre-session auth calls are keyed
+# by the browser's IP, which the web app forwards with its service token.
 _RATE_WINDOW_S = 60.0
 _DEFAULT_RATE_LIMIT = 120
 _AUTH_RATE_LIMIT = 20
-_AUTH_PATHS = {"/auth/strava/url", "/auth/strava/exchange"}
+_AUTH_PATHS = {
+    "/auth/strava/url", "/auth/strava/exchange",
+    "/auth/login", "/auth/register", "/auth/reset", "/auth/reset/confirm",
+}
 
 _hits: Dict[Tuple[str, str], deque] = defaultdict(deque)
 _hits_lock = threading.Lock()
@@ -156,10 +163,12 @@ _hits_lock = threading.Lock()
 
 def _rate_limit_key(request: Request) -> str:
     auth_header = request.headers.get("authorization", "")
-    if auth_header.lower().startswith("bearer "):
-        athlete_id = read_session_token(auth_header[7:], settings.session_secret)
-        if athlete_id is not None:
-            return f"athlete:{athlete_id}"
+    if auth_header.lower().startswith("bearer ") and auth_header[7:].strip():
+        return f"session:{hash_token(auth_header[7:].strip()).hex()[:32]}"
+    if constant_time_equals(request.headers.get("x-service-token", ""), settings.service_token):
+        client_ip = request.headers.get("x-client-ip", "").strip()
+        if client_ip:
+            return f"ip:{client_ip[:64]}"
     forwarded = request.headers.get("x-forwarded-for")
     ip = forwarded.split(",")[0].strip() if forwarded else None
     if not ip:
@@ -218,9 +227,11 @@ app.include_router(training.router)
 app.include_router(precompute.router)
 app.include_router(assets.router)
 app.include_router(coach.router)
+app.include_router(coaching.router)
 app.include_router(blog.router)
 app.include_router(race_plan.router)
 app.include_router(race_plan.saved_router)
+app.include_router(tools.router)
 
 
 @app.get("/health", tags=["ops"])

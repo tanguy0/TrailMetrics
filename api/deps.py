@@ -16,13 +16,16 @@ import logging
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Any, Dict, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Optional, Tuple
 
 from fastapi import Depends, HTTPException, Query, Request, status
 
 from api.config import Settings, get_settings
 from api.memo import AthleteMemo, MemoStore
-from api.security import constant_time_equals, read_session_token
+from api.passwords import hash_password
+from api.security import constant_time_equals, hash_token, new_token
+from src.domain.ports.accounts import Account
 from src.domain.ports.activity_data import ActivityDataSource
 from src.domain.ports.page_repository import PageRepository
 from src.domain.ports.storage import (
@@ -35,8 +38,11 @@ from src.domain.charts.ir import PlotOutput
 from src.infrastructure.postgres.activity_comment_repository import (
     PostgresActivityCommentRepository,
 )
+from src.infrastructure.postgres.account_repository import PostgresAccountRepository
 from src.infrastructure.postgres.activity_repository import PostgresActivityRepository
+from src.infrastructure.postgres.coaching_repository import PostgresCoachingRepository
 from src.infrastructure.postgres.athlete_repository import PostgresAthleteRepository
+from src.infrastructure.postgres.level_repository import PostgresLevelRepository
 from src.infrastructure.postgres.page_repository import PostgresPageRepository
 from src.infrastructure.postgres.planned_item_repository import (
     PostgresPlannedItemRepository,
@@ -61,6 +67,10 @@ from src.translations import DEFAULT_LANG, LANGUAGES
 from src.usecases.render_page import OutputCache, RenderContext
 
 logger = logging.getLogger(__name__)
+
+# The 409 detail an account with no Strava attached gets from any athlete route;
+# the web app keys its "connect Strava" states on it.
+STRAVA_NOT_CONNECTED = "strava_not_connected"
 
 # How many athletes keep warm caches in one process.
 MAX_CACHED_ATHLETES = 16
@@ -125,6 +135,16 @@ def get_athlete_repository() -> AthleteRepository:
 
 
 @lru_cache(maxsize=1)
+def get_account_repository() -> PostgresAccountRepository:
+    return PostgresAccountRepository(get_database())
+
+
+@lru_cache(maxsize=1)
+def get_coaching_repository() -> PostgresCoachingRepository:
+    return PostgresCoachingRepository(get_database())
+
+
+@lru_cache(maxsize=1)
 def get_activity_repository() -> ActivityRepository:
     return PostgresActivityRepository(get_database())
 
@@ -164,8 +184,12 @@ def get_precompute_repository(athlete_id: int) -> PostgresPrecomputeRepository:
     return PostgresPrecomputeRepository(get_database(), athlete_id)
 
 
-def get_race_plan_repository(athlete_id: int) -> PostgresRacePlanRepository:
-    return PostgresRacePlanRepository(get_database(), athlete_id)
+def get_race_plan_repository(account_id: str) -> PostgresRacePlanRepository:
+    return PostgresRacePlanRepository(get_database(), account_id)
+
+
+def get_level_repository(account_id: str) -> PostgresLevelRepository:
+    return PostgresLevelRepository(get_database(), account_id)
 
 
 # --- Per-athlete caches ----------------------------------------------------
@@ -268,64 +292,103 @@ class PersistentOutputCache(OutputCache):
 
 # --- Request-scoped -------------------------------------------------------
 
-def current_athlete_id(request: Request) -> int:
-    """The athlete this request acts as — almost always the signed-in one.
+# How long a session lives without being used; each use pushes it out again.
+# Re-written at most this often, so a burst of requests is not a burst of writes.
+SESSION_TOUCH_EVERY = timedelta(hours=1)
 
-    ``DEV_ATHLETE_ID`` bypasses the token check, but only when ``DEV_MODE`` is
-    explicitly on, so a misconfigured production deploy can't accidentally
-    authenticate everyone as one athlete.
 
-    A coach account (``COACH_ATHLETE_IDS``) can override this via the
-    ``X-View-As-Athlete-Id`` header the web app attaches while browsing another
-    athlete's account (see web/app/api/proxy). Every endpoint keyed on this
-    dependency — which is nearly all of them — picks that up for free; the one
-    exception is guarded explicitly with :func:`block_when_viewing_as`. The real,
-    signed-in identity is still recorded on ``request.state`` for that check and
-    for :func:`is_coach_session`.
-    """
-    settings = get_settings()
+def session_ttl_s() -> int:
+    return get_settings().session_ttl_days * 24 * 60 * 60
+
+
+def session_token(request: Request) -> str:
+    """The presented session token: the proxy's bearer header, else the cookie."""
     header = request.headers.get("authorization") or ""
     token = header[7:].strip() if header.lower().startswith("bearer ") else ""
-    if not token:
-        token = request.cookies.get("tm_session", "")
+    return token or request.cookies.get("tm_session", "")
 
-    real_id = read_session_token(token, settings.session_secret)
-    if real_id is None:
-        if not settings.allow_dev_athlete:
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Not signed in.")
-        real_id = int(settings.dev_athlete_id)
+
+def optional_account(request: Request) -> Optional[Account]:
+    """The signed-in account, or ``None`` — for the routes a visitor may call too.
+
+    Resolved once per request and kept on ``request.state``, along with the
+    attached Strava athlete (same query), which :func:`current_athlete_id` reads.
+
+    ``DEV_ATHLETE_ID`` stands in for a session, but only when ``DEV_MODE`` is
+    explicitly on, so a misconfigured production deploy can't accidentally
+    authenticate everyone as one athlete.
+    """
+    if hasattr(request.state, "account"):
+        return request.state.account
+    account: Optional[Account] = None
+    athlete_id: Optional[int] = None
+    token = session_token(request)
+    if token:
+        found = get_account_repository().session_by_token(hash_token(token))
+        if found is not None:
+            session, account = found
+            athlete_id = session.athlete_id
+            now = datetime.now(timezone.utc)
+            if session.last_seen_at is None or now - session.last_seen_at > SESSION_TOUCH_EVERY:
+                get_account_repository().extend_session(session.id, session_ttl_s())
+    if account is None and get_settings().allow_dev_athlete:
+        account, athlete_id = _dev_account()
+    request.state.account = account
+    request.state.account_athlete_id = athlete_id
+    return account
+
+
+def current_account(account: Optional[Account] = Depends(optional_account)) -> Account:
+    if account is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Not signed in.")
+    return account
+
+
+def current_athlete_id(request: Request, account: Account = Depends(current_account)) -> int:
+    """The Strava athlete this request acts as — almost always the account's own.
+
+    An account with no Strava attached gets a 409 ``strava_not_connected``: every
+    endpoint keyed on an athlete reads Strava data, so there is nothing for it
+    to return yet, and the client tells that apart from "not signed in".
+
+    A coach account (``role`` coach or master) can override this via the
+    ``X-View-As-Athlete-Id`` header the web app attaches while browsing another
+    athlete's account (see web/app/api/proxy) — but only for an athlete it
+    coaches (a row in ``coaching``); any other id is ignored. Every endpoint keyed on this
+    dependency — which is nearly all of them — picks that up for free; the one
+    exception is guarded explicitly with :func:`block_when_viewing_as`. The
+    account's own athlete is still recorded on ``request.state`` for that check.
+    """
+    real_id: Optional[int] = request.state.account_athlete_id
     request.state.real_athlete_id = real_id
 
     view_as = request.headers.get("x-view-as-athlete-id", "").strip()
-    if view_as and settings.is_coach(real_id):
+    if view_as and account.is_coach:
         try:
             target_id = int(view_as)
         except ValueError:
-            return real_id
-        if target_id != real_id:
+            target_id = None
+        if (
+            target_id is not None
+            and target_id != real_id
+            and get_coaching_repository().coaches_athlete(account.id, target_id)
+        ):
             return target_id
+    if real_id is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=STRAVA_NOT_CONNECTED)
     return real_id
 
 
-def real_athlete_id(request: Request, _: int = Depends(current_athlete_id)) -> int:
-    """The signed-in athlete, ignoring any view-as override."""
+def real_athlete_id(
+    request: Request, _: int = Depends(current_athlete_id)
+) -> Optional[int]:
+    """The account's own athlete, ignoring any view-as override."""
     return request.state.real_athlete_id
-
-
-def session_context(
-    effective_id: int = Depends(current_athlete_id),
-    real_id: int = Depends(real_athlete_id),
-) -> Dict[str, bool]:
-    """Coach status and view-as state, for the client to render the switcher."""
-    return {
-        "is_coach": get_settings().is_coach(real_id),
-        "viewing_as": effective_id != real_id,
-    }
 
 
 def block_when_viewing_as(
     effective_id: int = Depends(current_athlete_id),
-    real_id: int = Depends(real_athlete_id),
+    real_id: Optional[int] = Depends(real_athlete_id),
 ) -> None:
     """Guard for the handful of actions only the athlete themself may take.
 
@@ -340,18 +403,40 @@ def block_when_viewing_as(
         )
 
 
-def require_coach(real_id: int = Depends(real_athlete_id)) -> int:
-    if not get_settings().is_coach(real_id):
+def require_coach(account: Account = Depends(current_account)) -> Account:
+    if not account.is_coach:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not a coach.")
-    return real_id
+    return account
+
+
+def require_master(account: Account = Depends(current_account)) -> Account:
+    """Gate for writing blog posts — the operator's account, by role."""
+    if not account.is_master:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not the master account.")
+    return account
 
 
 def require_service_token(request: Request) -> None:
-    """Guard the OAuth exchange so only our own web app can call it."""
+    """Guard the server-to-server routes so only our own web app can call them."""
     settings = get_settings()
     presented = request.headers.get("x-service-token", "")
     if not constant_time_equals(presented, settings.service_token):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Bad service token.")
+
+
+def client_ip(request: Request) -> str:
+    """The browser's IP, as the web app reports it on a service-token call.
+
+    Every browser call reaches this API through the Next.js server, so the
+    connection's own address is the web app's. The web app forwards the real
+    one in ``X-Client-Ip``; only trust it alongside the service token.
+    """
+    presented = request.headers.get("x-service-token", "")
+    if constant_time_equals(presented, get_settings().service_token):
+        forwarded = request.headers.get("x-client-ip", "").strip()
+        if forwarded:
+            return forwarded[:64]
+    return request.client.host if request.client else "unknown"
 
 
 def language(lang: str = Query(DEFAULT_LANG)) -> str:
@@ -366,11 +451,32 @@ def current_athlete(athlete_id: int = Depends(current_athlete_id)) -> Athlete:
     return athlete
 
 
-def require_master(athlete: Athlete = Depends(current_athlete)) -> Athlete:
-    """Gate for writing blog posts — one hardcoded operator account, by email."""
-    if not get_settings().is_master(athlete.email):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not the master account.")
-    return athlete
+_dev_identity: Optional[Tuple[Account, Optional[int]]] = None
+
+
+def _dev_account() -> Tuple[Account, Optional[int]]:
+    """The account standing in for a session under ``DEV_MODE``.
+
+    The one attached to ``DEV_ATHLETE_ID`` if there is one; otherwise one is made
+    and attached, as ``master`` so every screen is reachable locally.
+    """
+    global _dev_identity
+    if _dev_identity is not None:
+        return _dev_identity
+    athlete_id = int(get_settings().dev_athlete_id)
+    accounts = get_account_repository()
+    account_id = accounts.account_id_of_athlete(athlete_id)
+    account = accounts.get(account_id) if account_id else None
+    if account is None:
+        email = f"dev-{athlete_id}@tagg.local"
+        found = accounts.by_email(email)
+        account = found[0] if found else accounts.create(
+            email, hash_password(new_token()), "master", DEFAULT_LANG
+        )
+        if not accounts.link_athlete(athlete_id, account.id):
+            logger.warning("DEV_ATHLETE_ID %s is not linkable to the dev account", athlete_id)
+    _dev_identity = (account, accounts.athlete_id_for(account.id))
+    return _dev_identity
 
 
 # --- Render plumbing ------------------------------------------------------

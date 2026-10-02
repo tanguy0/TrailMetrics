@@ -23,9 +23,16 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/Icon";
 import { PageHeader } from "@/components/PageHeader";
 import { Callout } from "@/components/Callout";
-import { ApiError, createPage, listPages } from "@/lib/api";
+import { Modal } from "@/components/Modal";
+import {
+  ApiError,
+  createPage,
+  createPageFromTemplate,
+  listPageTemplates,
+  listPages,
+} from "@/lib/api";
 import { plural, translator, type Strings, type Translate } from "@/lib/strings";
-import type { PageSummary } from "@/lib/types";
+import type { PageSummary, PageTemplate } from "@/lib/types";
 
 export function AnalysisScreen({ strings }: { strings: Strings }) {
   const t = translator(strings);
@@ -34,10 +41,12 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
   const [pages, setPages] = useState<PageSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  // The "New analysis" chooser: blank, or one of the shipped templates.
+  const [templates, setTemplates] = useState<PageTemplate[] | null>(null);
+  const [choosing, setChoosing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      // This call is also what seeds the defaults, server-side, on a fresh account.
       const { pages: listed } = await listPages();
       setPages(listed);
       setError(null);
@@ -54,17 +63,31 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
     load();
   }, [load]);
 
-  const newAnalysis = async () => {
-    const name = window.prompt(t("pages.new.prompt"), t("pages.new.default_name"));
-    if (!name) return;
+  const openChooser = async () => {
+    setChoosing(true);
+    if (templates === null) {
+      try {
+        setTemplates((await listPageTemplates()).templates);
+      } catch {
+        setTemplates([]);
+      }
+    }
+  };
+
+  const create = async (make: () => Promise<{ id: string }>) => {
     setCreating(true);
     try {
-      const page = await createPage(name);
+      const page = await make();
       router.push(`/pages/${page.id}`);
     } catch (caught) {
       setError((caught as Error).message);
       setCreating(false);
     }
+  };
+
+  const newBlank = () => {
+    const name = window.prompt(t("pages.new.prompt"), t("pages.new.default_name"));
+    if (name) create(() => createPage(name));
   };
 
   if (error) {
@@ -114,7 +137,7 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
       <button
         type="button"
         className="new-page"
-        onClick={newAnalysis}
+        onClick={openChooser}
         disabled={creating}
       >
         <span className="new-page__plus" aria-hidden="true">+</span>
@@ -123,6 +146,36 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
           <span className="new-page__hint">{t("pages.new.hint")}</span>
         </span>
       </button>
+
+      {choosing && (
+        <Modal title={t("pages.new.title")} onClose={() => setChoosing(false)}>
+          <div className="template-list">
+            <button type="button" className="card" onClick={newBlank} disabled={creating}>
+              <span className="card__title">{t("pages.new.blank")}</span>
+              <span className="card__description">{t("pages.new.blank_hint")}</span>
+            </button>
+            <h3 className="card-block__subtitle">{t("pages.new.from_template")}</h3>
+            {templates === null ? (
+              <p className="muted">{t("common.loading")}</p>
+            ) : (
+              templates.map((template) => (
+                <button
+                  type="button"
+                  className="card"
+                  key={template.key}
+                  disabled={creating}
+                  onClick={() => create(() => createPageFromTemplate(template.key))}
+                >
+                  <span className="card__title">{template.name}</span>
+                  {template.description && (
+                    <span className="card__description">{template.description}</span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </Modal>
+      )}
     </main>
   );
 }

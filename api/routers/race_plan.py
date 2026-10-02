@@ -27,7 +27,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from pydantic import BaseModel, Field, ValidationError
 
 from api.deps import (
-    current_athlete,
+    current_account,
     current_athlete_id,
     data_source_for,
     get_athlete_repository,
@@ -35,12 +35,14 @@ from api.deps import (
     get_plot_output_repository,
     get_race_plan_repository,
     language,
+    optional_account,
 )
 from src.domain.charts.ir import ChartData, PlotOutput, Trace
 from src.domain.models.gap import GapCurve
 from src.domain.durability.config import DEFAULT_CONFIG as DURABILITY_CONFIG
 from src.domain.durability.model import RaceWeather
 from src.domain.durability.personalization import AthleteDurabilityModel
+from src.domain.ports.accounts import Account
 from src.domain.ports.storage import Athlete
 from src.domain.race_plan.gpx import GpxError, parse_gpx
 from src.domain.race_plan.planner import PlanError, build_course
@@ -123,7 +125,7 @@ def plan(
     if gpx is not None:
         payload = _read_gpx(gpx, lang)
     elif plan_id and athlete is not None:
-        payload = get_race_plan_repository(athlete.id).gpx(plan_id)
+        payload = get_race_plan_repository(account.id).gpx(plan_id)
         if payload is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="race plan not found")
     else:
@@ -161,8 +163,8 @@ def plan(
 # --- Saved plans -------------------------------------------------------------
 
 @saved_router.get("")
-def list_saved(athlete: Athlete = Depends(current_athlete)) -> dict:
-    return {"plans": get_race_plan_repository(athlete.id).list()}
+def list_saved(account: Account = Depends(current_account)) -> dict:
+    return {"plans": get_race_plan_repository(account.id).list()}
 
 
 @saved_router.post("", status_code=status.HTTP_201_CREATED)
@@ -170,20 +172,20 @@ def create_saved(
     meta: str = Form(...),
     gpx: UploadFile = File(...),
     lang: str = Depends(language),
-    athlete: Athlete = Depends(current_athlete),
+    account: Account = Depends(current_account),
 ) -> dict:
     parsed = _parse(meta, SavedPlanMeta)
     payload = _read_gpx(gpx, lang)
     distance, gain = _course_stats(payload, lang)
-    return get_race_plan_repository(athlete.id).create(
+    return get_race_plan_repository(account.id).create(
         parsed.title.strip(), (gpx.filename or "")[:200], payload,
         parsed.params.model_dump(), distance, gain,
     )
 
 
 @saved_router.get("/{plan_id}")
-def get_saved(plan_id: str, athlete: Athlete = Depends(current_athlete)) -> dict:
-    saved = get_race_plan_repository(athlete.id).get(plan_id)
+def get_saved(plan_id: str, account: Account = Depends(current_account)) -> dict:
+    saved = get_race_plan_repository(account.id).get(plan_id)
     if saved is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="race plan not found")
     return saved
@@ -195,11 +197,11 @@ def update_saved(
     meta: str = Form(...),
     gpx: Optional[UploadFile] = File(None),
     lang: str = Depends(language),
-    athlete: Athlete = Depends(current_athlete),
+    account: Account = Depends(current_account),
 ) -> dict:
     """Replace a saved plan's inputs; a new GPX only when one is uploaded."""
     parsed = _parse(meta, SavedPlanMeta)
-    repository = get_race_plan_repository(athlete.id)
+    repository = get_race_plan_repository(account.id)
     if gpx is not None:
         payload = _read_gpx(gpx, lang)
     else:
@@ -222,8 +224,8 @@ def update_saved(
 
 
 @saved_router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_saved(plan_id: str, athlete: Athlete = Depends(current_athlete)) -> None:
-    get_race_plan_repository(athlete.id).delete(plan_id)
+def delete_saved(plan_id: str, account: Account = Depends(current_account)) -> None:
+    get_race_plan_repository(account.id).delete(plan_id)
 
 
 # --- Helpers -----------------------------------------------------------------
@@ -259,8 +261,10 @@ def _course_stats(payload: bytes, lang: str) -> Tuple[float, float]:
 def _optional_athlete(request: Request) -> Optional[Athlete]:
     """The signed-in athlete (view-as included), or ``None`` for a visitor."""
     try:
-        athlete_id = current_athlete_id(request)
-        return get_athlete_repository().get(athlete_id)
+        account = optional_account(request)
+        if account is None:
+            return None
+        return get_athlete_repository().get(current_athlete_id(request, account))
     except HTTPException:
         # Not signed in — or no database configured, which for this public
         # endpoint just means nobody can be.

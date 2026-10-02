@@ -2,7 +2,7 @@
 
     python -m api.keys
 
-Prints a fresh SESSION_SECRET, SERVICE_TOKEN and ENCRYPTION_KEY. Run it once per
+Prints a fresh SERVICE_TOKEN and ENCRYPTION_KEY. Run it once per
 environment and paste the values into the platform's variables — they should never
 be committed, and the two sides of SERVICE_TOKEN must match.
 """

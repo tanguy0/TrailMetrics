@@ -24,8 +24,8 @@ services:
         sync: false
       - key: STRAVA_CLIENT_SECRET
         sync: false
-      - key: SESSION_SECRET
-        sync: false
+      # Mail is off until a sending domain exists (docs/DEPLOYMENT.md § Mail):
+      # add MAIL_FROM and MAIL_RESEND_API_KEY then.
       - key: SERVICE_TOKEN
         sync: false        # must match the web app's TRAILMETRICS_SERVICE_TOKEN
       - key: ENCRYPTION_KEY

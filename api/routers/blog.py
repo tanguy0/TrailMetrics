@@ -29,16 +29,14 @@ from fastapi import (
     status,
 )
 
-from api.config import get_settings
 from api.deps import (
-    get_athlete_repository,
     get_blog_media_store,
     get_database,
+    optional_account,
     require_master,
 )
-from api.security import read_session_token
+from src.domain.ports.accounts import Account
 from src.domain.ports.blog_media import BlogMediaStore
-from src.domain.ports.storage import Athlete
 from src.infrastructure.pdf.rasterize import TooManyPages, rasterize_pdf
 
 logger = logging.getLogger(__name__)
@@ -63,7 +61,7 @@ def list_posts() -> dict:
 
 
 @router.get("/admin")
-def list_all_posts(_: Athlete = Depends(require_master)) -> dict:
+def list_all_posts(_: Account = Depends(require_master)) -> dict:
     """Every article, drafts included — what the "write a post" screen lists."""
     rows = get_database().fetch_all(
         "select id, slug, title, body_text, page_count, published, created_at "
@@ -92,7 +90,7 @@ async def create_post(
     slug: str = Form(""),
     published: bool = Form(True),
     pdf: UploadFile = File(...),
-    _: Athlete = Depends(require_master),
+    _: Account = Depends(require_master),
 ) -> dict:
     payload = await _read_pdf(pdf)
     pages = _rasterize(payload)
@@ -119,7 +117,7 @@ async def update_post(
     slug: Optional[str] = Form(None),
     published: Optional[bool] = Form(None),
     pdf: Optional[UploadFile] = File(None),
-    _: Athlete = Depends(require_master),
+    _: Account = Depends(require_master),
 ) -> dict:
     row = get_database().fetch_one("select * from blog_posts where id = %s", (post_id,))
     if row is None:
@@ -156,7 +154,7 @@ async def update_post(
 
 
 @router.delete("/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(post_id: str, _: Athlete = Depends(require_master)) -> None:
+def delete_post(post_id: str, _: Account = Depends(require_master)) -> None:
     get_blog_media_store().delete_prefix(post_id)
     get_database().execute("delete from blog_posts where id = %s", (post_id,))
 
@@ -183,19 +181,14 @@ def _is_master_request(request: Request) -> bool:
     """Non-throwing version of :func:`api.deps.require_master`, for the one public
     route (the article page) that should still show a draft to its author.
 
-    Mirrors ``current_athlete_id``'s ``DEV_ATHLETE_ID`` fallback (api/deps.py) so
-    the preview also works against a local, session-less dev server.
+    ``optional_account`` carries the ``DEV_ATHLETE_ID`` fallback, so the preview
+    also works against a local, session-less dev server.
     """
-    settings = get_settings()
-    header = request.headers.get("authorization") or ""
-    token = header[7:].strip() if header.lower().startswith("bearer ") else ""
-    athlete_id = read_session_token(token, settings.session_secret)
-    if athlete_id is None:
-        if not settings.allow_dev_athlete:
-            return False
-        athlete_id = int(settings.dev_athlete_id)
-    athlete = get_athlete_repository().get(athlete_id)
-    return athlete is not None and settings.is_master(athlete.email)
+    try:
+        account = optional_account(request)
+    except HTTPException:
+        return False
+    return account is not None and account.is_master
 
 
 async def _read_pdf(pdf: UploadFile) -> bytes:
