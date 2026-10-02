@@ -928,6 +928,7 @@ TRANSLATIONS = {
     "ui.visitor.more.link": {"en": "Connect Strava", "fr": "Connecter Strava"},
 
     "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},
+    "ui.chart.today": {"en": "Today", "fr": "Aujourd'hui"},
     "ui.common.close": {"en": "Close", "fr": "Fermer"},
     "ui.common.not_set": {"en": "Not set", "fr": "Non renseigné"},
     "ui.common.saving": {"en": "saving", "fr": "enregistrement"},
