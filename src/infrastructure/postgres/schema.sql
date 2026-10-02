@@ -366,6 +366,67 @@ create table if not exists race_plans (
 create index if not exists race_plans_athlete_updated_idx
     on race_plans (athlete_id, updated_at desc);
 
+-- --- Accounts (v2, design/specs/auth.md) -------------------------------------
+
+-- The identity is an email + password account; the Strava athlete becomes an
+-- optional attachment of it (`athletes.account_id`). What comes from Strava stays
+-- keyed by `athlete_id`; what comes from the account (saved plans, estimated
+-- zones, coaching requests) is keyed by `account_id`. Nothing from Strava is
+-- written into `accounts`.
+create extension if not exists citext;
+
+create table if not exists accounts (
+    id                uuid primary key default gen_random_uuid(),
+    email             citext unique not null,
+    password_hash     text not null,              -- argon2id, parameters encoded in the hash
+    role              text not null default 'athlete'
+                      check (role in ('athlete', 'coach', 'master')),
+    lang              text not null default 'en',
+    email_verified_at timestamptz,                -- reserved: verification flow comes later
+    created_at        timestamptz not null default now(),
+    last_login_at     timestamptz
+);
+
+alter table athletes add column if not exists account_id uuid
+    references accounts(id) on delete set null;
+create unique index if not exists athletes_account_id_idx on athletes (account_id);
+
+-- Opaque session tokens, stored hashed: a database dump cannot be replayed as a
+-- cookie. One row per signed-in device, so a session can be revoked on its own
+-- (sign out), all together (sign out everywhere, password reset).
+create table if not exists sessions (
+    id           uuid primary key default gen_random_uuid(),
+    account_id   uuid not null references accounts(id) on delete cascade,
+    token_hash   bytea not null unique,           -- sha256 of the token, never the token
+    created_at   timestamptz not null default now(),
+    expires_at   timestamptz not null,
+    last_seen_at timestamptz,
+    user_agent   text
+);
+
+create index if not exists sessions_account_idx on sessions (account_id);
+
+create table if not exists password_resets (
+    token_hash  bytea primary key,
+    account_id  uuid not null references accounts(id) on delete cascade,
+    expires_at  timestamptz not null,
+    used_at     timestamptz
+);
+
+-- Fixed-window counters for the auth endpoints. In the database rather than in
+-- memory so the limit holds across replicas and restarts; no Redis at this scale.
+create table if not exists login_attempts (
+    key          text not null,                   -- 'login-email:<email>', 'login-ip:<ip>', ...
+    window_start timestamptz not null,
+    count        integer not null default 0,
+    primary key (key, window_start)
+);
+
+-- Saved plans move to the account (filled from `athletes.account_id` when a
+-- Strava athlete is attached; read by account from the Tools PR on).
+alter table race_plans add column if not exists account_id uuid
+    references accounts(id) on delete cascade;
+
 -- --- Row-level security -----------------------------------------------------
 
 -- No policies defined: this is a default-deny backstop for any role other than
@@ -383,3 +444,7 @@ alter table assets enable row level security;
 alter table activity_comments enable row level security;
 alter table blog_posts enable row level security;
 alter table race_plans enable row level security;
+alter table accounts enable row level security;
+alter table sessions enable row level security;
+alter table password_resets enable row level security;
+alter table login_attempts enable row level security;
