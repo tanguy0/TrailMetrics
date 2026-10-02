@@ -20,11 +20,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { Callout } from "@/components/Callout";
 import { ChartView } from "@/components/ChartView";
 import { PageHeader } from "@/components/PageHeader";
 import { StravaMore } from "@/components/Teaser";
 import { TableView } from "@/components/TableView";
-import { Callout } from "@/components/Callout";
 import {
   deleteRacePlan,
   getRacePlan,
@@ -32,8 +32,8 @@ import {
   planRace,
   saveRacePlan,
 } from "@/lib/api";
-import { formatHms, formatNumber, formatPace } from "@/lib/format";
-import { translator, type Strings, type Translate } from "@/lib/strings";
+import { formatHms, formatNumber, formatPace, formatPaceInput } from "@/lib/format";
+import { plural, translator, type Strings, type Translate } from "@/lib/strings";
 import type {
   PlotOutput,
   RacePlanCurveOption,
@@ -319,7 +319,9 @@ export function RacePlanScreen({
         }
       />
 
-      {result && <RacePlanHero result={result} name={title.trim() || t("nav.race_plan")} t={t} />}
+      {result && (
+        <RacePlanHero result={result} name={title.trim() || t("race_plan.untitled")} t={t} />
+      )}
 
       <form className="tm-panel panel race-plan__form" onSubmit={submit}>
         <div className="race-plan__fields">
@@ -496,22 +498,46 @@ export function RacePlanScreen({
 }
 
 /**
- * The plan's one hero (`tm-hero` compact, design/tagg/components/Hero.md): the
- * time the plan is built around, in sun, with the course's distance and climb
- * beside it. Moved up from the summary tiles, not recomputed.
+ * The plan's one hero (`tm-hero` compact, design/tagg/components/Hero.md § Plan
+ * de course): which curve paced it, the race's name, the strategy in one line,
+ * and four numbers — the target time in sun first. "Target time" appears once,
+ * in its stat; the title is the race.
  */
 function RacePlanHero({ result, name, t }: { result: RacePlanResult; name: string; t: Translate }) {
   const s = result.summary;
+  const kicker = [
+    t("race_plan.hero.kicker", { curve: result.curve_label }),
+    result.personalized ? t("race_plan.hero.personalized") : null,
+  ].filter(Boolean).join(" · ");
+  // Each fragment is left out when the summary does not carry it.
+  const meta = [
+    Number.isFinite(s.gap_pace_s_per_km) ? t("race_plan.hero.gap", { pace: formatPaceInput(s.gap_pace_s_per_km) }) : null,
+    Number.isFinite(s.average_pace_s_per_km) ? t("race_plan.hero.real", { pace: formatPaceInput(s.average_pace_s_per_km) }) : null,
+    s.section_count ? plural(t, "race_plan.hero.sections", s.section_count) : null,
+    s.aid_station_count ? plural(t, "race_plan.hero.aid_stations", s.aid_station_count) : null,
+    s.durability_enabled && s.durability_multiplier_finish != null
+      ? t("race_plan.hero.drift", {
+          factor: formatNumber(s.durability_multiplier_finish, 2),
+          confidence: t(`race_plan.confidence.${s.durability_confidence ?? "population_only"}`),
+        })
+      : null,
+  ].filter(Boolean).join(" · ");
   const stats = [
     { label: t("race_plan.summary.target"), value: formatHms(s.target_time_s), key: true },
     { label: t("race_plan.summary.distance"), value: formatNumber(s.distance_m / 1000, 1), unit: "km" },
-    { label: t("race_plan.summary.elevation"), value: `+${formatNumber(s.elevation_gain_m, 0)}`, unit: "m" },
+    {
+      label: t("race_plan.hero.gain_loss"),
+      value: `+${formatNumber(s.elevation_gain_m, 0)} / −${formatNumber(s.elevation_loss_m, 0)}`,
+      unit: "m",
+    },
+    { label: t("race_plan.hero.gap_pace"), value: formatPaceInput(s.gap_pace_s_per_km), unit: "/km" },
   ];
   return (
     <header className="tm-hero tm-hero--compact race-plan__hero">
       <div className="tm-hero__body">
-        <span className="tm-hero__kicker">{name}</span>
-        <h2 className="tm-hero__title">{t("race_plan.summary.target")}</h2>
+        <span className="tm-hero__kicker">{kicker}</span>
+        <h2 className="tm-hero__title">{name}</h2>
+        {meta && <span className="tm-hero__meta">{meta}</span>}
       </div>
       <div className="tm-hero__stats">
         {stats.map((stat) => (
