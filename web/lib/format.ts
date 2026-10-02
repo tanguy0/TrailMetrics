@@ -9,9 +9,19 @@
 
 import type { CellFormat } from "./types";
 
-export function formatHms(seconds: number | null | undefined): string {
+/**
+ * A duration as a clock: `1:12` under the hour, `4:12:08` above, never a
+ * leading zero (design/tagg/density.md). Past a day, a total reads in hours —
+ * `1 062 h` — unless `exact`: a race target of 30 hours is still `30:00:00`,
+ * and an input needs the clock back.
+ */
+export function formatHms(
+  seconds: number | null | undefined,
+  { exact = false }: { exact?: boolean } = {},
+): string {
   if (seconds == null || !Number.isFinite(seconds)) return "—";
   const total = Math.round(seconds);
+  if (!exact && total >= 86_400) return `${formatNumber(total / 3600, 0)} h`;
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   const secs = total % 60;
@@ -65,10 +75,95 @@ export function formatNumber(value: number, decimals: number): string {
   });
 }
 
-export function formatDate(value: string | number | Date | null): string {
-  if (value == null) return "—";
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toISOString().slice(0, 10);
+export type DateStyle = "short" | "relative" | "long";
+
+/**
+ * The page's locale when the caller has none to hand — `<html lang>`, which the
+ * root layout sets from the session. Callers with strings pass `t("locale")`.
+ */
+function defaultLocale(): string | undefined {
+  return typeof document !== "undefined" ? document.documentElement.lang || undefined : undefined;
+}
+
+/** A `YYYY-MM-DD` is a calendar day, read in local time — not UTC midnight. */
+function toDate(value: string | number | Date): Date {
+  if (value instanceof Date) return value;
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(value);
+}
+
+/**
+ * A date as a person reads it (design/tagg/density.md — never ISO in the UI):
+ *
+ * - `short` — tiles, cells, pills: `30 sept.`, with `25` added when the year is
+ *   not the current one;
+ * - `relative` — hero, meta, sync state: `il y a 12 min`, `hier`, `lundi`, then
+ *   `short` past a week;
+ * - `long` — page titles, PDF: `mardi 30 septembre 2026`.
+ */
+export function formatDate(
+  value: string | number | Date | null | undefined,
+  style: DateStyle = "short",
+  locale: string | undefined = defaultLocale(),
+): string {
+  if (value == null || value === "") return "—";
+  const date = toDate(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  if (style === "long") {
+    return date.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }
+  if (style === "relative") {
+    const relative = relativeDate(date, locale);
+    if (relative) return relative;
+  }
+  const dayMonth = date.toLocaleDateString(locale, { day: "numeric", month: "short" });
+  return date.getFullYear() === new Date().getFullYear()
+    ? dayMonth
+    : `${dayMonth} ${String(date.getFullYear()).slice(-2)}`;
+}
+
+/** `il y a 12 min`, `il y a 3 h`, `hier`, a weekday — or null past a week. */
+function relativeDate(date: Date, locale: string | undefined): string | null {
+  const now = new Date();
+  const minutes = Math.round((now.getTime() - date.getTime()) / 60_000);
+  if (minutes < 0) return null;
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" });
+  if (minutes < 60) return rtf.format(-minutes, "minute");
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOf(now) - startOf(date)) / 86_400_000);
+  if (days === 0) return rtf.format(-Math.round(minutes / 60), "hour");
+  if (days === 1) return rtf.format(-1, "day");
+  if (days < 7) return date.toLocaleDateString(locale, { weekday: "long" });
+  return null;
+}
+
+/** A date range: `29 sept. – 5 oct.` (thin spaces around an en dash). */
+export function formatDateRange(
+  start: string | Date,
+  end: string | Date,
+  locale: string | undefined = defaultLocale(),
+): string {
+  return `${formatDate(start, "short", locale)}\u2009–\u2009${formatDate(end, "short", locale)}`;
+}
+
+/**
+ * A pace interval, fastest first, no spaces: `6:17–6:48` (density.md). The
+ * `/km` belongs in the label then — "Allure (/km)" — not in the value.
+ */
+export function formatPaceRange(fastSecondsPerKm: number, slowSecondsPerKm: number): string {
+  return `${formatPaceInput(fastSecondsPerKm)}–${formatPaceInput(slowSecondsPerKm)}`;
+}
+
+/**
+ * A tile's number size by its length, unit excluded (density.md): the default
+ * up to 5 characters, `--lg` from 6, `--sm` past 9.
+ */
+export function kpiNumClass(value: string): string {
+  const length = value.length;
+  return length > 9 ? "tm-kpi__num tm-kpi__num--sm" : length > 5 ? "tm-kpi__num tm-kpi__num--lg" : "tm-kpi__num";
 }
 
 /** Render one table cell according to its column's declared format. */
@@ -80,7 +175,7 @@ export function formatCell(value: unknown, format: CellFormat): string {
     case "pace":
       return formatPace(Number(value));
     case "date":
-      return formatDate(value as string);
+      return formatDate(value as string, "short");
     case "integer":
       return Number.isFinite(Number(value)) ? String(Math.round(Number(value))) : "—";
     case "percent": {

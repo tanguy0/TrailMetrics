@@ -221,3 +221,13 @@ button.tm-chip:focus-visible{outline:none;box-shadow:var(--focus-ring)}
   .tm-hero{flex-wrap:wrap}
   .tm-hero__stats{margin-left:0;flex-wrap:wrap;gap:var(--space-4)}
 }
+
+/* --- v1.2 · densité ------------------------------------------------------- */
+.tm-kpi__value,.tm-kpi__num,.tm-table .is-num,.tm-table .is-date,.tm-hero__stat .v,.tm-session__stats b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.tm-kpi__num--lg{font-size:22px;line-height:28px}
+.tm-kpi__num--sm{font-size:17px;line-height:24px}
+.tm-table .is-num{min-width:9ch}
+.tm-table td.is-text{max-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-table-scroll{overflow-x:auto;border-radius:var(--radius-xl)}
+.tm-range{white-space:nowrap}
+.tm-hero__sep{border-top:1px solid var(--on-hero-line);margin:2px 0;width:100%}

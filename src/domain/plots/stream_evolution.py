@@ -21,6 +21,7 @@ rolling mean, then a distance-domain Savitzky–Golay) is the same one the metri
 pipeline uses.
 """
 
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -82,6 +83,16 @@ _DEFAULT_SIGNALS = ["gap_pace"]
 # third signal alongside them falls back to the ordinary palette for it, since
 # there is no longer one single "other metric" to force a color onto.
 _EFFORT_SIGNALS = frozenset({"gap_pace", "pace", "power"})
+
+# charts.md § v1.2 — cas particulier. Altitude, when picked alongside other
+# signals, is the backdrop (drawn first, flat, on the right axis or a hidden one
+# when the right is taken); heart rate a thin chart-you-2 line, power chart-you-3.
+# Several activities are a comparison with the most recent as current; past four
+# the app asks for fewer rather than fading them further.
+_BACKDROP_SIGNAL = "altitude"
+_HR_WIDTH = 1.5
+_POWER_SIGNALS = frozenset({"power", "power_per_kg"})
+_MAX_COMPARED = 4
 
 # x-axis key -> (attribute, label key, scale from SI, hover unit)
 _X_AXES = {
@@ -204,6 +215,14 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     if not resolved_signals:
         return empty_output(weight_note(lang))
 
+    # The backdrop leaves the axis bucketing: it never claims a scale a signal
+    # needs. On its own, altitude is simply the chart's one series.
+    backdrop = [s for s in resolved_signals if s[0] == _BACKDROP_SIGNAL]
+    if backdrop and len(resolved_signals) > 1:
+        resolved_signals = [s for s in resolved_signals if s[0] != _BACKDROP_SIGNAL]
+    else:
+        backdrop = []
+
     multi_signal = len(resolved_signals) > 1
     resolved_keys = [key for key, *_ in resolved_signals]
     # Heart rate never shares an axis with anything else it's plotted alongside —
@@ -230,6 +249,7 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     primary_kind = axis_kinds[0] if axis_kinds else SIGNALS["heartrate"][2]
 
     traces: List[Trace] = []
+    owners: List[int] = []
     primary_entries: List[_AxisEntry] = []
     secondary_entries: List[_AxisEntry] = []
     # A single-colour axis tint only still means something when exactly one signal
@@ -241,10 +261,13 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     for index, (key, attribute, y_label_key, value_kind, decimals) in enumerate(resolved_signals):
         on_primary = value_kind == primary_kind and not (key == "heartrate" and has_other_signal)
         signal_as_speed = as_speed and value_kind == "pace"
+        width = 2.0
         if key == "heartrate" and has_other_signal:
-            color = theme.DANGER
+            color, width = theme.CHART_YOU_2, _HR_WIDTH
         elif paired_with_hr and key in _EFFORT_SIGNALS:
             color = theme.PRIMARY
+        elif multi_signal and key in _POWER_SIGNALS:
+            color = theme.CHART_YOU_3
         else:
             color = series_color(index) if multi_signal else None
         label = translate(f"signal.{key}", lang)
@@ -257,6 +280,8 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
             unify_color=color,
             signal_label=label,
             single_activity=single_activity,
+            width=width,
+            owners=owners,
         )
 
         entry: _AxisEntry = (label, value_kind, decimals, signal_as_speed, key)
@@ -277,9 +302,38 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
         left_axis.color = primary_color
         y2_axis.color = secondary_color
 
+    if backdrop:
+        key, attribute, _, value_kind, decimals = backdrop[0]
+        label = translate(f"signal.{key}", lang)
+        # The right axis when it is free (and then titled altitude), else a hidden one.
+        axis = "y2" if y2_axis is None else "y3"
+        drawn = _signal_traces(
+            resolved, activity_ids, attribute, x_attribute, x_scale, x_unit,
+            value_kind, decimals, as_speed=False,
+            smoothing=smoothing, smoothing_key=smoothing_key,
+            axis=axis, unify_color=None, signal_label=label,
+            single_activity=single_activity,
+        )
+        for trace in drawn:
+            trace.background = True
+        if axis == "y2":
+            y2_axis = _y_axis(label, value_kind, False, decimals)
+        traces = drawn + traces
+
+    if len(activity_ids) > 1:
+        # The most recent activity is the current one of the comparison.
+        latest = max(activity_ids, key=lambda aid: resolved.activity_start(aid) or datetime.min)
+        for trace, owner in zip([t for t in traces if not t.background], owners):
+            if owner == latest:
+                trace.end_label = True
+                break
+        if len(activity_ids) > _MAX_COMPARED:
+            notes.append(translate("plot.stream.too_many_compared", lang).format(limit=_MAX_COMPARED))
+
     title = " · ".join(label for label, *_ in primary_entries + secondary_entries)
 
     chart = ChartData(
+        family="comparison" if len(activity_ids) > 1 else "function",
         title=title,
         x_axis=Axis(title=translate(x_label_key, lang), kind=AxisKind.LINEAR,
                     tick_format=",.1f"),
@@ -327,6 +381,8 @@ def _signal_traces(
     unify_color: Optional[str],
     signal_label: str,
     single_activity: bool,
+    width: float = 2.0,
+    owners: Optional[List[int]] = None,
 ) -> List[Trace]:
     """One line per activity for a single signal, bound to one y-axis.
 
@@ -366,13 +422,15 @@ def _signal_traces(
             color=unify_color or series_color(index),
             axis=axis,
             dash=_ACTIVITY_DASHES[index % len(_ACTIVITY_DASHES)] if unify_color else "-",
-            width=2.0,
+            width=width,
             hover_text=_hover_texts(y, value_kind, as_speed, decimals),
             hover_template=(
                 f"%{{x:.2f}} {x_unit}<br>%{{customdata}}"
                 "<extra>%{fullData.name}</extra>"
             ),
         ))
+        if owners is not None:
+            owners.append(activity_id)
     return traces
 
 

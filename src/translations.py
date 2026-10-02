@@ -507,6 +507,10 @@ TRANSLATIONS = {
         "en": "None of the selected activities has per-second data.",
         "fr": "Aucune des activités sélectionnées n'a de données par seconde.",
     },
+    "plot.stream.too_many_compared": {
+        "en": "More than {limit} activities overlaid: remove some to compare them clearly.",
+        "fr": "Plus de {limit} activités superposées : retirez-en pour bien les comparer.",
+    },
     "plot.stream.truncated": {
         "en": "Showing the first {shown} of {total} activities — raise the limit to "
         "see more.",
@@ -928,6 +932,9 @@ TRANSLATIONS = {
     "ui.visitor.more.link": {"en": "Connect Strava", "fr": "Connecter Strava"},
 
     "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},
+    # The BCP 47 locale dates and numbers are formatted in (design/tagg/density.md).
+    "ui.locale": {"en": "en-GB", "fr": "fr-FR"},
+    "ui.common.per_km": {"en": "/km", "fr": "/km"},
     "ui.chart.today": {"en": "Today", "fr": "Aujourd'hui"},
     "ui.common.close": {"en": "Close", "fr": "Fermer"},
     "ui.common.not_set": {"en": "Not set", "fr": "Non renseigné"},
@@ -1777,6 +1784,21 @@ TRANSLATIONS = {
         "fr": "Choisissez un autre fichier pour le remplacer.",
     },
     "ui.race_plan.updated": {"en": "Updated {date}", "fr": "Modifié le {date}"},
+    # The plan's hero (design/tagg/components/Hero.md § Plan de course).
+    "ui.race_plan.hero.kicker": {"en": "Race plan · {curve} curve", "fr": "Plan de course · courbe {curve}"},
+    "ui.race_plan.hero.personalized": {"en": "personalised", "fr": "personnalisée"},
+    "ui.race_plan.hero.gap": {"en": "GAP {pace} /km", "fr": "GAP {pace} /km"},
+    "ui.race_plan.hero.real": {"en": "actual {pace} /km", "fr": "réel {pace} /km"},
+    "ui.race_plan.hero.sections.one": {"en": "{count} section", "fr": "{count} section"},
+    "ui.race_plan.hero.sections.many": {"en": "{count} sections", "fr": "{count} sections"},
+    "ui.race_plan.hero.aid_stations.one": {"en": "{count} aid station", "fr": "{count} ravito"},
+    "ui.race_plan.hero.aid_stations.many": {"en": "{count} aid stations", "fr": "{count} ravitos"},
+    "ui.race_plan.hero.drift": {
+        "en": "drift ×{factor} at the finish ({confidence})",
+        "fr": "dérive ×{factor} à l'arrivée ({confidence})",
+    },
+    "ui.race_plan.hero.gain_loss": {"en": "Gain / loss", "fr": "D+ / D−"},
+    "ui.race_plan.hero.gap_pace": {"en": "GAP pace", "fr": "Allure GAP"},
     "ui.race_plan.summary.distance": {"en": "Distance", "fr": "Distance"},
     "ui.race_plan.summary.elevation": {"en": "Elevation", "fr": "Dénivelé"},
     "ui.race_plan.summary.target": {"en": "Target time", "fr": "Temps visé"},

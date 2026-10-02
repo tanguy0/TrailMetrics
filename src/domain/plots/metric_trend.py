@@ -52,6 +52,8 @@ from src.domain.dataset.metrics import (
     optional_metric,
 )
 from src.domain.dataset.resolved import DataLevel, ResolvedGroup, ResolvedPanelData
+from src.domain.dataset.sport import CYCLING, HIKING, RUNNING, SWIMMING, sport_family
+from src.domain.gap import theme
 from src.domain.dataset.training_load import daily_training_load, fitness_fatigue_series
 from src.domain.plots.base import (
     PlotDefinition,
@@ -258,6 +260,7 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
             and resolved.mass_kg is None:
         notes.append(translate("races.weight_needed", lang))
 
+    owners: List[ResolvedGroup] = []
     traces = _metric_traces(
         resolved, metric, aggregation, granularity, x_mode, chart_kind,
         cumulative=cumulative,
@@ -267,7 +270,10 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
         lang=lang,
         axis="y",
         unify_color=_PRIMARY_COLOR if dual else None,
+        owners=owners,
     )
+    family = None if dual else _declare_family(
+        traces, owners, metric, aggregation, chart_kind, x_mode)
 
     # The optional second metric, drawn against its own right-hand axis.
     y2_axis = None
@@ -303,6 +309,9 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
         y2_axis=y2_axis,
         traces=traces,
         caption=_caption(metric, aggregation, granularity, lang),
+        family=family,
+        # Fitness/fatigue is always daily; elapsed months are not dates.
+        x_bucket=None if x_mode == "elapsed" else ("day" if _is_ff(metric) else granularity),
     )
     output = PlotOutput(charts=[chart], notes=notes)
     if params.get("show_totals"):
@@ -325,6 +334,7 @@ def _metric_traces(
     lang: str,
     axis: str,
     unify_color: Optional[str] = None,
+    owners: Optional[List[ResolvedGroup]] = None,
 ) -> List[Trace]:
     """Every series for one metric, bound to one y-axis.
 
@@ -338,7 +348,9 @@ def _metric_traces(
     matches the tint on the axis itself.
     """
     traces: List[Trace] = []
-    series_index = 0
+    # Sport colours are per family, so two sport types of one family (Run and
+    # TrailRun) share a colour; a dash tells them apart, as it does groups.
+    seen_per_color: Dict[str, int] = {}
     # Fitness/Fatigue is cross-sport by construction (there's no "split by
     # sport" for a number that already sums every sport together) and only
     # ever daily (see FITNESS_FATIGUE_METRICS's docstring) — both forced here
@@ -369,21 +381,25 @@ def _metric_traces(
 
             y_values = smooth_uniform_series(y_values, **smoothing)
 
+            color = _sport_color(label) if effective_split_by_sport else group_color(group.index)
+            dash = "-"
+            if effective_split_by_sport:
+                dash = _GROUP_DASHES[seen_per_color.get(color, 0) % len(_GROUP_DASHES)]
+                seen_per_color[color] = seen_per_color.get(color, 0) + 1
             traces.append(Trace(
                 name=label,
                 x=x_values,
                 y=y_values,
                 kind=chart_kind,
-                color=(
-                    series_color(series_index) if split_by_sport
-                    else group_color(group.index)
-                ),
+                color=color,
+                dash=dash,
                 axis=axis,
                 markers=markers and chart_kind is not TraceKind.BAR,
                 hover_text=metric_hover_texts(metric, y_values),
                 hover_template=hover_template(_x_hover(x_mode, lang)),
             ))
-            series_index += 1
+            if owners is not None:
+                owners.append(group)
 
     if unify_color is not None:
         # Only in the two-metric case, so a single-metric chart keeps the group
@@ -395,6 +411,43 @@ def _metric_traces(
             # Name carries the metric, since colour now encodes it rather than group.
             trace.name = label if len(traces) == 1 else f"{trace.name} · {label}"
     return traces
+
+
+def _sport_color(label: str) -> str:
+    """The `sport-*` token of a split series (charts.md § v1.2), from its sport type."""
+    sport = label.rsplit(" · ", 1)[-1]
+    return {
+        RUNNING: theme.SPORT_RUN,
+        CYCLING: theme.SPORT_BIKE,
+        HIKING: theme.SPORT_HIKE,
+        SWIMMING: theme.SPORT_SWIM,
+    }.get(sport_family(sport), theme.SPORT_OTHER)
+
+
+def _declare_family(
+    traces: List[Trace], owners: List[ResolvedGroup], metric, aggregation: str,
+    chart_kind: TraceKind, x_mode: str,
+) -> Optional[str]:
+    """What this trend is, per charts.md § v1.2 — the aggregation decides.
+
+    Bars and areas are a composition, left to the renderer. Several series, or
+    windows overlaid on elapsed time, are a comparison whose current series is
+    the most recent window. A single series is tracking when it adds up (sum,
+    count, a running total, the fitness/fatigue model) and an oscillation when it
+    is a level (mean, max, min, a ratio).
+    """
+    if chart_kind in (TraceKind.BAR, TraceKind.AREA) or not traces:
+        return None
+    if x_mode == "elapsed" or len(traces) > 1:
+        # Without windows (a hand-picked list) the renderer picks the current.
+        if any(o.window for o in owners):
+            latest = max(range(len(owners)), key=lambda i: (
+                owners[i].window.end if owners[i].window else date.min, -i))
+            traces[latest].end_label = True
+        return "comparison"
+    if _is_ff(metric) or (not metric.is_ratio and aggregation in ("sum", "count")):
+        return "tracking"
+    return "oscillation"
 
 
 def _subsets(

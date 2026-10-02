@@ -34,13 +34,15 @@ from src.translations import translate
 # daily timeline, which a discrete pick list doesn't naturally define.
 _FALLBACK_DISPLAY_DAYS = 182  # ~6 months
 
-# charts.md § v1.1: fitness forest with the area under it, fatigue a thinner
-# terra line without one, form sun bars around zero.
+# charts.md § v1.2 — cas particulier: the question is "am I tired?", so the
+# fatigue carries the figure's area (terra, 2.2 px); the fitness is a thin
+# forest line without one; form stays sun bars around a zero baseline. Both
+# lines end on their value. The one figure where the area is not on series 1.
 _FITNESS_COLOR = theme.FITNESS  # forest — slow, steady
 _FATIGUE_COLOR = theme.FATIGUE  # terra — fast, reactive
 _FORM_COLOR = theme.FORM        # sun — the signal of the moment
-_FITNESS_WIDTH = 2.2
-_FATIGUE_WIDTH = 1.5
+_FITNESS_WIDTH = 1.5
+_FATIGUE_WIDTH = 2.2
 # A fresh day (form above zero) reads stronger than a tired one.
 _FORM_OPACITY_POSITIVE = 0.75
 _FORM_OPACITY_NEGATIVE = 0.4
@@ -91,11 +93,13 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
                 name=translate("plot.fitness_fatigue.fitness", lang),
                 x=x, y=fitness_y, kind=TraceKind.LINE,
                 color=_FITNESS_COLOR, width=_FITNESS_WIDTH,
+                area=False, end_label=True,
             ),
             Trace(
                 name=translate("plot.fitness_fatigue.fatigue", lang),
                 x=x, y=fatigue_y, kind=TraceKind.LINE,
                 color=_FATIGUE_COLOR, width=_FATIGUE_WIDTH,
+                area=True, end_label=True,
             ),
             Trace(
                 name=translate("plot.fitness_fatigue.form", lang),
@@ -109,6 +113,9 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
         height=420,
         hover_mode="x unified",
         bargap=_FORM_BARGAP,
+        family="oscillation",
+        baseline=0.0,
+        x_bucket="day",
     )
     return PlotOutput(charts=[chart], notes=notes)
 

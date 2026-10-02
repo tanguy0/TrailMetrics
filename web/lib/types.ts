@@ -170,6 +170,9 @@ export interface Axis {
   dtick: number | null;
   /** Tints the axis to its series; set on dual-axis charts. */
   color: string | null;
+  /** Fixed ticks with their own words, for an ordinal scale. Both or neither. */
+  tick_values?: number[] | null;
+  tick_labels?: string[] | null;
 }
 
 export interface Trace {
@@ -179,7 +182,7 @@ export interface Trace {
   kind: TraceKind;
   color: string | null;
   /** Which y-axis this series is measured against; only used when `y2_axis` is set. */
-  axis: "y" | "y2";
+  axis: "y" | "y2" | "y3";
   dash: string;
   width: number;
   markers: boolean;
@@ -196,6 +199,15 @@ export interface Trace {
   point_colors: string[] | null;
   point_opacity: number[] | null;
   point_text: string[] | null;
+  /** charts.md § v1.2 — declared by a plot that knows its figure; null = the family decides. */
+  area?: boolean | null;
+  end_label?: boolean | null;
+  /** A flat backdrop (altitude, profile): line-strong fill, drawn first. */
+  background?: boolean;
+  band_opacity?: number | null;
+  /** Bars only: where every bar starts (in y units), and each bar's width in x units. */
+  bar_base?: number | null;
+  point_widths?: number[] | null;
 }
 
 /**
@@ -230,12 +242,25 @@ export interface Badge {
   short: string | null;
 }
 
-/** A date pinned on the x-axis: today (dotted sun line) or a race (terra dot). */
+/**
+ * A point pinned on the x-axis: today (dotted sun line), a race or an aid
+ * station (terra dot, named), or a section boundary (thin rule, no label).
+ */
 export interface Marker {
-  kind: "today" | "race";
+  kind: "today" | "race" | "aid" | "boundary";
   x: number | string;
   label: string;
+  /** A race in the current period: its label stacks above today's. */
+  stacked?: boolean;
 }
+
+export type ChartFamily =
+  | "tracking"
+  | "comparison"
+  | "function"
+  | "oscillation"
+  | "composition"
+  | "scatter";
 
 export interface ChartData {
   title: string;
@@ -258,6 +283,12 @@ export interface ChartData {
   hover_mode: string;
   /** Gap between bars as a share of each slot; null keeps Plotly's. */
   bargap?: number | null;
+  /** charts.md § v1.2: tracking | comparison | function | oscillation | composition | scatter. */
+  family?: ChartFamily | null;
+  /** An oscillation's reference level; null = 0 if the data straddles it, else the mean. */
+  baseline?: number | null;
+  /** A binned date axis (day | week | month | quarter | year); markers align to it. */
+  x_bucket?: string | null;
   caption: string | null;
 }
 

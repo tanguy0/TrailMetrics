@@ -64,6 +64,10 @@ class Axis:
     # Tint the axis title and ticks to match the series measured against it. Set on
     # dual-axis charts, where "which axis is this line on?" is otherwise a guess.
     color: Optional[str] = None
+    # Fixed ticks with their own words, for an ordinal scale (feeling: weak / ok /
+    # strong). Both or neither.
+    tick_values: Optional[List[float]] = None
+    tick_labels: Optional[List[str]] = None
 
 
 @dataclass
@@ -76,7 +80,8 @@ class Trace:
     kind: TraceKind = TraceKind.LINE
     color: Optional[str] = None
     # Which y-axis this series is measured against: "y" (left) or "y2" (right).
-    # Only meaningful when the chart defines a ``y2_axis``.
+    # Only meaningful when the chart defines a ``y2_axis``. A ``background`` may
+    # also take "y3": a hidden axis of its own, when both visible ones are taken.
     axis: str = "y"
     # matplotlib-style code ("-", "--", "-.", ":"); mapped to a Plotly dash.
     dash: str = "-"
@@ -101,6 +106,24 @@ class Trace:
     point_colors: Optional[List[str]] = None
     point_opacity: Optional[List[float]] = None
     point_text: Optional[List[str]] = None
+    # charts.md § v1.2 — what a plot that knows its figure declares. ``None``
+    # leaves the call to the chart's family (see src.domain.charts.families).
+    # ``area``: this line carries the figure's one gradient area (or never does).
+    area: Optional[bool] = None
+    # ``end_label``: a dot and the last value right of the line; on a comparison
+    # it also names the *current* series.
+    end_label: Optional[bool] = None
+    # A flat backdrop (altitude, a course profile): filled to zero in
+    # line-strong, drawn first, out of the legend unless it is the only series.
+    # Not "the area" — a figure may have a background, a band and an area.
+    background: bool = False
+    # Opacity of the ±band ribbon; ``None`` keeps the renderer's default.
+    band_opacity: Optional[float] = None
+    # Bars only: where every bar starts (in ``y`` units — a pace in s/km on a pace
+    # axis), so bars can rise from the slow end of a reversed axis; and each bar's
+    # own width in ``x`` units (a section's length). ``None`` keeps zero / even bars.
+    bar_base: Optional[float] = None
+    point_widths: Optional[List[float]] = None
 
 
 @dataclass
@@ -157,13 +180,18 @@ class Marker:
     """A point in time pinned on a date axis (charts.md § v1.1 — repères).
 
     ``kind`` is ``"today"`` — a dotted sun line across the plot with a mono label
-    above it — or ``"race"`` — a terra dot sitting on the x-axis, named by
-    ``label``. Both are the renderer's to draw; a plot only says where.
+    above it — ``"race"`` or ``"aid"`` — a terra dot sitting on the x-axis, named
+    by ``label`` (a race on a calendar, an aid station on a course) — or
+    ``"boundary"`` — a thin line-coloured rule, no label (a section limit). All
+    are the renderer's to draw; a plot only says where. Not only on date axes.
     """
 
-    kind: str  # today | race
+    kind: str  # today | race | aid | boundary
     x: Any
     label: str = ""
+    # A race in the current period shares today's x on a binned axis: its label
+    # then stacks above today's instead of sitting on the axis.
+    stacked: bool = False
 
 
 @dataclass
@@ -199,6 +227,16 @@ class ChartData:
     hover_mode: str = "auto"
     # Gap between bars, as a share of each slot; ``None`` keeps Plotly's.
     bargap: Optional[float] = None
+    # charts.md § v1.2 — tracking | comparison | function | oscillation |
+    # composition | scatter. ``None`` lets the renderer classify the figure.
+    family: Optional[str] = None
+    # An oscillation's reference level, drawn as a line-strong rule; ``None``
+    # takes 0 when the data straddles it, else the window's mean.
+    baseline: Optional[float] = None
+    # A date axis binned into periods — day | week | month | quarter | year —
+    # each point sitting on its period's first day. Markers align to it
+    # (src.domain.charts.markers); ``None`` is an unbinned or non-date axis.
+    x_bucket: Optional[str] = None
     # Caption rendered under the figure.
     caption: Optional[str] = None
 

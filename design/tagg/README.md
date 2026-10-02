@@ -35,7 +35,7 @@ Deux familles hébergées Google Fonts : **Manrope** (400–800) pour tout le te
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
 ```
 
-Les titres Manrope sont serrés (`letter-spacing` −0.02 à −0.035em) ; le corps reste à 0. Les styles `kicker` et `label` sont les seuls en capitales.
+Tout élément en `mono` porte `font-variant-numeric: tabular-nums`. Les titres Manrope sont serrés (`letter-spacing` −0.02 à −0.035em) ; le corps reste à 0. Les styles `kicker` et `label` sont les seuls en capitales.
 
 ## Espacements, rayons, ombres
 
@@ -51,8 +51,10 @@ La règle complète est dans la section **Graphiques (Plotly)**. En bref : fond 
 
 ## Composants
 
-Les composants sont décrits et prévisualisés dans l'onglet Composants. Ils existent en deux formes équivalentes : des **classes CSS** préfixées `tm-` dans `components/components.css` (pour l'app actuelle en CSS écrit main) et des **composants React** `window.TAGG.*` dans `components/components.js` qui ne font que poser ces classes. Le consommateur fournit le texte, les icônes (SVG inline) et les données ; le système fournit la forme.
+Les composants sont décrits et prévisualisés dans l'onglet Composants. Ils existent en deux formes équivalentes : des **classes CSS** préfixées `tm-` dans `components/components.css` (pour l'app actuelle en CSS écrit main ; le repo en a une copie, `web/app/components.css`, qui contient aussi des classes propres à l'app — `tm-modal`, `tm-week-summary`, `tm-textarea`, le responsive — absentes d'ici : le repo **fusionne**, il ne remplace jamais) et des **composants React** `window.TAGG.*` dans `components/components.js` qui ne font que poser ces classes. Le consommateur fournit le texte, les icônes (SVG inline) et les données ; le système fournit la forme.
 
 Deux composants servent le visiteur sans compte (`Teaser`, `AccessGrid`) ; la logique d'ensemble est dans la section **Expérience visiteur (freemium)**.
+
+Le formatage des dates, allures et nombres dans les cellules suit la section **Densité des cellules et des valeurs** (`density.md`).
 
 Correspondance avec le code existant : voir la section **Migration depuis globals.css**.

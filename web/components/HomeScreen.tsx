@@ -40,7 +40,8 @@ import {
   updateProfile,
 } from "@/lib/api";
 import {
-  formatDate, formatHms, formatNumber, formatPaceInput, parsePaceInput,
+  formatDate, formatDateRange, formatHms, formatNumber, formatPaceInput, formatPaceRange,
+  kpiNumClass, parsePaceInput,
 } from "@/lib/format";
 import { RUNNING_SPORT_TYPES } from "@/lib/sport";
 import { TREND_TONE, chipClass } from "@/lib/tone";
@@ -54,7 +55,6 @@ import type {
   PanelSpec,
   Trace,
 } from "@/lib/types";
-import { tokens } from "@/lib/theme";
 
 const POLL_MS = 2000;
 const WEEKS_SHOWN = 20;
@@ -281,7 +281,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
 
       {/* Last Run: the import controls, then the most recent activity itself. */}
       <section className="card-block card-block--sync">
-        <SectionTitle icon="refresh" kicker={summary.last_activity ? formatDate(summary.last_activity.date) : null}>{t("home.last.title")}</SectionTitle>
+        <SectionTitle icon="refresh" kicker={summary.last_activity ? formatDate(summary.last_activity.date, "relative", t("locale")) : null}>{t("home.last.title")}</SectionTitle>
 
         <SyncControls
           athlete={athlete}
@@ -554,11 +554,11 @@ function ProfileCard({
         />
         <Tile
           label={t("home.profile.oldest")}
-          value={formatDate(profile.oldest_activity)}
+          value={formatDate(profile.oldest_activity, "short", t("locale"))}
         />
         <Tile
           label={t("home.profile.newest")}
-          value={formatDate(profile.newest_activity)}
+          value={formatDate(profile.newest_activity, "short", t("locale"))}
         />
         <Tile
           label={t("home.profile.furthest")}
@@ -568,12 +568,12 @@ function ProfileCard({
               : "—"
           }
           unit={t("common.km")}
-          footnote={formatDate(profile.furthest_activity?.date ?? null)}
+          footnote={formatDate(profile.furthest_activity?.date ?? null, "short", t("locale"))}
         />
         <Tile
           label={t("home.profile.longest")}
           value={formatHms(profile.longest_activity?.moving_s)}
-          footnote={formatDate(profile.longest_activity?.date ?? null)}
+          footnote={formatDate(profile.longest_activity?.date ?? null, "short", t("locale"))}
         />
       </div>
 
@@ -599,10 +599,10 @@ function RecordsCard({ records, t }: { records: HomeRecord[]; t: T }) {
             <div className="tm-kpi tm-kpi--flat" key={record.label}>
               <span className="tm-kpi__label">{record.label}</span>
               <span className="tm-kpi__value">
-                <span className="tm-kpi__num">{formatHms(record.seconds)}</span>
+                <span className={kpiNumClass(formatHms(record.seconds))}>{formatHms(record.seconds)}</span>
               </span>
               <span className="tm-kpi__delta">
-                {formatDate(record.set_on)}
+                {formatDate(record.set_on, "short", t("locale"))}
                 {record === newest && (
                   <span className={chipClass("sun", "records__new")}>{t("home.records.new")}</span>
                 )}
@@ -721,10 +721,11 @@ const VMA_PACE_ZONES: { key: string; lowPct: number; highPct: number }[] = [
   { key: "reps", lowPct: 105, highPct: 115 },
 ];
 
+/** The zone's pace interval, fastest first (density.md): `6:17–6:48`. */
 function vmaPaceRange(vmaSecondsPerKm: number, lowPct: number, highPct: number): string {
   const slow = vmaSecondsPerKm / (lowPct / 100);
   const fast = vmaSecondsPerKm / (highPct / 100);
-  return `${formatPaceInput(slow)}–${formatPaceInput(fast)}`;
+  return formatPaceRange(fast, slow);
 }
 
 /**
@@ -792,9 +793,9 @@ function ZonesCard({
         {VMA_PACE_ZONES.map((zone) => (
           <Tile
             key={zone.key}
-            label={t(`home.zones.pace_${zone.key}`)}
+            // An interval: the unit moves up into the label, out of the value.
+            label={`${t(`home.zones.pace_${zone.key}`)} (${t("common.per_km")})`}
             value={vma != null ? vmaPaceRange(vma, zone.lowPct, zone.highPct) : "—"}
-            unit={vma != null ? "/km" : undefined}
             footnote={t("home.zones.unlocked_by_vma")}
           />
         ))}
@@ -1016,7 +1017,6 @@ function HomeHero({
   const monday = currentWeekStart();
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
-  const day = (date: Date) => date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 
   const { distance, climb } = volumeTraces(volumeCharts);
   const km = currentWeekValue(distance);
@@ -1025,7 +1025,7 @@ function HomeHero({
 
   const meta = [
     athlete.sync.last_synced_at
-      ? `${t("home.import.last")} ${formatDate(athlete.sync.last_synced_at)}`
+      ? `${t("home.import.last")} ${formatDate(athlete.sync.last_synced_at, "relative", t("locale"))}`
       : null,
     `${summary.profile.activity_count} ${t("home.profile.activities").toLowerCase()}`,
   ].filter(Boolean).join(" · ");
@@ -1045,7 +1045,7 @@ function HomeHero({
       )}
       <div className="tm-hero__body">
         <span className="tm-hero__kicker">
-          {t("home.hero.week", { number: isoWeekNumber(monday), range: `${day(monday)} – ${day(sunday)}` })}
+          {t("home.hero.week", { number: isoWeekNumber(monday), range: formatDateRange(monday, sunday, t("locale")) })}
         </span>
         <h1 className="tm-hero__title">{athlete.display_name}</h1>
         <div className="hero-email">{email}</div>
@@ -1278,19 +1278,16 @@ function RecentFormCard({
   );
 }
 
+/** The feeling scale of plots/weekly_feel.py, by its score on the right axis. */
+const FEELING_BY_SCORE = ["faible", "ok", "fort"] as const;
+
 /**
- * The feeling of the last rated week, read off the Feel chart's background
- * bands — each band is one week, coloured by its average feeling (the colours
- * of plots/weekly_feel.py `_FEELING_COLOR`).
+ * The feeling of the last rated week, read off the Feel chart's feeling line —
+ * the series on its right axis, one point per week, scored 1 (weak) to 3 (strong).
  */
 function lastFeeling(chart: ChartData | undefined): "faible" | "ok" | "fort" | null {
-  const band = chart?.bands[chart.bands.length - 1];
-  if (!band) return null;
-  const color = band.color.toLowerCase();
-  if (color === tokens.forest) return "fort";
-  if (color === tokens.sun) return "ok";
-  if (color === tokens.danger) return "faible";
-  return null;
+  const score = lastValue(chart?.traces.find((trace) => trace.axis === "y2")?.y);
+  return score != null ? FEELING_BY_SCORE[Math.round(score) - 1] ?? null : null;
 }
 
 /**
@@ -1486,7 +1483,7 @@ function SyncControls({
           </span>
           {athlete.sync.last_synced_at && (
             <span className="muted sync__last">
-              {t("home.import.last")} {formatDate(athlete.sync.last_synced_at)}
+              {t("home.import.last")} {formatDate(athlete.sync.last_synced_at, "relative", t("locale"))}
             </span>
           )}
         </div>
@@ -1520,7 +1517,7 @@ function SyncControls({
           )}
           {athlete.sync.last_synced_at && (
             <span className="muted sync__last">
-              {t("home.import.last")} {formatDate(athlete.sync.last_synced_at)}
+              {t("home.import.last")} {formatDate(athlete.sync.last_synced_at, "relative", t("locale"))}
             </span>
           )}
         </div>
@@ -1569,7 +1566,7 @@ function Tile({
     <div className={kpiClass(tone)}>
       <span className="tm-kpi__label">{label}</span>
       <span className="tm-kpi__value">
-        <span className="tm-kpi__num">{value}</span>
+        <span className={kpiNumClass(value)}>{value}</span>
         {unit && <span className="tm-kpi__unit">{unit}</span>}
       </span>
       {spark && <Sparkline values={spark} />}
@@ -1669,7 +1666,7 @@ function EditableTile({
           onClick={() => setEditing(true)}
         >
           {value != null ? (
-            <span className="tm-kpi__num">{value}</span>
+            <span className={kpiNumClass(value)}>{value}</span>
           ) : (
             <span className="kpi__unset">{t("common.not_set")}</span>
           )}

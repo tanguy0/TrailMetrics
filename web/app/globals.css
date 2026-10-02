@@ -474,10 +474,6 @@ input[type="radio"] {
   margin-top: var(--space-2);
 }
 
-.table-scroll {
-  overflow-x: auto;
-}
-
 /* --- Notes & status ------------------------------------------------------- */
 
 /* A callout sits in the flow with a little air around it; one carrying
@@ -863,7 +859,7 @@ input[type="radio"] {
 }
 
 /* A horizontal scroller rather than letting the chart's many labels crush
-   together on a narrow screen — same idiom as `.table-scroll`. */
+   together on a narrow screen — same idiom as `.tm-table-scroll`. */
 .hr-map__scroll {
   overflow-x: auto;
 }
@@ -2186,11 +2182,6 @@ a.new-page {
 }
 
 /* A curve name or a D+/D- pair is longer than Home's single numbers. */
-.race-plan__kpi-num {
-  font-size: 19px;
-  line-height: 26px;
-}
-
 /* --- Visitor (design/tagg/visitor.md) ------------------------------------- */
 
 .landing__brand {

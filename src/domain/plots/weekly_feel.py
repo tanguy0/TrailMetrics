@@ -2,19 +2,19 @@
 
 Three answers about the same week, on one timeline:
 
-* **average RPE** — the curve, on the only axis (1-10);
-* **average feeling** — the colour of the week's slab of background;
+* **average RPE** — bars on the left axis (0-10), each in the colour of the RPE
+  pill the athlete already knows;
+* **average feeling** — a thin line on a fixed right-hand scale of its three
+  words (weak / ok / strong);
 * **the fitness trend** — the week summary's own tag ("Fitness ↑"), pinned in a
-  row above the curve.
+  row above the bars.
 
-Three quantities, three scales, and one of them ordinal with three levels: a
-second y-axis would have to pick an alignment between them, and the reader would
-read a correlation out of where the lines happen to cross. So only the RPE gets an
-axis; the other two get channels that carry no scale (a fill, a tag) and can't
-imply one.
+Both scales are ordinal and fixed, never autoranged, so where the line crosses a
+bar says nothing on its own — it is the same week read twice, not a correlation
+(charts.md § v1.2).
 
-**Nothing here invents its own vocabulary.** The feeling colours are
-``FEELING_COLOR`` from ``TrainingScreen.tsx``, the tag is the one
+**Nothing here invents its own vocabulary.** The RPE colours are the pill's
+(``rpeTone`` in ``web/lib/tone.ts``), the feeling words the rating's own, the tag is the one
 ``WeekDetailColumn`` draws, and "up / stable / down" uses the same ±1 threshold on
 the same Banister CTL as ``weekFitnessTrend``. A reader who learned the tag in
 Training already knows what it means here — which is the whole reason to reuse it
@@ -28,14 +28,13 @@ week summary's, which counts every sport too.
 """
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import date, timedelta
 from typing import Any, Dict, List, Optional
 
 from src.domain.charts.ir import (
     Axis,
     AxisKind,
     Badge,
-    Band,
     ChartData,
     PlotOutput,
     Trace,
@@ -58,13 +57,6 @@ _FALLBACK_DISPLAY_DAYS = 182  # ~6 months
 # FEELING_SCORE / FEELING_COLOR in web/components/TrainingScreen.tsx.
 _FEELING_SCORE = {"faible": 1, "ok": 2, "fort": 3}
 _FEELING_BY_SCORE = ("faible", "ok", "fort")
-_FEELING_COLOR = {
-    "faible": theme.DANGER,
-    "ok": theme.SUNRISE,
-    "fort": theme.PRIMARY,
-}
-# Light enough that the curve, the gridlines and the tags all still read over it.
-_FEELING_OPACITY = 0.10  # bands stay at 10 % (charts.md § v1.1)
 
 # The fitness tag: arrow, ink/border colour, fill, and the full wording. The
 # wording and the ±1 threshold below are read straight from the `ui.*` keys the
@@ -80,8 +72,15 @@ _FITNESS_TAG = {
 # number as `weekFitnessTrend` in TrainingScreen.tsx.
 _TREND_THRESHOLD = 1.0
 
-_RPE_COLOR = theme.CHART_YOU_4  # lake blue
-_RPE_MIN, _RPE_MAX = 1.0, 10.0
+# charts.md § v1.2 — cas particulier. RPE takes the colour of its pill (moss up
+# to 4, sun 5–7, danger from 8 — rpeTone in web/lib/tone.ts), as bars at 0.85;
+# the feeling is a thin moss-ink line with r 3 dots on a fixed right-hand scale.
+# The scales are ordinal: no area, no end label.
+_RPE_OPACITY = 0.85
+_FEELING_LINE = theme.MOSS_INK
+_FEELING_WIDTH = 1.5
+_FEELING_MARKER_SIZE = 6  # r 3
+_RPE_MIN, _RPE_MAX = 0.0, 10.0
 # Headroom above the RPE scale for the badge row to live in (see ir.Badge).
 _BADGE_HEADROOM = 1.5
 
@@ -117,6 +116,7 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
 
     x = [w.start for w in weeks]
     return PlotOutput(charts=[ChartData(
+        x_bucket="week",
         title=translate("plot.weekly_feel.label", lang),
         x_axis=Axis(title="", kind=AxisKind.DATE),
         y_axis=Axis(
@@ -126,30 +126,46 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
             range=[_RPE_MIN, _RPE_MAX + _BADGE_HEADROOM],
             dtick=2,
         ),
+        y2_axis=Axis(
+            title=translate("ui.training.session.feeling_short", lang),
+            kind=AxisKind.LINEAR,
+            range=[0.5, 3.5],
+            tick_values=[1, 2, 3],
+            tick_labels=[
+                translate(f"ui.training.session.feeling_{level}", lang)
+                for level in _FEELING_BY_SCORE
+            ],
+            color=_FEELING_LINE,
+        ),
         traces=[
             Trace(
                 name=translate("plot.weekly_feel.rpe", lang),
                 x=x,
                 y=[w.avg_rpe for w in weeks],
-                kind=TraceKind.LINE,
-                color=_RPE_COLOR,
-                markers=True,
-                marker_size=8,
+                kind=TraceKind.BAR,
+                color=theme.SUN,
+                point_colors=[_rpe_color(w.avg_rpe) for w in weeks],
+                opacity=_RPE_OPACITY,
                 hover_text=[_hover(w, lang) for w in weeks],
                 hover_template="%{x|%d/%m/%Y}<br>%{customdata}<extra></extra>",
             ),
-            *_feeling_legend(lang, x[0]),
-        ],
-        bands=[
-            Band(
-                x0=_midweek(w.start, -3.5),
-                x1=_midweek(w.start, 3.5),
-                color=_FEELING_COLOR[w.feeling],
-                opacity=_FEELING_OPACITY,
-            )
-            for w in weeks if w.feeling is not None
+            Trace(
+                name=translate("ui.training.session.feeling_short", lang),
+                x=x,
+                y=[_FEELING_SCORE.get(w.feeling or "") for w in weeks],
+                kind=TraceKind.LINE,
+                color=_FEELING_LINE,
+                axis="y2",
+                width=_FEELING_WIDTH,
+                markers=True,
+                marker_size=_FEELING_MARKER_SIZE,
+                end_label=False,
+                hover_text=[_hover(w, lang) for w in weeks],
+                hover_template="%{x|%d/%m/%Y}<br>%{customdata}<extra></extra>",
+            ),
         ],
         badges=[_badge(w, lang) for w in weeks if w.trend is not None],
+        family="composition",
         height=340,
         caption=translate("plot.weekly_feel.caption", lang),
     )])
@@ -254,15 +270,6 @@ def _average_feeling(scores: List[int]) -> Optional[str]:
 
 # --- Rendering pieces ------------------------------------------------------
 
-def _midweek(week: date, offset_days: float) -> datetime:
-    """A band edge, as a datetime so half-day offsets survive.
-
-    Bands are centred on their week's Monday, which is where the marker sits, so
-    each point stands in the middle of its own colour rather than on its left edge.
-    """
-    return datetime.combine(week, time.min) + timedelta(days=offset_days)
-
-
 def _badge(week: _Week, lang: str) -> Badge:
     """The week's fitness tag: "Fitness ↑", falling back to the arrow alone.
 
@@ -284,27 +291,16 @@ def _badge(week: _Week, lang: str) -> Badge:
     )
 
 
-def _feeling_legend(lang: str, x0: date) -> List[Trace]:
-    """Three marker-only traces carrying no point — the legend key for the bands.
-
-    A band cannot legend itself, and a background that only means something if you
-    already know the colour code means nothing. These draw nothing (their single
-    y is null) and exist to put "Feeling: strong / ok / weak" in the legend, in
-    the same words the athlete picked when rating the session.
-    """
-    label = translate("ui.training.session.feeling_short", lang)
-    return [
-        Trace(
-            name=f"{label} · {translate(f'ui.training.session.feeling_{level}', lang)}",
-            x=[x0],
-            y=[None],
-            kind=TraceKind.SCATTER,
-            color=_FEELING_COLOR[level],
-            marker_size=11,
-            opacity=0.55,
-        )
-        for level in reversed(_FEELING_BY_SCORE)
-    ]
+def _rpe_color(rpe: Optional[float]) -> str:
+    """The colour of the RPE pill for a week's average, rounded like the pill's."""
+    if rpe is None:
+        return theme.SUN
+    rounded = round(rpe)
+    if rounded <= 4:
+        return theme.MOSS
+    if rounded <= 7:
+        return theme.SUN
+    return theme.DANGER
 
 
 def _hover(week: _Week, lang: str) -> str:

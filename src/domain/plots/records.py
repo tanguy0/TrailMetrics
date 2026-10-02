@@ -6,7 +6,7 @@ reversed so every improvement moves *up*, which is the only orientation that rea
 as progress.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -25,6 +25,7 @@ from src.domain.charts.ir import (
 )
 from src.domain.dataset.features import best_column
 from src.domain.dataset.resolved import DataLevel, ResolvedGroup, ResolvedPanelData
+from src.domain.gap import theme
 from src.domain.plots.base import PlotDefinition, register, series_color
 from src.domain.plotting_common import fmt_hms, fmt_pace
 from src.domain.progress.models import PR_DISTANCES
@@ -77,26 +78,39 @@ def compute_progression(resolved: ResolvedPanelData, params: Dict[str, Any]) -> 
         dates = [d for d in frame["date"] if isinstance(d, datetime)]
         end_date = max(dates) if dates else None
 
-    traces: List[Trace] = []
+    lines: List[Trace] = []
+    steps: List[Trace] = []
     color_index = 0
     for prefix, subset, _ in series:
         if subset is None or subset.empty:
             continue
         for label in labels:
-            trace = _progression_trace(
+            drawn = _progression_trace(
                 subset, label, prefix, as_pace, end_date, color_index, lang
             )
             color_index += 1
-            if trace is not None:
-                traces.append(trace)
+            if drawn is not None:
+                lines.append(drawn[0])
+                steps.extend(drawn[1])
 
-    if not traces:
+    if not lines:
         return empty_output(translate("plot.records.none", lang))
+
+    # charts.md § v1.2: one distance is tracked on its own; several are compared,
+    # the first one chosen being the current. The axis is reversed, so no area.
+    lines[0].end_label = True
+    if len(lines) > 1:
+        for line in lines[1:]:
+            for step in steps:
+                if step.legend_group == line.name:
+                    step.opacity = _OTHER_OPACITY
+    traces = lines + steps
 
     y_title = translate(
         "plot.ltp.records.y_pace" if as_pace else "plot.ltp.records.y_time", lang
     )
     chart = ChartData(
+        family="tracking" if len(lines) == 1 else "comparison",
         title=translate("plot.ltp.records.title", lang),
         x_axis=Axis(title=translate("plot.x.time", lang), kind=AxisKind.DATE),
         y_axis=Axis(title=y_title, kind=AxisKind.DURATION, reversed=True,
@@ -106,10 +120,20 @@ def compute_progression(resolved: ResolvedPanelData, params: Dict[str, Any]) -> 
     return PlotOutput(charts=[chart])
 
 
+# A record is a step: a dot on each step only (not on the carried-flat end), and
+# a record set within the last month in sun, larger — the same rule as the
+# "new" pill on Home.
+_STEP_MARKER_SIZE = 8   # r 4
+_NEW_MARKER_SIZE = 12   # r 6
+_NEW_RECORD_DAYS = 30
+_OTHER_OPACITY = 0.7
+
+
 def _progression_trace(
     frame, label: str, prefix: str, as_pace: bool,
     end_date: Optional[datetime], color_index: int, lang: str,
-) -> Optional[Trace]:
+) -> Optional[Tuple[Trace, List[Trace]]]:
+    """The record's step line, and the dots on its steps (recent ones apart)."""
     column = best_column(label)
     if column not in frame.columns:
         return None
@@ -126,6 +150,7 @@ def _progression_trace(
     times = [t for _, t in progression]
     kilometres = _METERS_BY_LABEL[label] / 1000.0
     paces = [t / kilometres for t in times]
+    step_count = len(dates)
 
     if end_date is not None and end_date > dates[-1]:
         # Carry the current record flat to the edge of the plot, so the line does
@@ -141,17 +166,38 @@ def _progression_trace(
         for t, p in zip(times, paces)
     ]
     name = f"{prefix} · {label}" if prefix else label
-    return Trace(
+    color = series_color(color_index)
+    template = "%{x|%d %b %Y}<br>%{customdata}<extra>%{fullData.name}</extra>"
+    line = Trace(
         name=name,
         x=dates,
         y=values,
         kind=TraceKind.STEP,
-        color=series_color(color_index),
-        markers=True,
-        marker_size=7,
+        color=color,
         hover_text=hover,
-        hover_template="%{x|%Y-%m-%d}<br>%{customdata}<extra>%{fullData.name}</extra>",
+        hover_template=template,
     )
+
+    recent = datetime.now() - timedelta(days=_NEW_RECORD_DAYS)
+    old = [i for i in range(step_count) if _naive(dates[i]) < recent]
+    new = [i for i in range(step_count) if _naive(dates[i]) >= recent]
+
+    def dots(indices: List[int], dot_color: str, size: float) -> Trace:
+        return Trace(
+            name=name, x=[dates[i] for i in indices], y=[values[i] for i in indices],
+            kind=TraceKind.SCATTER, color=dot_color, marker_size=size,
+            legend_group=name, show_legend=False,
+            hover_text=[hover[i] for i in indices], hover_template=template,
+        )
+
+    steps = [dots(old, color, _STEP_MARKER_SIZE)] if old else []
+    if new:
+        steps.append(dots(new, theme.SUN, _NEW_MARKER_SIZE))
+    return line, steps
+
+
+def _naive(moment: datetime) -> datetime:
+    return moment.replace(tzinfo=None) if moment.tzinfo else moment
 
 
 def _as_float(value) -> float:
