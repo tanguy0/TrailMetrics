@@ -6,7 +6,8 @@
 
 1. **Les données sont le décor.** Un écran TAGG se reconnaît à ses courbes et à ses chiffres en mono, pas à ses boutons. Tout ce qui n'est pas une donnée est neutre : blanc, crème grisé, filets fins.
 2. **Un seul accent chaud à la fois.** `forest` structure (marque, actions, onglets). `terra` veut dire « vous » et ne sert qu'à ça. `sun` est un signal ponctuel (record, infobulle, précalcul). On ne pose jamais terra et sun côte à côte sur la même carte sans raison.
-3. **La hiérarchie vient des surfaces, pas des couleurs.** Fond `bg-page` → panneau blanc avec `shadow-card` → plot-card bordée sans ombre. Trois niveaux, jamais quatre.
+3. **La hiérarchie vient des surfaces, pas des couleurs.** Fond `bg-page` → panneau blanc avec `shadow-card` → tuile ou plot-card crème sans ombre. Trois niveaux, jamais quatre, et **jamais deux niveaux consécutifs de la même teinte** : dans une carte blanche, les tuiles sont crème (`tm-kpi--flat`).
+   **Une vedette par page** : un seul bloc en `bg-hero`, un ou deux chiffres colorés par carte, un surtitre coloré par section — voir *Contraste et relief*.
 4. **Les chiffres sont alignés et tabulaires.** Toute valeur numérique est en `mono` (DM Mono), alignée à droite dans un tableau, avec son unité en `ink-muted` et plus petite.
 5. **Pas d'emoji, pas de dégradé, pas de bord gauche coloré** (sauf la carte de séance, où le bord code le sport et porte toujours un libellé).
 

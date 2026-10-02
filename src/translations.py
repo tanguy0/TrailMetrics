@@ -374,6 +374,7 @@ TRANSLATIONS = {
     },
     "plot.fitness_fatigue.fitness": {"en": "Fitness", "fr": "Fitness"},
     "plot.fitness_fatigue.fatigue": {"en": "Fatigue", "fr": "Fatigue"},
+    "plot.fitness_fatigue.form": {"en": "Form", "fr": "Forme"},
     "plot.fitness_fatigue.y": {
         "en": "Training load (Relative Effort)",
         "fr": "Charge d'entraînement (Effort relatif)",
@@ -927,6 +928,7 @@ TRANSLATIONS = {
     "ui.visitor.more.link": {"en": "Connect Strava", "fr": "Connecter Strava"},
 
     "ui.common.loading": {"en": "Loading…", "fr": "Chargement…"},
+    "ui.chart.today": {"en": "Today", "fr": "Aujourd'hui"},
     "ui.common.close": {"en": "Close", "fr": "Fermer"},
     "ui.common.not_set": {"en": "Not set", "fr": "Non renseigné"},
     "ui.common.saving": {"en": "saving", "fr": "enregistrement"},
@@ -942,6 +944,24 @@ TRANSLATIONS = {
     "ui.common.hours": {"en": "h", "fr": "h"},
 
     # Home — profile card
+    # Card kickers (design/tagg/contrast.md § 4): the time window, or "you".
+    "ui.home.kicker.you": {"en": "You", "fr": "Vous"},
+    "ui.home.kicker.all_time": {"en": "All time", "fr": "Tout l'historique"},
+    "ui.home.kicker.weeks": {"en": "Last {count} weeks", "fr": "{count} dernières semaines"},
+    # The hero (design/tagg/components/Hero.md): the current week in three numbers.
+    "ui.home.hero.week": {"en": "Week {number} · {range}", "fr": "Semaine {number} · {range}"},
+    "ui.home.hero.volume": {"en": "Volume", "fr": "Volume"},
+    "ui.home.hero.climb": {"en": "Climb", "fr": "D+"},
+    "ui.home.hero.form": {"en": "Form", "fr": "Forme"},
+    "ui.home.hero.import": {"en": "Import", "fr": "Importer"},
+    "ui.home.hero.this_week": {"en": "This week", "fr": "Cette semaine"},
+    "ui.home.recent.weekly_average": {"en": "Weekly average", "fr": "Moyenne par semaine"},
+    "ui.home.efficiency.latest": {"en": "Latest week", "fr": "Dernière semaine"},
+    "ui.home.form.fitness": {"en": "Fitness", "fr": "Fitness"},
+    "ui.home.form.fatigue": {"en": "Fatigue", "fr": "Fatigue"},
+    "ui.home.feel.latest": {"en": "Last rated week", "fr": "Dernière semaine notée"},
+    "ui.home.feel.rpe": {"en": "Average RPE", "fr": "RPE moyen"},
+    "ui.home.records.new": {"en": "New", "fr": "Nouveau"},
     "ui.home.profile.title": {"en": "Athlete History", "fr": "Historique de l'athlète"},
     "ui.home.profile.activities": {"en": "Activities", "fr": "Activités"},
     "ui.home.profile.oldest": {"en": "First run", "fr": "Première sortie"},

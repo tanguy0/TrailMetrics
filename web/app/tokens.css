@@ -1,11 +1,17 @@
-/* TAGG · tokens.css — généré depuis design/tagg/tokens.json. Source de vérité : tokens.json. */
+/* TAGG · tokens.css — généré depuis design/tagg/tokens.json (v2). Source de vérité : tokens.json. */
 :root {
   /* couleurs */
-  --bg-page: #f4f1ea;
+  --bg-page: #eee9de;
   --bg-surface: #ffffff;
   --bg-surface-alt: #f8f6f1;
   --bg-rail: #1f4b2c;
   --bg-chart: #ffffff;
+  --bg-hero: var(--bg-rail);
+  --on-hero-muted: rgba(255,255,255,0.68);
+  --on-hero-line: rgba(255,255,255,0.25);
+  --on-hero-fill: rgba(255,255,255,0.10);
+  --bg-tile: var(--bg-surface-alt);
+  --hl: var(--sun-tint);
   --line: #e8e2d6;
   --line-strong: #d5cdbe;
   --ink: #241f19;

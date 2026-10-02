@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 
 import { BlogCarousel } from "@/components/BlogCarousel";
 import { BlogSignature } from "@/components/BlogSignature";
+import { Callout } from "@/components/Callout";
 import { apiBaseUrl, lang, readSession } from "@/lib/session";
 import type { BlogPost } from "@/lib/types";
 
@@ -46,7 +47,7 @@ export default async function BlogPostPage({
   return (
     <main className="container container--narrow blog-post">
       {post.published === false && (
-        <p className="note">Brouillon — non visible dans la liste publique.</p>
+        <Callout>Brouillon — non visible dans la liste publique.</Callout>
       )}
       <h1>{post.title}</h1>
       {post.body_text.split("\n\n").map((paragraph, i) => (

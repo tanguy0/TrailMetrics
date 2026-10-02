@@ -22,11 +22,13 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
+import { Callout } from "@/components/Callout";
 import { ChartView } from "@/components/ChartView";
 import { EmailForm } from "@/components/EmailForm";
 import { Icon, type IconName } from "@/components/Icon";
 import { ProgressBar } from "@/components/ProgressBar";
 import { SessionDetail } from "@/components/SessionDetail";
+import { Sparkline } from "@/components/Sparkline";
 import {
   ApiError,
   getAthlete,
@@ -50,7 +52,9 @@ import type {
   HomeRecord,
   HomeSummary,
   PanelSpec,
+  Trace,
 } from "@/lib/types";
+import { tokens } from "@/lib/theme";
 
 const POLL_MS = 2000;
 const WEEKS_SHOWN = 20;
@@ -208,7 +212,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
   if (error) {
     return (
       <main className="container">
-        <p className="note note--error">{error}</p>
+        <Callout tone="terra">{error}</Callout>
       </main>
     );
   }
@@ -222,38 +226,32 @@ export function HomeScreen({ strings }: { strings: Strings }) {
 
   return (
     <main className="container">
-      <header className="hero">
-        <div>
-          <h1 className="hero__name">{athlete.display_name}</h1>
-          <div className="hero__email">
-            <EditableTile
-              label={t("home.health.email")}
-              value={athlete.email}
-              input={{ type: "email", value: athlete.email ?? "" }}
-              onCommit={async (raw) =>
-                setAthlete(await updateProfile({ email: raw.trim() === "" ? null : raw.trim() }))
-              }
-              t={t}
-            />
-          </div>
-          <p className="hero__meta">
-            {formatNumber(summary.profile.total_distance_m / 1000, 0)}{" "}
-            {t("common.km")} · {summary.profile.activity_count}{" "}
-            {t("home.profile.activities").toLowerCase()}
-          </p>
-        </div>
-        {/* A plain <img>: the source is Strava's CDN, so there is nothing for the
-            Next image loader to optimise, and it needs no remote-host allowlist. */}
-        {athlete.profile_url && (
-          <img className="hero__avatar" src={athlete.profile_url} alt="" />
-        )}
-      </header>
+      <HomeHero
+        athlete={athlete}
+        summary={summary}
+        volumeCharts={volumeCharts}
+        formCharts={formCharts}
+        busy={busy}
+        onImport={() => importActivities(false)}
+        email={
+          <EditableTile
+            label={t("home.health.email")}
+            value={athlete.email}
+            input={{ type: "email", value: athlete.email ?? "" }}
+            onCommit={async (raw) =>
+              setAthlete(await updateProfile({ email: raw.trim() === "" ? null : raw.trim() }))
+            }
+            t={t}
+          />
+        }
+        t={t}
+      />
 
       {/* Someone who reached this screen without answering the email question —
           an account created before it existed, or a skipped `/welcome`. */}
       {athlete.needs_email && (
         <section className="card-block card-block--welcome">
-          <SectionTitle icon="mail">{t("email.missing")}</SectionTitle>
+          <SectionTitle icon="mail" kicker={t("home.kicker.you")} role="terra">{t("email.missing")}</SectionTitle>
           <p className="muted">{t("email.body")}</p>
           <EmailForm
             strings={strings}
@@ -268,7 +266,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
       )}
 
       <div className="home-grid">
-        <ProfileCard summary={summary} t={t} />
+        <ProfileCard summary={summary} volumeCharts={volumeCharts} t={t} />
         <HealthCard
           athlete={athlete}
           summary={summary}
@@ -283,7 +281,7 @@ export function HomeScreen({ strings }: { strings: Strings }) {
 
       {/* Last Run: the import controls, then the most recent activity itself. */}
       <section className="card-block card-block--sync">
-        <SectionTitle icon="refresh">{t("home.last.title")}</SectionTitle>
+        <SectionTitle icon="refresh" kicker={summary.last_activity ? formatDate(summary.last_activity.date) : null}>{t("home.last.title")}</SectionTitle>
 
         <SyncControls
           athlete={athlete}
@@ -301,34 +299,19 @@ export function HomeScreen({ strings }: { strings: Strings }) {
         </div>
       </section>
 
-      {/* Recent Progress: volume, efficiency and form over the trailing window. */}
-      <section className="card-block card-block--progress">
-        <SectionTitle icon="chart">{t("home.progress.title")}</SectionTitle>
-
-        <div className="data-stack">
-          <RecentHistoryBlock
-            charts={volumeCharts}
-            hasData={activityCount > 0}
-            t={t}
-          />
-          <RecentEfficiencyBlock
-            charts={efficiencyCharts}
-            hasData={activityCount > 0}
-            hasWeight={athlete.weight_kg != null}
-            t={t}
-          />
-          <RecentFormBlock
-            charts={formCharts}
-            hasData={activityCount > 0}
-            t={t}
-          />
-          <RecentFeelBlock
-            charts={feelCharts}
-            hasData={activityCount > 0}
-            t={t}
-          />
-        </div>
-      </section>
+      {/* Recent progress, one card per question (contrast.md § 1-4): what have
+          I done, how efficient am I, am I in form, how do I feel. Each card has
+          its own colour role and one headline tile, read off the last value of
+          the series its chart already draws — no extra request. */}
+      <RecentHistoryCard charts={volumeCharts} hasData={activityCount > 0} t={t} />
+      <RecentEfficiencyCard
+        charts={efficiencyCharts}
+        hasData={activityCount > 0}
+        hasWeight={athlete.weight_kg != null}
+        t={t}
+      />
+      <RecentFormCard charts={formCharts} hasData={activityCount > 0} t={t} />
+      <RecentFeelCard charts={feelCharts} hasData={activityCount > 0} t={t} />
     </main>
   );
 }
@@ -497,21 +480,55 @@ function isoDate(date: Date): string {
 
 // --- Profile ---------------------------------------------------------------
 
-/** The heading of a Home section (History, Health, Performance, Records). */
-function SectionTitle({ icon, children }: { icon: IconName; children: ReactNode }) {
+/**
+ * A section's colour role (contrast.md § 4): its kicker and icon take it, nothing
+ * else in the heading does. `forest` is the default and needs no modifier.
+ */
+type SectionRole = "forest" | "terra" | "sun" | "moss";
+
+/**
+ * The heading of a Home card: a mono kicker (the time window, or "You") over the
+ * title, both beside an icon in the section's role colour.
+ */
+function SectionTitle({
+  icon,
+  kicker,
+  role = "forest",
+  children,
+}: {
+  icon: IconName;
+  kicker?: string | null;
+  role?: SectionRole;
+  children: ReactNode;
+}) {
   return (
-    <h2 className="card-block__title">
+    <h2 className={`tm-section${role === "forest" ? "" : ` tm-section--${role}`} section-title`}>
       <Icon name={icon} size={18} />
-      <span className="card-block__title-text">{children}</span>
+      <span className="section-title__text">
+        {kicker && <span className="tm-section__kicker">{kicker}</span>}
+        {children}
+      </span>
     </h2>
   );
 }
 
-function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
-  const { profile, records } = summary;
+/** Weeks of history in the Total distance sparkline (contrast.md § 3). */
+const SPARK_WEEKS = 13;
+
+function ProfileCard({
+  summary,
+  volumeCharts,
+  t,
+}: {
+  summary: HomeSummary;
+  volumeCharts: ChartData[] | null;
+  t: T;
+}) {
+  const { profile } = summary;
+  const weekly = volumeTraces(volumeCharts).distance?.y.slice(-SPARK_WEEKS);
   return (
     <section className="card-block card-block--profile">
-      <SectionTitle icon="run">{t("home.profile.title")}</SectionTitle>
+      <SectionTitle icon="run" kicker={t("home.kicker.all_time")}>{t("home.profile.title")}</SectionTitle>
 
       <div className="kpi-grid kpi-grid--four">
         <Tile
@@ -522,6 +539,8 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
           label={t("home.profile.total_distance")}
           value={formatNumber(profile.total_distance_m / 1000, 0)}
           unit={t("common.km")}
+          tone="forest"
+          spark={weekly}
         />
         <Tile
           label={t("home.profile.total_elevation")}
@@ -570,18 +589,24 @@ function ProfileCard({ summary, t }: { summary: HomeSummary; t: T }) {
  * stacked list in a half-width column does not.
  */
 function RecordsCard({ records, t }: { records: HomeRecord[]; t: T }) {
+  const newest = newestRecord(records);
   return (
     <section className="card-block card-block--records">
-      <SectionTitle icon="award">{t("home.profile.records")}</SectionTitle>
+      <SectionTitle icon="award" kicker={t("home.kicker.all_time")} role="sun">{t("home.profile.records")}</SectionTitle>
       {records.length ? (
         <div className="kpi-grid kpi-grid--records">
           {records.map((record) => (
-            <div className="tm-kpi" key={record.label}>
+            <div className="tm-kpi tm-kpi--flat" key={record.label}>
               <span className="tm-kpi__label">{record.label}</span>
               <span className="tm-kpi__value">
                 <span className="tm-kpi__num">{formatHms(record.seconds)}</span>
               </span>
-              <span className="tm-kpi__delta">{formatDate(record.set_on)}</span>
+              <span className="tm-kpi__delta">
+                {formatDate(record.set_on)}
+                {record === newest && (
+                  <span className={chipClass("sun", "records__new")}>{t("home.records.new")}</span>
+                )}
+              </span>
             </div>
           ))}
         </div>
@@ -590,6 +615,23 @@ function RecordsCard({ records, t }: { records: HomeRecord[]; t: T }) {
       )}
     </section>
   );
+}
+
+/** Within this long, the most recent record still reads as "new". */
+const NEW_RECORD_DAYS = 30;
+
+/**
+ * The most recently set record, if it is recent enough to call new — the one
+ * tile of the card that gets the sun pill. Every other record stays neutral.
+ */
+function newestRecord(records: HomeRecord[]): HomeRecord | null {
+  let newest: HomeRecord | null = null;
+  for (const record of records) {
+    if (record.set_on && (!newest?.set_on || record.set_on > newest.set_on)) newest = record;
+  }
+  if (!newest?.set_on) return null;
+  const age = (Date.now() - Date.parse(newest.set_on)) / 86_400_000;
+  return age <= NEW_RECORD_DAYS ? newest : null;
 }
 
 // --- Health ----------------------------------------------------------------
@@ -609,7 +651,7 @@ function HealthCard({
 
   return (
     <section className="card-block card-block--health">
-      <SectionTitle icon="heart">{t("home.health.title")}</SectionTitle>
+      <SectionTitle icon="heart" kicker={t("home.kicker.you")} role="terra">{t("home.health.title")}</SectionTitle>
 
       <div className="kpi-grid kpi-grid--square">
         <EditableTile
@@ -640,6 +682,7 @@ function HealthCard({
           value={athlete.weight_kg != null ? formatNumber(athlete.weight_kg, 1) : null}
           unit={athlete.weight_kg != null ? t("common.kg") : undefined}
           help={t("home.health.weight_help")}
+          tone="terra"
           input={{ type: "number", value: athlete.weight_kg?.toString() ?? "", min: 25, max: 250, step: 0.5 }}
           onCommit={async (raw) =>
             onSaved(await updateProfile({ weight_kg: raw === "" ? null : Number(raw) }))
@@ -725,7 +768,7 @@ function ZonesCard({
 
   return (
     <section className="card-block card-block--zones">
-      <SectionTitle icon="target">{t("home.zones.title")}</SectionTitle>
+      <SectionTitle icon="target" kicker={t("home.kicker.you")} role="terra">{t("home.zones.title")}</SectionTitle>
       <p className="data-block__lede">{t("home.zones.subtitle")}</p>
 
       <div className="kpi-grid">
@@ -882,8 +925,209 @@ function LastActivityBlock({
   );
 }
 
-/** The last 30 weeks: distance and climb on one chart, across the full width. */
-function RecentHistoryBlock({
+// --- Hero ------------------------------------------------------------------
+
+/** Monday of the current week, local time — the bin `granularity: "week"` opens. */
+function currentWeekStart(): Date {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return date;
+}
+
+/** ISO 8601 week number — the "Semaine N" the hero's kicker names. */
+function isoWeekNumber(date: Date): number {
+  const day = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  day.setUTCDate(day.getUTCDate() + 4 - (day.getUTCDay() || 7));
+  const yearStart = Date.UTC(day.getUTCFullYear(), 0, 1);
+  return Math.ceil(((day.getTime() - yearStart) / 86_400_000 + 1) / 7);
+}
+
+/** The last non-missing value of a series, or null when it has none. */
+function lastValue(values: (number | null)[] | undefined): number | null {
+  if (!values) return null;
+  for (let i = values.length - 1; i >= 0; i--) {
+    const value = values[i];
+    if (value != null && !Number.isNaN(value)) return value;
+  }
+  return null;
+}
+
+/**
+ * A weekly trace's value for the current week. A week with no activity has no
+ * bin at all, so a missing current bin reads as zero, not as unknown.
+ */
+function currentWeekValue(trace: Trace | undefined): number | null {
+  if (!trace) return null;
+  const monday = isoDate(currentWeekStart());
+  const index = trace.x.findIndex((x) => String(x).slice(0, 10) === monday);
+  return index < 0 ? 0 : (trace.y[index] ?? 0);
+}
+
+/** The volume chart's distance (left axis) and climb (right axis) traces. */
+function volumeTraces(charts: ChartData[] | null) {
+  const traces = charts?.[0]?.traces ?? [];
+  return {
+    distance: traces.find((trace) => trace.axis !== "y2"),
+    climb: traces.find((trace) => trace.axis === "y2"),
+  };
+}
+
+/**
+ * Banister form today, fitness minus fatigue — from the two series the Form
+ * chart draws (fitness first, fatigue second; see plots/fitness_fatigue.py).
+ */
+function formValues(charts: ChartData[] | null) {
+  const traces = charts?.[0]?.traces ?? [];
+  const fitness = lastValue(traces[0]?.y);
+  const fatigue = lastValue(traces[1]?.y);
+  return {
+    fitness,
+    fatigue,
+    form: fitness != null && fatigue != null ? fitness - fatigue : null,
+  };
+}
+
+/**
+ * The page's one hero (`tm-hero`, design/tagg/components/Hero.md): who, the
+ * current week, and its three numbers — volume, climb and form, form being the
+ * key figure in sun. The import action is secondary here; the page's primary
+ * button stays in the Last Run card.
+ */
+function HomeHero({
+  athlete,
+  summary,
+  volumeCharts,
+  formCharts,
+  busy,
+  onImport,
+  email,
+  t,
+}: {
+  athlete: Athlete;
+  summary: HomeSummary;
+  volumeCharts: ChartData[] | null;
+  formCharts: ChartData[] | null;
+  busy: boolean;
+  onImport: () => void;
+  email: ReactNode;
+  t: T;
+}) {
+  const monday = currentWeekStart();
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  const day = (date: Date) => date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+
+  const { distance, climb } = volumeTraces(volumeCharts);
+  const km = currentWeekValue(distance);
+  const gain = currentWeekValue(climb);
+  const { form } = formValues(formCharts);
+
+  const meta = [
+    athlete.sync.last_synced_at
+      ? `${t("home.import.last")} ${formatDate(athlete.sync.last_synced_at)}`
+      : null,
+    `${summary.profile.activity_count} ${t("home.profile.activities").toLowerCase()}`,
+  ].filter(Boolean).join(" · ");
+
+  const stats = [
+    { label: t("home.hero.volume"), value: km != null ? formatNumber(km, 1) : "—", unit: t("common.km") },
+    { label: t("home.hero.climb"), value: gain != null ? formatNumber(gain, 0) : "—", unit: t("common.metres") },
+    { label: t("home.hero.form"), value: form != null ? formatSigned(form) : "—", key: true },
+  ];
+
+  return (
+    <header className="tm-hero home-hero">
+      {/* A plain <img>: the source is Strava's CDN, so there is nothing for the
+          Next image loader to optimise, and it needs no remote-host allowlist. */}
+      {athlete.profile_url && (
+        <img className="tm-hero__avatar" src={athlete.profile_url} alt="" />
+      )}
+      <div className="tm-hero__body">
+        <span className="tm-hero__kicker">
+          {t("home.hero.week", { number: isoWeekNumber(monday), range: `${day(monday)} – ${day(sunday)}` })}
+        </span>
+        <h1 className="tm-hero__title">{athlete.display_name}</h1>
+        <div className="hero-email">{email}</div>
+        <span className="tm-hero__meta">{meta}</span>
+      </div>
+      <div className="tm-hero__stats">
+        {stats.map((stat) => (
+          <div className={`tm-hero__stat${stat.key ? " is-key" : ""}`} key={stat.label}>
+            <span className="l">{stat.label}</span>
+            <span className="v">
+              {stat.value}
+              {stat.unit && stat.value !== "—" && <small>{stat.unit}</small>}
+            </span>
+          </div>
+        ))}
+      </div>
+      {/* Hidden, not disabled, for a coach: only the athlete can import. */}
+      {!athlete.viewing_as && athlete.sync.status !== "running" && (
+        <div className="home-hero__action">
+          <button type="button" className="tm-btn tm-btn--secondary" onClick={onImport} disabled={busy}>
+            <Icon name="refresh" /> {t("home.hero.import")}
+          </button>
+        </div>
+      )}
+    </header>
+  );
+}
+
+/** A signed figure — form is read against zero, so "+4" and "−7", never "4". */
+function formatSigned(value: number): string {
+  const rounded = Math.round(value);
+  return rounded > 0 ? `+${rounded}` : rounded < 0 ? `−${Math.abs(rounded)}` : "0";
+}
+
+// --- Recent progress -------------------------------------------------------
+
+/** A recent-progress card's chart, or why there is none. */
+function ChartBody({
+  charts,
+  hasData,
+  empty,
+  t,
+}: {
+  charts: ChartData[] | null;
+  hasData: boolean;
+  /** What to show when the panel came back with no chart. */
+  empty?: ReactNode;
+  t: T;
+}) {
+  if (!hasData) return <p className="muted">{t("home.last.empty")}</p>;
+  if (charts === null) {
+    return (
+      <div className="pending">
+        <span className="spinner" />
+        <p className="muted">{t("common.loading")}</p>
+      </div>
+    );
+  }
+  if (charts.length === 0) return <>{empty ?? <p className="muted">{t("home.last.empty")}</p>}</>;
+  return (
+    <>
+      {charts.map((chart, index) => (
+        <div className="chart-frame" key={index}>
+          <ChartView chart={chart} />
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** A card's heading row: the section title, and the trend badges beside it. */
+function CardHeading({ children, badges }: { children: ReactNode; badges?: ReactNode }) {
+  return (
+    <div className="data-block__heading progress-card__heading">
+      {children}
+      {badges}
+    </div>
+  );
+}
+
+/** The last 20 weeks: distance and climb on one chart. Forest — what was done. */
+function RecentHistoryCard({
   charts,
   hasData,
   t,
@@ -892,35 +1136,41 @@ function RecentHistoryBlock({
   hasData: boolean;
   t: T;
 }) {
-  return (
-    <div className="data-block">
-      <h3 className="data-block__title">
-        <Icon name="trending" /> {t("home.recent.title")}
-      </h3>
-      <p className="data-block__lede">{t("home.recent.subtitle")}</p>
+  const { distance } = volumeTraces(charts);
+  const km = currentWeekValue(distance);
+  const weekly = distance?.y.filter((v): v is number => v != null) ?? [];
+  const average = weekly.length ? weekly.reduce((a, b) => a + b, 0) / weekly.length : null;
 
-      {!hasData ? (
-        <p className="muted">{t("home.last.empty")}</p>
-      ) : charts === null ? (
-        <div className="pending">
-          <span className="spinner" />
-          <p className="muted">{t("common.loading")}</p>
+  return (
+    <section className="card-block card-block--progress">
+      <CardHeading>
+        <SectionTitle icon="trending" kicker={t("home.kicker.weeks", { count: WEEKS_SHOWN })}>
+          {t("home.recent.title")}
+        </SectionTitle>
+      </CardHeading>
+      <p className="data-block__lede">{t("home.recent.subtitle")}</p>
+      {hasData && charts && charts.length > 0 && (
+        <div className="kpi-grid kpi-grid--headline">
+          <Tile
+            label={t("home.hero.this_week")}
+            value={km != null ? formatNumber(km, 1) : "—"}
+            unit={t("common.km")}
+            tone="forest"
+          />
+          <Tile
+            label={t("home.recent.weekly_average")}
+            value={average != null ? formatNumber(average, 1) : "—"}
+            unit={t("common.km")}
+          />
         </div>
-      ) : charts.length === 0 ? (
-        <p className="muted">{t("home.last.empty")}</p>
-      ) : (
-        charts.map((chart, index) => (
-          <div className="chart-frame" key={index}>
-            <ChartView chart={chart} />
-          </div>
-        ))
       )}
-    </div>
+      <ChartBody charts={charts} hasData={hasData} t={t} />
+    </section>
   );
 }
 
-/** The last 30 weeks of power-to-heart-rate: recent efficiency at a glance. */
-function RecentEfficiencyBlock({
+/** The last 20 weeks of power-to-heart-rate. Terra — your own cost per beat. */
+function RecentEfficiencyCard({
   charts,
   hasData,
   hasWeight,
@@ -931,51 +1181,53 @@ function RecentEfficiencyBlock({
   hasWeight: boolean;
   t: T;
 }) {
+  const latest = lastValue(charts?.[0]?.traces[0]?.y);
   return (
-    <div className="data-block">
-      <div className="data-block__heading">
-        <h3 className="data-block__title">
-          <Icon name="zap" /> {t("home.efficiency.title")}
-        </h3>
-        {/* Weekly points already — 4 and 12 of them are 4 and 12 weeks. */}
-        <TrendBadgePair
-          values={charts?.[0]?.traces[0]?.y}
-          shortWindow={4}
-          longWindow={12}
-          shortThreshold={0.005}
-          longThreshold={0.02}
-          t={t}
-        />
-      </div>
+    <section className="card-block card-block--progress">
+      <CardHeading
+        badges={
+          // Weekly points already — 4 and 12 of them are 4 and 12 weeks.
+          <TrendBadgePair
+            values={charts?.[0]?.traces[0]?.y}
+            shortWindow={4}
+            longWindow={12}
+            shortThreshold={0.005}
+            longThreshold={0.02}
+            t={t}
+          />
+        }
+      >
+        <SectionTitle icon="zap" kicker={t("home.kicker.weeks", { count: WEEKS_SHOWN })} role="terra">
+          {t("home.efficiency.title")}
+        </SectionTitle>
+      </CardHeading>
       <p className="data-block__lede">{t("home.efficiency.subtitle")}</p>
 
-      {!hasData ? (
-        <p className="muted">{t("home.last.empty")}</p>
-      ) : !hasWeight ? (
+      {hasData && !hasWeight ? (
         // Power is stored per kilogram, so this chart is empty without a weight.
         // Said here rather than drawn blank — and the field to fix it is on the
         // Health card a few centimetres up.
-        <p className="note">{t("home.efficiency.needs_weight")}</p>
-      ) : charts === null ? (
-        <div className="pending">
-          <span className="spinner" />
-          <p className="muted">{t("common.loading")}</p>
-        </div>
-      ) : charts.length === 0 ? (
-        <p className="muted">{t("home.last.empty")}</p>
+        <Callout>{t("home.efficiency.needs_weight")}</Callout>
       ) : (
-        charts.map((chart, index) => (
-          <div className="chart-frame" key={index}>
-            <ChartView chart={chart} />
-          </div>
-        ))
+        <>
+          {latest != null && (
+            <div className="kpi-grid kpi-grid--headline">
+              <Tile label={t("home.efficiency.latest")} value={formatNumber(latest, 2)} tone="terra" />
+            </div>
+          )}
+          <ChartBody charts={charts} hasData={hasData} t={t} />
+        </>
       )}
-    </div>
+    </section>
   );
 }
 
-/** The last 30 weeks of fitness and fatigue (Banister model): recent form at a glance. */
-function RecentFormBlock({
+/**
+ * The last 20 weeks of fitness and fatigue (Banister model). Sun — the signal of
+ * the moment: form, fitness minus fatigue, is the headline; the two curves it is
+ * read from stay in ink.
+ */
+function RecentFormCard({
   charts,
   hasData,
   t,
@@ -984,55 +1236,66 @@ function RecentFormBlock({
   hasData: boolean;
   t: T;
 }) {
+  const { fitness, fatigue, form } = formValues(charts);
   return (
-    <div className="data-block">
-      <div className="data-block__heading">
-        <h3 className="data-block__title">
-          <Icon name="flame" /> {t("home.form.title")}
-        </h3>
-        {/* Fitness (the model's first, slow-moving trace) is the one that
-            answers "is training working?" — fatigue reacts to the last few
-            days and would make either badge flicker on the day's session
-            alone. Two windows because a short build and a long one answer
-            different questions: is this week's load landing, versus is the
-            block as a whole working. `fitness_fatigue_series` is one point
-            per *calendar day*, not per week (see training_load.py), so "4
-            weeks" and "12 weeks" here are 28 and 84 trailing daily points —
-            unlike the weekly-binned charts, where the window size and the
-            point count are the same number. */}
-        <TrendBadgePair
-          values={charts?.[0]?.traces[0]?.y}
-          shortWindow={28}
-          longWindow={84}
-          shortThreshold={0.005}
-          longThreshold={0.02}
-          t={t}
-        />
-      </div>
+    <section className="card-block card-block--progress">
+      <CardHeading
+        badges={
+          // Fitness (the model's first, slow-moving trace) is the one that
+          // answers "is training working?" — fatigue reacts to the last few
+          // days and would make either badge flicker on the day's session
+          // alone. Two windows because a short build and a long one answer
+          // different questions: is this week's load landing, versus is the
+          // block as a whole working. `fitness_fatigue_series` is one point
+          // per *calendar day*, not per week (see training_load.py), so "4
+          // weeks" and "12 weeks" here are 28 and 84 trailing daily points —
+          // unlike the weekly-binned charts, where the window size and the
+          // point count are the same number.
+          <TrendBadgePair
+            values={charts?.[0]?.traces[0]?.y}
+            shortWindow={28}
+            longWindow={84}
+            shortThreshold={0.005}
+            longThreshold={0.02}
+            t={t}
+          />
+        }
+      >
+        <SectionTitle icon="flame" kicker={t("home.kicker.weeks", { count: WEEKS_SHOWN })} role="sun">
+          {t("home.form.title")}
+        </SectionTitle>
+      </CardHeading>
       <p className="data-block__lede">{t("home.form.subtitle")}</p>
-
-      {!hasData ? (
-        <p className="muted">{t("home.last.empty")}</p>
-      ) : charts === null ? (
-        <div className="pending">
-          <span className="spinner" />
-          <p className="muted">{t("common.loading")}</p>
+      {form != null && (
+        <div className="kpi-grid kpi-grid--headline">
+          <Tile label={t("home.hero.form")} value={formatSigned(form)} tone="sun" />
+          <Tile label={t("home.form.fitness")} value={formatNumber(fitness ?? 0, 0)} />
+          <Tile label={t("home.form.fatigue")} value={formatNumber(fatigue ?? 0, 0)} />
         </div>
-      ) : charts.length === 0 ? (
-        <p className="muted">{t("home.last.empty")}</p>
-      ) : (
-        charts.map((chart, index) => (
-          <div className="chart-frame" key={index}>
-            <ChartView chart={chart} />
-          </div>
-        ))
       )}
-    </div>
+      <ChartBody charts={charts} hasData={hasData} t={t} />
+    </section>
   );
 }
 
 /**
- * The last 30 weeks as the athlete rated them: RPE, feeling, fitness tag.
+ * The feeling of the last rated week, read off the Feel chart's background
+ * bands — each band is one week, coloured by its average feeling (the colours
+ * of plots/weekly_feel.py `_FEELING_COLOR`).
+ */
+function lastFeeling(chart: ChartData | undefined): "faible" | "ok" | "fort" | null {
+  const band = chart?.bands[chart.bands.length - 1];
+  if (!band) return null;
+  const color = band.color.toLowerCase();
+  if (color === tokens.forest) return "fort";
+  if (color === tokens.sun) return "ok";
+  if (color === tokens.danger) return "faible";
+  return null;
+}
+
+/**
+ * The last 20 weeks as the athlete rated them: RPE, feeling, fitness tag. Moss —
+ * how it felt.
  *
  * No trend badge on this one. The three series answer *together* ("a hard week
  * that felt strong and moved fitness up") and a single arrow over any one of
@@ -1041,7 +1304,7 @@ function RecentFormBlock({
  * activities but no ratings, the chart is empty for a reason the athlete can fix
  * in two taps on the Training screen.
  */
-function RecentFeelBlock({
+function RecentFeelCard({
   charts,
   hasData,
   t,
@@ -1050,32 +1313,33 @@ function RecentFeelBlock({
   hasData: boolean;
   t: T;
 }) {
+  const feeling = lastFeeling(charts?.[0]);
+  const rpe = lastValue(charts?.[0]?.traces[0]?.y);
   return (
-    <div className="data-block">
-      <div className="data-block__heading">
-        <h3 className="data-block__title">
-          <Icon name="heart" /> {t("home.feel.title")}
-        </h3>
-      </div>
+    <section className="card-block card-block--progress">
+      <CardHeading>
+        <SectionTitle icon="heart" kicker={t("home.kicker.weeks", { count: WEEKS_SHOWN })} role="moss">
+          {t("home.feel.title")}
+        </SectionTitle>
+      </CardHeading>
       <p className="data-block__lede">{t("home.feel.subtitle")}</p>
-
-      {!hasData ? (
-        <p className="muted">{t("home.last.empty")}</p>
-      ) : charts === null ? (
-        <div className="pending">
-          <span className="spinner" />
-          <p className="muted">{t("common.loading")}</p>
+      {(feeling || rpe != null) && (
+        <div className="kpi-grid kpi-grid--headline">
+          <Tile
+            label={t("home.feel.latest")}
+            value={feeling ? t(`training.session.feeling_${feeling}`) : "—"}
+            tone="moss"
+          />
+          <Tile label={t("home.feel.rpe")} value={rpe != null ? formatNumber(rpe, 1) : "—"} />
         </div>
-      ) : charts.length === 0 ? (
-        <p className="note">{t("home.feel.empty")}</p>
-      ) : (
-        charts.map((chart, index) => (
-          <div className="chart-frame" key={index}>
-            <ChartView chart={chart} />
-          </div>
-        ))
       )}
-    </div>
+      <ChartBody
+        charts={charts}
+        hasData={hasData}
+        empty={<Callout>{t("home.feel.empty")}</Callout>}
+        t={t}
+      />
+    </section>
   );
 }
 
@@ -1250,9 +1514,9 @@ function SyncControls({
             </button>
           )}
           {athlete.sync.status === "error" && (
-            <span className="note note--error">
+            <Callout tone="terra">
               {t("home.import.failed")}: {athlete.sync.message}
-            </span>
+            </Callout>
           )}
           {athlete.sync.last_synced_at && (
             <span className="muted sync__last">
@@ -1267,7 +1531,7 @@ function SyncControls({
       )}
 
       {athlete.activity_count === 0 && !syncing && !viewingAs && (
-        <p className="note">{t("home.import.empty")}</p>
+        <Callout>{t("home.import.empty")}</Callout>
       )}
     </>
   );
@@ -1275,24 +1539,40 @@ function SyncControls({
 
 // --- Small presentational pieces -------------------------------------------
 
+/**
+ * A card's headline tile colours its number in the card's role
+ * (contrast.md § 3) — one per card, two at most; every other tile stays ink.
+ */
+type KpiTone = SectionRole;
+
+function kpiClass(tone: KpiTone | undefined, extra = ""): string {
+  return `tm-kpi tm-kpi--flat${tone ? ` tm-kpi--${tone}` : ""}${extra ? ` ${extra}` : ""}`;
+}
+
 function Tile({
   label,
   value,
   unit,
   footnote,
+  tone,
+  spark,
 }: {
   label: string;
   value: string;
   unit?: string;
   footnote?: string | null;
+  tone?: KpiTone;
+  /** A sparkline under the number, in its colour — headline tiles only. */
+  spark?: (number | null)[];
 }) {
   return (
-    <div className="tm-kpi">
+    <div className={kpiClass(tone)}>
       <span className="tm-kpi__label">{label}</span>
       <span className="tm-kpi__value">
         <span className="tm-kpi__num">{value}</span>
         {unit && <span className="tm-kpi__unit">{unit}</span>}
       </span>
+      {spark && <Sparkline values={spark} />}
       {footnote && footnote !== "—" && <span className="kpi__note">{footnote}</span>}
     </div>
   );
@@ -1311,12 +1591,14 @@ function EditableTile({
   help,
   input,
   onCommit,
+  tone,
   t,
 }: {
   label: string;
   value: string | null;
   unit?: string;
   help?: string;
+  tone?: KpiTone;
   input: {
     type: "number" | "date" | "email" | "text";
     value: string;
@@ -1354,7 +1636,7 @@ function EditableTile({
   };
 
   return (
-    <div className="tm-kpi kpi--editable">
+    <div className={kpiClass(tone, "kpi--editable")}>
       <span className="tm-kpi__label">
         {label}
         {saving && <span> · {t("common.saving")}</span>}

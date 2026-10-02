@@ -34,8 +34,18 @@ from src.translations import translate
 # daily timeline, which a discrete pick list doesn't naturally define.
 _FALLBACK_DISPLAY_DAYS = 182  # ~6 months
 
-_FITNESS_COLOR = theme.CHART_YOU_1  # forest — slow, steady
-_FATIGUE_COLOR = theme.CHART_YOU_2  # terra — fast, reactive
+# charts.md § v1.1: fitness forest with the area under it, fatigue a thinner
+# terra line without one, form sun bars around zero.
+_FITNESS_COLOR = theme.FITNESS  # forest — slow, steady
+_FATIGUE_COLOR = theme.FATIGUE  # terra — fast, reactive
+_FORM_COLOR = theme.FORM        # sun — the signal of the moment
+_FITNESS_WIDTH = 2.2
+_FATIGUE_WIDTH = 1.5
+# A fresh day (form above zero) reads stronger than a tired one.
+_FORM_OPACITY_POSITIVE = 0.75
+_FORM_OPACITY_NEGATIVE = 0.4
+# Bars take 60 % of each day's slot.
+_FORM_BARGAP = 0.4
 
 
 def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
@@ -59,6 +69,8 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     x = [dates[i] for i in indices]
     fitness_y = [fitness[i] for i in indices]
     fatigue_y = [fatigue[i] for i in indices]
+    # Form (training stress balance): fitness minus fatigue, read against zero.
+    form_y = [f - g for f, g in zip(fitness_y, fatigue_y)]
 
     notes: List[str] = []
     if missing_count:
@@ -78,16 +90,25 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
             Trace(
                 name=translate("plot.fitness_fatigue.fitness", lang),
                 x=x, y=fitness_y, kind=TraceKind.LINE,
-                color=_FITNESS_COLOR, width=2.0,
+                color=_FITNESS_COLOR, width=_FITNESS_WIDTH,
             ),
             Trace(
                 name=translate("plot.fitness_fatigue.fatigue", lang),
                 x=x, y=fatigue_y, kind=TraceKind.LINE,
-                color=_FATIGUE_COLOR, width=2.0,
+                color=_FATIGUE_COLOR, width=_FATIGUE_WIDTH,
+            ),
+            Trace(
+                name=translate("plot.fitness_fatigue.form", lang),
+                x=x, y=form_y, kind=TraceKind.BAR,
+                color=_FORM_COLOR,
+                point_opacity=[
+                    _FORM_OPACITY_POSITIVE if v >= 0 else _FORM_OPACITY_NEGATIVE for v in form_y
+                ],
             ),
         ],
         height=420,
         hover_mode="x unified",
+        bargap=_FORM_BARGAP,
     )
     return PlotOutput(charts=[chart], notes=notes)
 

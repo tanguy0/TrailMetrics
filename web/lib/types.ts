@@ -192,6 +192,10 @@ export interface Trace {
   hover_template: string | null;
   legend_group: string | null;
   show_legend: boolean;
+  /** Per-point overrides, bars only (charts.md § v1.1): colour, opacity, label. */
+  point_colors: string[] | null;
+  point_opacity: number[] | null;
+  point_text: string[] | null;
 }
 
 /**
@@ -226,6 +230,13 @@ export interface Badge {
   short: string | null;
 }
 
+/** A date pinned on the x-axis: today (dotted sun line) or a race (terra dot). */
+export interface Marker {
+  kind: "today" | "race";
+  x: number | string;
+  label: string;
+}
+
 export interface ChartData {
   title: string;
   x_axis: Axis;
@@ -241,7 +252,12 @@ export interface ChartData {
   bands: Band[];
   badges: Badge[];
   height: number;
+  /** Dates worth pointing at; absent from a chart cached before v1.1. */
+  markers?: Marker[];
+  /** "auto" (renderer's call), "closest" or "x unified". */
   hover_mode: string;
+  /** Gap between bars as a share of each slot; null keeps Plotly's. */
+  bargap?: number | null;
   caption: string | null;
 }
 

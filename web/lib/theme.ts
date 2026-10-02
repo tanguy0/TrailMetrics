@@ -10,11 +10,17 @@
 
 /** Every colour token, by its `tokens.json` name, aliases resolved. */
 export const tokens = {
-  "bg-page": "#f4f1ea",
+  "bg-page": "#eee9de",
   "bg-surface": "#ffffff",
   "bg-surface-alt": "#f8f6f1",
   "bg-rail": "#1f4b2c",
   "bg-chart": "#ffffff",
+  "bg-hero": "#1f4b2c",
+  "on-hero-muted": "rgba(255,255,255,0.68)",
+  "on-hero-line": "rgba(255,255,255,0.25)",
+  "on-hero-fill": "rgba(255,255,255,0.10)",
+  "bg-tile": "#f8f6f1",
+  hl: "#fdf4e3",
   line: "#e8e2d6",
   "line-strong": "#d5cdbe",
   ink: "#241f19",
@@ -72,11 +78,26 @@ export const theme = {
   forestTint: tokens["forest-tint"],
   terraTint: tokens["terra-tint"],
   sunTint: tokens["sun-tint"],
+  lineStrong: tokens["line-strong"],
+
+  // v1.1 — slope bars read the sign of the gradient, not the series order;
+  // fitness / fatigue / form; time markers. Matches theme.py.
+  slopeDown: tokens.moss,
+  slopeFlat: tokens.forest,
+  slopeUp: tokens.terra,
+  fitness: tokens["chart-you-1"],
+  fatigue: tokens["chart-you-2"],
+  form: tokens.sun,
+  todayMarker: tokens.sun,
+  raceMarker: tokens.terra,
 
   // tokens.json § type.families — Plotly takes a plain family list.
   fontSans: "Manrope, Helvetica Neue, Arial, sans-serif",
   fontMono: "DM Mono, ui-monospace, SF Mono, Menlo, monospace",
 };
+
+/** Top of the vertical fill under series 1 (charts.md § v1.1); matches AREA_ALPHA_TOP. */
+export const AREA_ALPHA_TOP = 0.22;
 
 /** Fallback cycle for traces with no explicit colour; matches CURVE_CYCLE. */
 export const curvePalette = [

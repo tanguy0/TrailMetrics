@@ -24,6 +24,7 @@ import { ChartView } from "@/components/ChartView";
 import { PageHeader } from "@/components/PageHeader";
 import { StravaMore } from "@/components/Teaser";
 import { TableView } from "@/components/TableView";
+import { Callout } from "@/components/Callout";
 import {
   deleteRacePlan,
   getRacePlan,
@@ -318,6 +319,8 @@ export function RacePlanScreen({
         }
       />
 
+      {result && <RacePlanHero result={result} name={title.trim() || t("nav.race_plan")} t={t} />}
+
       <form className="tm-panel panel race-plan__form" onSubmit={submit}>
         <div className="race-plan__fields">
           <label className="race-plan__field">
@@ -479,7 +482,7 @@ export function RacePlanScreen({
             </span>
           )}
         </div>
-        {error && <p className="note note--error">{error}</p>}
+        {error && <Callout tone="terra">{error}</Callout>}
       </form>
 
       {result && <RacePlanResultView result={result} t={t} />}
@@ -492,6 +495,39 @@ export function RacePlanScreen({
   );
 }
 
+/**
+ * The plan's one hero (`tm-hero` compact, design/tagg/components/Hero.md): the
+ * time the plan is built around, in sun, with the course's distance and climb
+ * beside it. Moved up from the summary tiles, not recomputed.
+ */
+function RacePlanHero({ result, name, t }: { result: RacePlanResult; name: string; t: Translate }) {
+  const s = result.summary;
+  const stats = [
+    { label: t("race_plan.summary.target"), value: formatHms(s.target_time_s), key: true },
+    { label: t("race_plan.summary.distance"), value: formatNumber(s.distance_m / 1000, 1), unit: "km" },
+    { label: t("race_plan.summary.elevation"), value: `+${formatNumber(s.elevation_gain_m, 0)}`, unit: "m" },
+  ];
+  return (
+    <header className="tm-hero tm-hero--compact race-plan__hero">
+      <div className="tm-hero__body">
+        <span className="tm-hero__kicker">{name}</span>
+        <h2 className="tm-hero__title">{t("race_plan.summary.target")}</h2>
+      </div>
+      <div className="tm-hero__stats">
+        {stats.map((stat) => (
+          <div className={`tm-hero__stat${stat.key ? " is-key" : ""}`} key={stat.label}>
+            <span className="l">{stat.label}</span>
+            <span className="v">
+              {stat.value}
+              {stat.unit && <small>{stat.unit}</small>}
+            </span>
+          </div>
+        ))}
+      </div>
+    </header>
+  );
+}
+
 function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translate }) {
   const s = result.summary;
   const tiles: [string, string][] = [
@@ -500,7 +536,6 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
       t("race_plan.summary.elevation"),
       `+${formatNumber(s.elevation_gain_m, 0)} / −${formatNumber(s.elevation_loss_m, 0)} m`,
     ],
-    [t("race_plan.summary.target"), formatHms(s.target_time_s)],
     [t("race_plan.summary.gap_pace"), formatPace(s.gap_pace_s_per_km)],
     [t("race_plan.summary.avg_pace"), formatPace(s.average_pace_s_per_km)],
     [t("race_plan.summary.curve"), result.curve_label],
@@ -531,11 +566,14 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
           </div>
         ))}
       </div>
-      {result.notes.map((note, index) => (
-        <p key={index} className="note">
-          {note}
-        </p>
-      ))}
+      {/* One callout per card at most: the notes go in it together. */}
+      {result.notes.length > 0 && (
+        <Callout>
+          {result.notes.map((note, index) => (
+            <span className="callout__line" key={index}>{note}</span>
+          ))}
+        </Callout>
+      )}
 
       <OutputSection title={t("race_plan.section.profile")} output={result.outputs.profile} />
       <OutputSection title={t("race_plan.section.sections")} output={result.outputs.sections} />
@@ -565,11 +603,14 @@ function OutputSection({ title, output }: { title: string; output: PlotOutput })
       {output.tables.map((table, index) => (
         <TableView key={index} table={table} />
       ))}
-      {output.notes.map((note, index) => (
-        <p key={index} className="note">
-          {note}
-        </p>
-      ))}
+      {/* One callout per card at most: the notes go in it together. */}
+      {output.notes.length > 0 && (
+        <Callout>
+          {output.notes.map((note, index) => (
+            <span className="callout__line" key={index}>{note}</span>
+          ))}
+        </Callout>
+      )}
     </section>
   );
 }

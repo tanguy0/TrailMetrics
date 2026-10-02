@@ -55,7 +55,7 @@ export function Teaser({ page, t }: { page: TeaserPage; t: Translate }) {
 
 function EmptyKpi({ label }: { label: string }) {
   return (
-    <div className="tm-kpi">
+    <div className="tm-kpi tm-kpi--flat">
       <span className="tm-kpi__label">{label}</span>
       <span className="tm-kpi__value">
         <span className="tm-kpi__num">—</span>
@@ -78,9 +78,12 @@ function HomeStructure({ t }: { t: Translate }) {
   return (
     <div className="teaser-structure">
       <section className="card-block">
-        <h2 className="card-block__title">
+        <h2 className="tm-section section-title">
           <Icon name="run" size={18} />
-          {t("home.profile.title")}
+          <span className="section-title__text">
+            <span className="tm-section__kicker">{t("home.kicker.all_time")}</span>
+            {t("home.profile.title")}
+          </span>
         </h2>
         <div className="kpi-grid kpi-grid--four">
           {["home.profile.activities", "home.profile.total_distance", "home.profile.total_elevation",
@@ -90,9 +93,12 @@ function HomeStructure({ t }: { t: Translate }) {
         </div>
       </section>
       <section className="card-block">
-        <h2 className="card-block__title">
+        <h2 className="tm-section tm-section--sun section-title">
           <Icon name="award" size={18} />
-          {t("home.profile.records")}
+          <span className="section-title__text">
+            <span className="tm-section__kicker">{t("home.kicker.all_time")}</span>
+            {t("home.profile.records")}
+          </span>
         </h2>
         <div className="kpi-grid kpi-grid--records">
           {["5 km", "10 km", "21,1 km", "42,2 km"].map((label) => (

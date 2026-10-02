@@ -480,20 +480,14 @@ input[type="radio"] {
 
 /* --- Notes & status ------------------------------------------------------- */
 
-.note {
-  background: var(--bg-surface-alt);
-  border: 1px solid var(--line);
-  padding: 0.6rem 0.8rem;
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  line-height: 20px;
+/* A callout sits in the flow with a little air around it; one carrying
+   several notes stacks them one per line. */
+.tm-callout {
   margin: 0.5rem 0;
 }
 
-.note--error {
-  background: var(--danger-tint);
-  border-color: transparent;
-  color: var(--danger);
+.callout__line {
+  display: block;
 }
 
 .pending {
@@ -639,49 +633,50 @@ input[type="radio"] {
 
 /* --- Home screen ---------------------------------------------------------- */
 
-.hero {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
+/* The hero (tm-hero) is the design system's; only what Home adds to it lives
+   here. The email under the name is still a click-to-edit tile, stripped of
+   its chrome and caption so it reads as one more line of the hero. */
+.home-hero {
   margin-bottom: 1.25rem;
 }
 
-.hero__name {
-  font-size: 30px;
-}
-
-/* Plain text under the name, not a tile: strip the tile's chrome and caption,
-   keep only the (still click-to-edit) value. */
-.hero__email .tm-kpi {
+.hero-email .tm-kpi {
   background: none;
   border: none;
   padding: 0;
-  margin-top: 0.15rem;
   box-shadow: none;
 }
 
-.hero__email .tm-kpi__label {
+.hero-email .tm-kpi__label {
   display: none;
 }
 
-.hero__email .tm-kpi__num {
-  font: 500 13px/20px var(--font-sans);
-  color: var(--ink-muted);
+.hero-email .tm-kpi__num,
+.hero-email .kpi__unset {
+  font: 400 13px/18px var(--font-sans);
+  color: var(--on-hero-muted);
 }
 
-.hero__meta {
-  color: var(--ink-muted);
-  font-size: 0.9rem;
-  margin: 0.4rem 0 0;
+.hero-email .kpi__button {
+  color: inherit;
+  border-bottom-color: var(--on-hero-line);
 }
 
-.hero__avatar {
-  width: 3.75rem;
-  height: 3.75rem;
-  border-radius: 50%;
-  margin-left: auto;
-  border: 3px solid var(--sun);
-  object-fit: cover;
+.home-hero__action {
+  flex: none;
+}
+
+/* A card's headline tiles, between its lede and its chart. */
+.kpi-grid--headline {
+  margin-bottom: var(--space-4);
+}
+
+.progress-card__heading .section-title {
+  margin: 0;
+}
+
+.records__new {
+  margin-left: var(--space-2);
 }
 
 /* Athlete History beside Athlete Health Metrics. Stretched to equal height —
@@ -733,26 +728,19 @@ input[type="radio"] {
   margin: 1.5rem 0;
 }
 
-.card-block__title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 19px;
-  line-height: 26px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--ink);
+/* Layout of a Home card's `tm-section` heading: the kicker stacks over the
+   title, and the pair takes the row's width beside the icon. */
+.section-title {
   margin: 0 0 var(--space-4);
 }
 
-.card-block__title svg {
-  color: var(--forest);
+.section-title svg {
   flex: none;
 }
 
-
-.card-block__title-text {
+.section-title__text {
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .card-block__subtitle {
@@ -803,13 +791,6 @@ input[type="radio"] {
 /* Space between a card's stacked KPI grids. */
 .kpi-grid+.kpi-grid {
   margin-top: var(--space-4);
-}
-
-/* Inside a panel a tile is a bordered card without its own shadow (KpiTile.md). */
-.card-block .tm-kpi,
-.tm-panel .tm-kpi,
-.tm-modal .tm-kpi {
-  box-shadow: none;
 }
 
 .tm-kpi__num {
@@ -1772,6 +1753,28 @@ input[type="radio"] {
   text-overflow: ellipsis;
 }
 
+/* The current week as the screen's hero (tm-hero tm-hero--compact): the grid
+   above keeps its layout, the hero gives the fill; text goes cream, labels and
+   icons muted, the running distance (`is-key`) sun. */
+.week-summary--current {
+  display: grid;
+  padding: 0.65rem var(--week-summary-pad-x);
+}
+
+.week-summary--current .tm-section__kicker,
+.week-summary--current .tm-week-summary__label,
+.week-summary--current .tm-week-summary__icon {
+  color: var(--on-hero-muted);
+}
+
+.week-summary--current .week-summary__value {
+  color: var(--on-forest);
+}
+
+.week-summary--current .week-summary__value.is-key {
+  color: var(--sun);
+}
+
 .training-day {
   min-width: 0;
   min-height: 7rem;
@@ -2100,6 +2103,10 @@ a.new-page {
   color: var(--forest);
 }
 
+.race-plan__hero {
+  margin-bottom: var(--space-4);
+}
+
 .race-plan__form {
   display: flex;
   flex-direction: column;
@@ -2245,4 +2252,11 @@ a.new-page {
 .visitor-more {
   margin: var(--space-8) 0 0;
   color: var(--ink-muted);
+}
+
+/* The landing's two access columns share one inset, so the tinted "With
+   Strava" column and the plain one line up. */
+.landing__col {
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
 }

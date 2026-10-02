@@ -1,7 +1,7 @@
 """Where the time actually goes: share of moving time per gradient band.
 
-A 100%-stacked area over the ``time_*`` feature columns, green (descent) → red
-(ascent). It answers "am I really training for a vertical race, or just running
+A 100%-stacked area over the ``time_*`` feature columns, coloured by the sign
+of the slope: descents moss, flat forest, climbs terra. It answers "am I really training for a vertical race, or just running
 hills occasionally" in a way a single average-gradient number hides — two athletes
 with the same mean gradient can have completely different band profiles.
 
@@ -32,15 +32,18 @@ from src.domain.progress.models import GRADIENT_BAND_KEYS, GRADIENT_BANDS
 from src.domain.spec.params import ParamSpec, choice, multichoice
 from src.translations import translate
 
-# Green (descent) → red (ascent), every step a theme token. Kept here, next to
-# the only plot that uses it.
+# The sign of the slope, not a cycle (charts.md § v1.1): descents moss, flat
+# forest, climbs terra; within a sign the steep band is solid and the gentle one
+# fades. Kept here, next to the only plot that uses it.
 BAND_COLORS = {
-    "steep_descent": theme.FOREST,
-    "gentle_descent": theme.MOSS,
-    "flat": theme.SUN,
-    "gentle_ascent": theme.TERRA,
-    "steep_ascent": theme.DANGER,
+    "steep_descent": theme.SLOPE_DOWN,
+    "gentle_descent": theme.SLOPE_DOWN,
+    "flat": theme.SLOPE_FLAT,
+    "gentle_ascent": theme.SLOPE_UP,
+    "steep_ascent": theme.SLOPE_UP,
 }
+BAND_OPACITY = {"steep_descent": 1.0, "gentle_descent": 0.55, "flat": 1.0,
+                "gentle_ascent": 0.55, "steep_ascent": 1.0}
 
 PARAMS: List[ParamSpec] = [
     choice("granularity", "param.granularity", "week", choices_from="granularities"),
@@ -116,6 +119,7 @@ def _group_chart(
             y=shares[band],
             kind=TraceKind.AREA,
             color=BAND_COLORS[band],
+            opacity=BAND_OPACITY[band],
             stack_group="bands",
             hover_template="%{x|%d %b %Y}<br>%{y:.0f} %<extra>%{fullData.name}</extra>",
         )

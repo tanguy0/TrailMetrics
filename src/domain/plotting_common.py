@@ -28,6 +28,20 @@ DASH_BY_LINESTYLE = {"-": "solid", "--": "5px,4px", "-.": "dashdot", ":": "2px,4
 # carries one), so the top only has to clear the legend.
 MARGIN = dict(l=44, r=16, t=16, b=32)
 
+# The x-axis hover guide of charts.md § v1.1: a vertical dotted line across the
+# plot at the hovered x, read together with the unified hover label.
+SPIKES = dict(
+    showspikes=True,
+    spikecolor=theme.LINE_STRONG,
+    spikedash="2px,4px",
+    spikethickness=1,
+    spikemode="across",
+    spikesnap="cursor",
+)
+
+# At most five y ticks (charts.md § v1.1): the grid is a reading aid, not a ruler.
+Y_NTICKS = 5
+
 
 def axis_style(*, grid: bool) -> dict:
     """Axis chrome: mono 11 px ticks; only the y-axis draws a grid, only x a line."""
@@ -76,8 +90,8 @@ def base_figure(*, title: str, x_title: str, y_title: str, height: int = 480) ->
             font=dict(family=theme.FONT_SANS, color=theme.INK, size=12),
         ),
     )
-    fig.update_xaxes(title_text=x_title, **axis_style(grid=False))
-    fig.update_yaxes(title_text=y_title, **axis_style(grid=True))
+    fig.update_xaxes(title_text=x_title, **axis_style(grid=False), **SPIKES)
+    fig.update_yaxes(title_text=y_title, nticks=Y_NTICKS, **axis_style(grid=True))
     return fig
 
 

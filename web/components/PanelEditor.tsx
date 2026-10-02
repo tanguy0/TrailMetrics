@@ -24,6 +24,7 @@ import type {
   PlotSpec,
   Registry,
 } from "@/lib/types";
+import { Callout } from "@/components/Callout";
 
 // How long to wait after the last edit before re-rendering.
 const DEBOUNCE_MS = 400;
@@ -190,7 +191,9 @@ export function PanelEditor({
   if (halves.length % 2 === 1) fullWidth.add(halves[halves.length - 1]);
 
   return (
-    <section className="tm-panel panel">
+    // The page's main panel — the first — is its one tinted block (contrast.md
+    // § 1): Analyses has no hero, the curves are the star.
+    <section className={`tm-panel panel${index === 0 ? " tm-panel--tint" : ""}`}>
       <header className="tm-panel__head">
         <div className="tm-panel__lead">
           <span className="tm-panel__index">{String(index + 1).padStart(2, "0")}</span>
@@ -287,8 +290,8 @@ export function PanelEditor({
         />
       )}
 
-      {failure && <p className="note note--error">Could not render this panel: {failure}</p>}
-      {result?.error && <p className="note note--error">{result.error}</p>}
+      {failure && <Callout tone="terra">Could not render this panel: {failure}</Callout>}
+      {result?.error && <Callout tone="terra">{result.error}</Callout>}
 
       <div className="tm-plot-grid">
         {panel.plots.map((plot, index) => {

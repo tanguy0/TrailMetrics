@@ -21,6 +21,7 @@ from src.domain.charts.ir import (
 )
 from src.domain.dataset.metrics import metric_or_default
 from src.domain.dataset.resolved import DataLevel, ResolvedPanelData
+from src.domain.gap import theme
 from src.domain.plots.base import (
     PlotDefinition,
     group_color,
@@ -32,6 +33,24 @@ from src.domain.plots.base import (
 )
 from src.domain.spec.params import Choice, ParamSpec, boolean, choice, integer
 from src.translations import translate
+
+# A slope histogram reads by the sign of the gradient, not by series order
+# (charts.md § v1.1): descents moss, flat forest, climbs terra — the flat band of
+# GRADIENT_BANDS. The three most frequent bins stay solid and carry their value;
+# the rest fade.
+_SLOPE_METRIC = "avg_gradient_pct"
+_FLAT_PCT = 3.0
+_TOP_BINS = 3
+_FADED_OPACITY = 0.55
+
+
+def _slope_color(center: float) -> str:
+    if center < -_FLAT_PCT:
+        return theme.SLOPE_DOWN
+    if center > _FLAT_PCT:
+        return theme.SLOPE_UP
+    return theme.SLOPE_FLAT
+
 
 PARAMS: List[ParamSpec] = [
     choice("metric", "param.metric", "distance_km", choices_from="activity_metrics"),
@@ -101,7 +120,23 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
                     tick_format=",.0f" if not normalize else ",.1f"),
         traces=traces,
     )
+    if metric.key == _SLOPE_METRIC and len(traces) == 1 and traces[0].kind is TraceKind.BAR:
+        # One group only: with several, colour is what tells the groups apart.
+        _paint_slopes(traces[0], centers, normalize)
     return PlotOutput(charts=[chart])
+
+
+def _paint_slopes(trace: Trace, centers: List[float], normalize: bool) -> None:
+    """Colour a slope histogram by gradient sign; highlight its three tallest bins."""
+    top = set(sorted(range(len(trace.y)), key=lambda i: trace.y[i], reverse=True)[:_TOP_BINS])
+    top = {i for i in top if trace.y[i] > 0}
+    trace.opacity = 1.0
+    trace.point_colors = [_slope_color(c) for c in centers]
+    trace.point_opacity = [1.0 if i in top else _FADED_OPACITY for i in range(len(trace.y))]
+    trace.point_text = [
+        (f"{trace.y[i]:.1f}" if normalize else f"{trace.y[i]:.0f}") if i in top else ""
+        for i in range(len(trace.y))
+    ]
 
 
 register(PlotDefinition(

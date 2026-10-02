@@ -13,6 +13,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Callout } from "@/components/Callout";
 import { createBlogPost, deleteBlogPost, updateBlogPost } from "@/lib/api";
 import type { BlogPost } from "@/lib/types";
 
@@ -102,7 +103,7 @@ export function BlogPostForm({ existing }: { existing?: BlogPost }) {
         Publié (visible dans la liste publique)
       </label>
 
-      {error && <p className="note note--error">{error}</p>}
+      {error && <Callout tone="terra">{error}</Callout>}
 
       <div className="blog-form__actions">
         <button type="submit" className="tm-btn" disabled={busy}>

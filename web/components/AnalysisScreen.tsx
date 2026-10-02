@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 
 import { Icon } from "@/components/Icon";
 import { PageHeader } from "@/components/PageHeader";
+import { Callout } from "@/components/Callout";
 import { ApiError, createPage, listPages } from "@/lib/api";
 import { plural, translator, type Strings, type Translate } from "@/lib/strings";
 import type { PageSummary } from "@/lib/types";
@@ -69,7 +70,7 @@ export function AnalysisScreen({ strings }: { strings: Strings }) {
   if (error) {
     return (
       <main className="container">
-        <p className="note note--error">{error}</p>
+        <Callout tone="terra">{error}</Callout>
       </main>
     );
   }

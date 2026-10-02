@@ -28,3 +28,16 @@ Les figures sont rendues par Plotly des deux côtés (`src/domain/charts/plotly.
 ## Palette multi-séries
 
 Quand un graphique superpose plusieurs échelles de temps ou groupes : `chart-you-1` → `-2` → `-3` → `-4` → `-5` dans cet ordre (forest, terra, sun, lac, prune). Au-delà de cinq groupes, passer en petits multiples plutôt qu'en sixième couleur.
+
+## v1.1 — Plus de caractère
+
+Les règles ci-dessus donnent des graphiques propres mais interchangeables. Six gestes les rendent reconnaissables sans trahir le système :
+
+1. **Aire sous la série 1.** La série principale de l'athlète (`chart-you-1`) reçoit une aire `fillgradient` verticale de la couleur à 22 % vers 0 % (Plotly ≥ 5.20 ; sinon `fill: tozeroy` à 10 %). Une seule série par graphique a une aire ; jamais les références, jamais les comparaisons.
+2. **Étiquette de fin de courbe.** Chaque série de l'athlète se termine par un marqueur r 4 et une annotation mono 11 px dans sa couleur (`4:21`, `68`), alignée à droite du dernier point. La légende reste pour les références ; pour les séries de l'athlète elle devient optionnelle quand l'étiquette de fin suffit.
+3. **Survol unifié.** `hovermode: "x unified"`, ligne de repère (`spikes`) verticale `line-strong` en pointillé 2-4, infobulle carte avec la valeur de la série principale en `sun-ink` et les autres en `ink`.
+4. **Axes plus légers.** `nticks: 5` en y, pas de ligne d'axe y, grille `chart-grid` ; en x une seule ligne `line` et les ticks sans trait. Les titres d'axe disparaissent quand l'unité est dans le sous-titre de la carte.
+5. **Barres sémantiques.** `marker.cornerradius: 4`. Dans la *carte des pentes* et la *distribution*, les barres prennent le sens de la donnée : descentes `moss`, plat `forest`, montées `terra` (le signe de la pente, pas l'ordre des séries). Dans *volume*, période courante 95 %, autres 28 % — inchangé.
+6. **Repères temporels.** « Aujourd'hui » = ligne verticale `sun` pointillée avec une étiquette mono ; une course = marqueur `terra` au-dessus de l'axe avec son nom. Les bandes (zones, blocs d'entraînement) restent à 10 % et perdent leur bordure.
+
+Deux conséquences : la **sparkline** (`tm-kpi__spark`) est une mini-version de ces règles — trait 1,6 px, aire 12 %, point de fin, rien d'autre ; et *fitness / fatigue / forme* se dessine fitness en `forest` avec aire, fatigue en `terra` fin sans aire, forme en `sun` en barres 60 % positive/négative autour de zéro.

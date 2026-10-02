@@ -40,6 +40,7 @@ import type {
   PrecomputeStatus,
   Registry,
 } from "@/lib/types";
+import { Callout } from "@/components/Callout";
 
 const AUTOSAVE_MS = 1200;
 const PRECOMPUTE_POLL_MS = 3000;
@@ -203,7 +204,7 @@ export function PageWorkspace({
   if (loadError) {
     return (
       <main className="container">
-        <p className="note note--error">Could not load this page: {loadError}</p>
+        <Callout tone="terra">Could not load this page: {loadError}</Callout>
       </main>
     );
   }
@@ -265,10 +266,10 @@ export function PageWorkspace({
       <PrecomputeNotice spec={spec} registry={registry} strings={strings} />
 
       {athlete.weight_kg == null && (
-        <p className="note">
+        <Callout>
           Set your weight on the <a href="/home">Home screen</a> to unlock the power
           and power-to-heart-rate metrics.
-        </p>
+        </Callout>
       )}
 
       {spec.panels.map((panel, index) => (
@@ -356,9 +357,9 @@ function PrecomputeNotice({
 
   if (status.status === "error") {
     return (
-      <p className="note note--error">
+      <Callout tone="terra">
         {t("precompute.failed")}: {status.message}
-      </p>
+      </Callout>
     );
   }
   if (status.status !== "running") return null;
@@ -384,7 +385,7 @@ function SaveBadge({ state, error }: { state: SaveState; error: string | null })
   if (state === "saving") return <span className="muted">Saving…</span>;
   if (state === "saved") return <span className="muted">Saved</span>;
   if (state === "error") {
-    return <span className="note note--error">Not saved: {error}</span>;
+    return <span className="tm-chip tm-chip--danger">Not saved: {error}</span>;
   }
   return null;
 }
