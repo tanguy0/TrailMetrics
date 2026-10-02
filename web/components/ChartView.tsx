@@ -67,7 +67,7 @@ function isAthleteLine(trace: Trace, color: string): boolean {
 
 /** Mirrors `_area_trace`: the first chart-you-1 line on a plain numeric left axis. */
 function areaTrace(chart: ChartData, colored: { trace: Trace; index: number; color: string }[]): number | null {
-  if (chart.y_axis.kind !== "linear") return null;
+  if (chart.y_axis.kind !== "linear" || chart.y_axis.reversed) return null;
   const found = colored.find(
     ({ trace, color }) =>
       isAthleteLine(trace, color) &&
@@ -77,6 +77,38 @@ function areaTrace(chart: ChartData, colored: { trace: Trace; index: number; col
       !trace.stack_group,
   );
   return found ? found.index : null;
+}
+
+// Mirror `_ZERO_REACH` / `_RANGE_PAD` in src/domain/charts/plotly.py.
+const ZERO_REACH = 0.5;
+const RANGE_PAD = 0.05;
+
+const finite = (values: (number | null)[] | null | undefined): number[] =>
+  (values ?? []).filter((v): v is number => v != null && Number.isFinite(v));
+
+/**
+ * Mirrors `area_y_range`: the left axis's range when series 1 carries an area,
+ * as `[lo, hi, dataMax]`. `fill: tozeroy` would otherwise pull zero into the
+ * autorange; computed from the data instead, bars start at zero, lines only
+ * when zero is within reach. An explicit range is kept as given.
+ */
+function areaYRange(chart: ChartData): [number, number, number] | null {
+  const primary = chart.traces.filter((t) => t.axis !== "y2" || !chart.y2_axis);
+  const values = primary.flatMap((t) => [...finite(t.y), ...finite(t.band_upper), ...finite(t.band_lower)]);
+  if (!values.length) return null;
+  const dataMax = Math.max(...values);
+  if (chart.y_axis.range) return [chart.y_axis.range[0], chart.y_axis.range[1], dataMax];
+
+  let lo = Math.min(...values);
+  let hi = dataMax;
+  const hasBars = primary.some((t) => t.kind === "bar" && hasPoints(t));
+  let span = hi - lo || Math.abs(hi) || 1;
+  // Zero joins the range when bars need it or the data already nearly reaches it.
+  if (lo >= 0 && (hasBars || lo <= ZERO_REACH * span)) lo = 0;
+  else if (hi <= 0 && (hasBars || -hi <= ZERO_REACH * span)) hi = 0;
+  span = hi - lo || Math.abs(hi) || 1;
+  const pad = RANGE_PAD * span;
+  return [lo === 0 ? lo : lo - pad, hi === 0 ? hi : hi + pad, dataMax];
 }
 
 /** Mirrors `resolve_hover_mode`: unified unless the chart is a scatter. */
@@ -192,12 +224,13 @@ function roles(chart: ChartData) {
   // Right of the plot is where a right-hand axis keeps its ticks.
   const endLabels = !chart.y2_axis && athleteLines.length > 0;
   const main = area ?? athleteLines[0] ?? null;
-  return { area, athleteLines, endLabels, main };
+  const areaRange = area !== null ? areaYRange(chart) : null;
+  return { area: areaRange ? area : null, areaRange, athleteLines, endLabels, main };
 }
 
 function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];
-  const { area, athleteLines, endLabels, main } = roles(chart);
+  const { area, areaRange, athleteLines, endLabels, main } = roles(chart);
 
   // References first so they sit underneath; `legendrank` keeps the legend in the
   // chart's own order regardless (same as the Python renderer).
@@ -296,11 +329,14 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
       scatter.stackgroup = trace.stack_group || "area";
       scatter.fillcolor = rgba(color, trace.stack_group ? 0.35 : 0.2);
       scatter.line = { color, width: 0.35 };
-    } else if (index === area) {
-      // Series 1's area: AREA_ALPHA_TOP at the top, fading to nothing.
+    } else if (index === area && areaRange) {
+      // Series 1's area: AREA_ALPHA_TOP at the data's top, fading to nothing at
+      // the bottom of the *visible* axis — not at zero, which may be far below.
       scatter.fill = "tozeroy";
       scatter.fillgradient = {
         type: "vertical",
+        start: areaRange[0],
+        stop: areaRange[2],
         colorscale: [
           [0, rgba(color, 0)],
           [1, rgba(color, AREA_ALPHA_TOP)],
@@ -442,7 +478,7 @@ function toAnnotations(chart: ChartData, width: number): Record<string, unknown>
 function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
   const stacked = chart.traces.some((t) => t.stack_group);
   const hasBars = chart.traces.some((t) => t.kind === "bar");
-  const { endLabels } = roles(chart);
+  const { endLabels, areaRange } = roles(chart);
   const shapes = [...toShapes(chart), ...markerShapes(chart)];
   const annotations = [
     ...(chart.badges?.length ? toAnnotations(chart, width) : []),
@@ -476,7 +512,12 @@ function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
       font: { family: theme.fontSans, color: theme.ink, size: 12 },
     },
     xaxis: { ...axisLayout(chart.x_axis, false), ...SPIKES },
-    yaxis: { ...axisLayout(yAxis, true), nticks: Y_NTICKS },
+    yaxis: {
+      ...axisLayout(yAxis, true),
+      nticks: Y_NTICKS,
+      // The area never decides the axis (see areaYRange).
+      ...(areaRange ? { range: [areaRange[0], areaRange[1]] } : {}),
+    },
     ...(chart.y2_axis
       ? {
           yaxis2: {

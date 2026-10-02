@@ -9,7 +9,7 @@ This replaces the per-topic ``plotting.py`` modules the app used to carry, where
 each analysis re-implemented its own axis and legend styling.
 """
 
-from typing import Any, List, Optional, Sequence
+from typing import Any, List, Optional, Sequence, Tuple
 
 import numpy as np
 import plotly.graph_objects as go
@@ -77,7 +77,7 @@ def _area_trace(chart: ChartData, colored) -> Optional[int]:
     its own (the band already fills it) and not stacked. Never a reference, never
     a second series — one area per figure.
     """
-    if chart.y_axis.kind is not AxisKind.LINEAR:
+    if chart.y_axis.kind is not AxisKind.LINEAR or chart.y_axis.reversed:
         return None
     for index, trace, color in colored:
         if (
@@ -89,6 +89,60 @@ def _area_trace(chart: ChartData, colored) -> Optional[int]:
         ):
             return index
     return None
+
+
+# Lines start at zero only when zero is already near the data: within this share
+# of the data's span below its minimum. Power-to-HR (1.2–1.8) stays zoomed in;
+# a volume from a low base keeps its zero.
+_ZERO_REACH = 0.5
+# Headroom either side of the data, as a share of its span (Plotly's autorange
+# pads about the same).
+_RANGE_PAD = 0.05
+
+
+def _finite(values) -> List[float]:
+    out = []
+    for value in values or []:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            continue
+        if np.isfinite(number):
+            out.append(number)
+    return out
+
+
+def area_y_range(chart: ChartData) -> Optional[Tuple[float, float, float]]:
+    """The left axis's range when series 1 carries an area: ``(lo, hi, data_max)``.
+
+    ``fill: tozeroy`` would otherwise pull zero into Plotly's autorange on every
+    such chart. Computed from the data instead, so the area never decides the
+    axis: bars always start at zero (their length is the value), lines only when
+    zero is within reach of the data. The fill runs on below ``lo`` and is
+    clipped there. An explicit ``y_axis.range`` is kept as given; ``None`` means
+    a chart with no data to fit.
+    """
+    primary = [t for t in chart.traces if t.axis != "y2" or chart.y2_axis is None]
+    values = [
+        v for t in primary
+        for v in _finite(t.y) + _finite(t.band_upper) + _finite(t.band_lower)
+    ]
+    if not values:
+        return None
+    lo, hi = min(values), max(values)
+    if chart.y_axis.range:
+        return chart.y_axis.range[0], chart.y_axis.range[1], hi
+
+    has_bars = any(t.kind is TraceKind.BAR and _has_points(t) for t in primary)
+    span = hi - lo or abs(hi) or 1.0
+    # Zero joins the range when bars need it or the data already nearly reaches it.
+    if lo >= 0 and (has_bars or lo <= _ZERO_REACH * span):
+        lo = 0.0
+    elif hi <= 0 and (has_bars or -hi <= _ZERO_REACH * span):
+        hi = 0.0
+    span = hi - lo or abs(hi) or 1.0
+    pad = _RANGE_PAD * span
+    return (lo if lo == 0 else lo - pad), (hi if hi == 0 else hi + pad), max(values)
 
 
 def resolve_hover_mode(chart: ChartData) -> str:
@@ -158,6 +212,7 @@ def render_chart(chart: ChartData) -> go.Figure:
     colored.sort(key=lambda item: not _is_reference(item[2]))
 
     area = _area_trace(chart, colored)
+    area_range = area_y_range(chart) if area is not None else None
     athlete_lines = [i for i, trace, color in colored if _is_athlete_line(trace, color)]
     # End labels sit right of the plot, where a right-hand axis keeps its ticks:
     # a dual-axis chart goes without them.
@@ -169,7 +224,7 @@ def render_chart(chart: ChartData) -> go.Figure:
         _add_band(fig, trace, chart, color)
         _add_trace(
             fig, trace, chart, color, rank=index + 1,
-            area=index == area,
+            area=area_range if index == area else None,
             main=index == main,
             # With one athlete line its end label names it well enough; with
             # several, only the legend says which is which.
@@ -184,6 +239,9 @@ def render_chart(chart: ChartData) -> go.Figure:
 
     _apply_axis(fig.update_xaxes, chart.x_axis)
     _apply_axis(fig.update_yaxes, chart.y_axis)
+    if area_range is not None:
+        # Left axis only: `update_yaxes` would reach a right-hand axis too.
+        fig.update_layout(yaxis_range=[area_range[0], area_range[1]])
     if chart.y2_axis is not None:
         # Overlaid on the left axis and drawn on the right. No grid of its own is
         # not cosmetic: two sets of gridlines at different intervals produce a mesh
@@ -358,7 +416,8 @@ def _float_or_nan(value: Any) -> float:
 
 def _add_trace(
     fig: go.Figure, trace: Trace, chart: ChartData, color: str, rank: int,
-    *, area: bool = False, main: bool = False, hide_legend: bool = False,
+    *, area: Optional[Tuple[float, float, float]] = None, main: bool = False,
+    hide_legend: bool = False,
 ) -> None:
     y_axis = _y_axis_for(trace, chart)
     x = _encode(trace.x, chart.x_axis)
@@ -422,12 +481,14 @@ def _add_trace(
         scatter["stackgroup"] = trace.stack_group or "area"
         # A hairline keeps stacked bands readable without dominating the fill.
         scatter["line"] = dict(color=color, width=0.35)
-    elif area:
-        # Series 1's area: the colour at AREA_ALPHA_TOP at the top, fading to
-        # nothing at the bottom (charts.md § v1.1).
+    elif area is not None:
+        # Series 1's area: the colour at AREA_ALPHA_TOP at the data's top, fading
+        # to nothing at the bottom of the *visible* axis (charts.md § v1.1) — not
+        # at zero, which may be far below a zoomed-in range.
         scatter["fill"] = "tozeroy"
         scatter["fillgradient"] = dict(
             type="vertical",
+            start=area[0], stop=area[2],
             colorscale=[[0, rgba(color, 0)], [1, rgba(color, theme.AREA_ALPHA_TOP)]],
         )
 
