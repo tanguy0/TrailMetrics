@@ -132,6 +132,10 @@ export const updateProfile = (
     body: JSON.stringify(changes),
   });
 
+/** Email a fresh verification link to the signed-in account. */
+export const resendVerification = () =>
+  request<{ sent: boolean; verified: boolean }>("/auth/verify/resend", { method: "POST" });
+
 /** Forget the account's Strava tokens; the athlete and their history stay. */
 export const disconnectStrava = () => request<{ ok: boolean }>("/auth/strava", { method: "DELETE" });
 

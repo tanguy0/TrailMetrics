@@ -438,7 +438,15 @@ export interface Athlete {
   is_master: boolean;
   /** The signed-in account. `email` above is the *viewed* athlete's sign-in
    * address, which differs only while a coach is viewing another athlete. */
-  account: { id: string; email: string; role: "athlete" | "coach" | "master" };
+  account: {
+    id: string;
+    email: string;
+    role: "athlete" | "coach" | "master";
+    /** Proven by a verification link or a completed password reset. */
+    email_verified: boolean;
+    /** Whether a verification link can be sent at all (a mail provider is set). */
+    can_verify: boolean;
+  };
   /** Whether a Strava athlete is attached. False: every Strava field above is
    * empty, `id` is null, and Home renders its degraded variant. */
   strava_connected: boolean;

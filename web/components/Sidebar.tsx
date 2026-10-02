@@ -32,7 +32,7 @@ interface Item {
 }
 
 const RANK: Record<Tier, number> = { visitor: 0, account: 1, strava: 2 };
-const AUTH_PATHS = ["/login", "/register", "/reset"];
+const AUTH_PATHS = ["/login", "/register", "/reset", "/verify"];
 
 async function signOut() {
   await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);

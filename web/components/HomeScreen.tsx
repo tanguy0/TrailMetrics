@@ -39,6 +39,7 @@ import {
   ApiError,
   disconnectStrava,
   getAthlete,
+  resendVerification,
   getHomeSummary,
   getSyncStatus,
   renderPanel,
@@ -278,6 +279,9 @@ export function HomeScreen({ strings, notice = null }: { strings: Strings; notic
     <NoStrava.Provider value={offline}>
     <main className="container">
       {notice && <Callout tone="terra">{notice}</Callout>}
+      {!athlete.viewing_as && !athlete.account.email_verified && athlete.account.can_verify && (
+        <VerifyPrompt t={t} />
+      )}
 
       <HomeHero
         athlete={athlete}
@@ -1187,6 +1191,39 @@ function ChartBody({
         </div>
       ))}
     </>
+  );
+}
+
+/**
+ * Until the address is confirmed: one quiet line, and a way to get the link
+ * again. Nothing in the app waits on it except role promotion, so this informs
+ * rather than blocks.
+ */
+function VerifyPrompt({ t }: { t: T }) {
+  const [state, setState] = useState<"idle" | "sent" | "error">("idle");
+  return (
+    <Callout>
+      {t("auth.verify.pending")}{" "}
+      {state === "sent" ? (
+        t("auth.verify.resent")
+      ) : (
+        <button
+          type="button"
+          className="tm-btn tm-btn--ghost tm-btn--sm"
+          onClick={async () => {
+            try {
+              const result = await resendVerification();
+              setState(result.sent ? "sent" : "error");
+            } catch {
+              setState("error");
+            }
+          }}
+        >
+          {t("auth.verify.resend")}
+        </button>
+      )}
+      {state === "error" && ` ${t("auth.error.generic")}`}
+    </Callout>
   );
 }
 
