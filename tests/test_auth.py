@@ -11,7 +11,7 @@ never a hosted one: they create and delete accounts. They run only when
 Only rows they create are deleted (``@test.tagg`` accounts, athletes from
 ``ATHLETE_BASE`` up), so pointing them at a dev database with data in it is safe.
 
-``test_coach_sees_only_coached_athletes`` lands with the coaching tables (PR 3).
+``test_coach_sees_only_coached_athletes`` lands with the coaching tables.
 """
 
 import os
@@ -113,6 +113,7 @@ class AuthApiTest(unittest.TestCase):
         cls.db.execute("delete from accounts where email like %s", (f"%@{DOMAIN}",))
         cls.db.execute("delete from login_attempts where key like %s", (f"%{DOMAIN}%",))
         cls.db.execute("delete from login_attempts where key like %s", ("%203.0.113.%",))
+        cls.db.execute("delete from login_attempts where key like %s", ("verify-account:%",))
 
     def setUp(self):
         self._clean()
@@ -182,9 +183,71 @@ class AuthApiTest(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
-    def test_master_email_gets_the_master_role(self):
+    def test_master_email_is_not_master_before_proving_it(self):
         token = self.token_for("boss")
-        self.assertEqual(self.me(token).json()["account"]["role"], "master")
+        account = self.me(token).json()["account"]
+        self.assertEqual(account["role"], "athlete")
+        self.assertFalse(account["email_verified"])
+
+    # --- email verification -------------------------------------------------------
+
+    def _with_mailbox(self):
+        from unittest import mock
+
+        sent = []
+
+        class FakeSender:
+            def send(self, to, subject, text):
+                sent.append((to, text))
+
+        return sent, mock.patch("api.routers.auth.get_mail_sender", return_value=FakeSender())
+
+    @staticmethod
+    def _token_in(text, path):
+        return next(word for word in text.split() if path in word).rsplit("/", 1)[1]
+
+    def test_verification_link_promotes_the_master_email(self):
+        sent, mailbox = self._with_mailbox()
+        with mailbox:
+            token = self.token_for("boss")
+        link_token = self._token_in(sent[0][1], "/verify/")
+        response = self.client.post("/auth/verify/confirm", json={"token": link_token})
+        self.assertEqual(response.status_code, 200, response.text)
+        account = self.me(token).json()["account"]
+        self.assertEqual(account["role"], "master")
+        self.assertTrue(account["email_verified"])
+        reused = self.client.post("/auth/verify/confirm", json={"token": link_token})
+        self.assertEqual(reused.status_code, 400)
+
+    def test_verification_does_not_promote_anyone_else(self):
+        sent, mailbox = self._with_mailbox()
+        with mailbox:
+            token = self.token_for("ana")
+        self.client.post("/auth/verify/confirm", json={"token": self._token_in(sent[0][1], "/verify/")})
+        account = self.me(token).json()["account"]
+        self.assertEqual(account["role"], "athlete")
+        self.assertTrue(account["email_verified"])
+
+    def test_reset_takes_a_squatted_master_email_back(self):
+        squatter = self.token_for("boss")  # someone registered the address first
+        sent, mailbox = self._with_mailbox()
+        with mailbox:
+            self.client.post("/auth/reset", json={"email": f"boss@{DOMAIN}"}, headers=SERVICE)
+        confirm = {"token": self._token_in(sent[0][1], "/reset/"), "password": "le vrai propriétaire"}
+        owner = self.client.post("/auth/reset/confirm", json=confirm, headers=SERVICE).json()
+        self.assertEqual(self.me(squatter).status_code, 401)
+        self.assertEqual(self.me(owner["session_token"]).json()["account"]["role"], "master")
+
+    def test_resend_is_limited(self):
+        token = self.token_for("ana")
+        sent, mailbox = self._with_mailbox()
+        with mailbox:
+            for _ in range(3):
+                response = self.client.post("/auth/verify/resend", headers=self.bearer(token))
+                self.assertEqual(response.json(), {"sent": True, "verified": False})
+            limited = self.client.post("/auth/verify/resend", headers=self.bearer(token))
+        self.assertEqual(limited.status_code, 429)
+        self.assertEqual(len(sent), 3)
 
     # --- login ------------------------------------------------------------------
 
@@ -360,9 +423,10 @@ class AuthApiTest(unittest.TestCase):
             self.client.get("/coach/athletes", headers=self.bearer(self.token_for("ana"))).status_code,
             403,
         )
+        boss = self.token_for("boss")
+        self.db.execute("update accounts set role = 'master' where email = %s", (f"boss@{DOMAIN}",))
         self.assertEqual(
-            self.client.get("/coach/athletes", headers=self.bearer(self.token_for("boss"))).status_code,
-            200,
+            self.client.get("/coach/athletes", headers=self.bearer(boss)).status_code, 200
         )
 
     def test_view_as_is_ignored_for_an_athlete(self):

@@ -1040,6 +1040,42 @@ TRANSLATIONS = {
         "en": "Your account is already linked to another Strava account.",
         "fr": "Votre compte est déjà lié à un autre compte Strava.",
     },
+    "ui.auth.error.verify_invalid": {
+        "en": "This link is no longer valid. Sign in and ask for a new one from your Home.",
+        "fr": "Ce lien n’est plus valide. Connectez-vous et demandez-en un nouveau depuis "
+              "votre Accueil.",
+    },
+    "ui.auth.verify.mail.subject": {
+        "en": "TAGG — confirm your email address",
+        "fr": "TAGG — confirmez votre adresse e-mail",
+    },
+    "ui.auth.verify.mail.body": {
+        "en": "Hello,\n\nTo confirm this address for your TAGG account, open this link "
+              "(valid for 48 hours):\n{link}\n\nIf you did not create a TAGG account, "
+              "ignore this message.\n\nTAGG",
+        "fr": "Bonjour,\n\nPour confirmer cette adresse pour votre compte TAGG, ouvrez ce "
+              "lien (valable 48 heures) :\n{link}\n\nSi vous n’avez pas créé de compte "
+              "TAGG, ignorez ce message.\n\nTAGG",
+    },
+    "ui.auth.verify.pending": {
+        "en": "Confirm your email address: the link is in your inbox.",
+        "fr": "Confirmez votre adresse e-mail : le lien vous attend dans votre boîte.",
+    },
+    "ui.auth.verify.resend": {"en": "Send the link again", "fr": "Renvoyer le lien"},
+    "ui.auth.verify.resent": {
+        "en": "A new link is on its way.",
+        "fr": "Un nouveau lien vient de partir.",
+    },
+    "ui.auth.verify.done.title": {"en": "Address confirmed", "fr": "Adresse confirmée"},
+    "ui.auth.verify.done.body": {
+        "en": "{email} is confirmed for your TAGG account.",
+        "fr": "{email} est confirmée pour votre compte TAGG.",
+    },
+    "ui.auth.verify.failed.title": {
+        "en": "Link not valid",
+        "fr": "Lien non valide",
+    },
+    "ui.auth.verify.continue": {"en": "Go to my Home", "fr": "Aller à mon Accueil"},
     "ui.auth.error.generic": {
         "en": "Something went wrong. Try again.",
         "fr": "Une erreur est survenue. Réessayez.",

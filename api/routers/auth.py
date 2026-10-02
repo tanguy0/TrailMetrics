@@ -11,6 +11,12 @@ runs the OAuth flow, and the callback (on the web app, for the same first-party
 cookie reasons) posts the code here with the account's session; the athlete is
 then attached to the account — see :func:`exchange`.
 
+Roles are earned by proof, not by typing: the account registered with
+``MASTER_EMAIL`` only becomes ``master`` once it proves it holds the address —
+a verification link, or a completed password reset (which also takes the
+address back from anyone who registered it first). Other roles are set with
+``python -m api.roles``.
+
 Errors that could tell an attacker whether an email has an account are the same
 for both cases: one message for an unknown email and a wrong password, and a
 dummy hash verified for the unknown one so the timing matches too. Registration
@@ -68,6 +74,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 RESET_TTL_S = 30 * 60
+VERIFY_TTL_S = 48 * 60 * 60
+VERIFY_RESEND_PER_ACCOUNT = 3
 
 # A Strava authorization code can be exchanged exactly once, but the callback can
 # easily arrive twice — a double-clicked button, a browser retrying a redirect, a
@@ -147,6 +155,10 @@ class ResetRequest(BaseModel):
     email: str = Field(min_length=1, max_length=254)
 
 
+class VerifyConfirm(BaseModel):
+    token: str = Field(min_length=1, max_length=200)
+
+
 class ResetConfirm(BaseModel):
     token: str = Field(min_length=1, max_length=200)
     password: str = Field(min_length=1, max_length=1024)
@@ -208,19 +220,18 @@ def register(payload: Registration, request: Request, lang: str = Depends(langua
     if problem:
         raise _fail(status.HTTP_422_UNPROCESSABLE_ENTITY, f"password_{problem}", lang)
 
-    settings = get_settings()
-    # The operator's address is the one role assigned outside the database: it
-    # replaces the old MASTER_EMAIL / COACH_ATHLETE_IDS environment lists.
-    role = "master" if settings.is_master_email(email) else "athlete"
+    # Every account starts as an athlete — MASTER_EMAIL included, until it
+    # proves it holds the address (see the module docstring).
     try:
         account = accounts.create(
             email,
             passwords.hash_password(payload.password),
-            role,
+            "athlete",
             payload.lang if payload.lang in LANGUAGES else lang,
         )
     except AccountExists:
         raise _fail(status.HTTP_409_CONFLICT, "exists", lang)
+    _send_verification(account)
     return _open_session(account, request)
 
 
@@ -312,7 +323,37 @@ def confirm_reset(payload: ResetConfirm, request: Request, lang: str = Depends(l
         raise _fail(status.HTTP_400_BAD_REQUEST, "reset_invalid", lang)
     accounts.set_password_hash(account.id, passwords.hash_password(payload.password))
     accounts.delete_sessions(account.id)
+    # The link came to the address, so following it is proof of holding it.
+    _mark_verified(account)
     return _open_session(account, request)
+
+
+@router.post("/verify/confirm")
+def confirm_verification(payload: VerifyConfirm, lang: str = Depends(language)) -> dict:
+    """Follow a verification link. Needs no session: the token is the proof,
+    and the link may well be opened on another device than the one signed in."""
+    accounts = get_account_repository()
+    account_id = accounts.consume_verification(hash_token(payload.token))
+    account = accounts.get(account_id) if account_id else None
+    if account is None:
+        raise _fail(status.HTTP_400_BAD_REQUEST, "verify_invalid", lang)
+    _mark_verified(account)
+    return {"ok": True, "email": account.email}
+
+
+@router.post("/verify/resend")
+def resend_verification(
+    account: Account = Depends(current_account), lang: str = Depends(language)
+) -> dict:
+    """Send a fresh verification link to the signed-in account's address."""
+    if account.email_verified:
+        return {"sent": False, "verified": True}
+    accounts = get_account_repository()
+    if over_limit(
+        accounts, (f"verify-account:{account.id}", VERIFY_RESEND_PER_ACCOUNT, SIGNUP_WINDOW_S)
+    ):
+        raise _fail(status.HTTP_429_TOO_MANY_REQUESTS, "too_many", lang)
+    return {"sent": _send_verification(account), "verified": False}
 
 
 @router.post("/strava/url")
@@ -400,6 +441,7 @@ def session(request: Request, account: Account = Depends(current_account)) -> di
         "strava_connected": request.state.account_athlete_id is not None,
         "is_coach": account.is_coach,
         "is_master": account.is_master,
+        "email_verified": account.email_verified,
         "lang": account.lang,
     }
 
@@ -489,6 +531,36 @@ def update_me(
 
 # --- Helpers -----------------------------------------------------------------
 
+def _send_verification(account: Account) -> bool:
+    """Email a verification link. False when no mail is configured, or it failed —
+    the account works regardless; only role promotion waits on it."""
+    sender = get_mail_sender()
+    if sender is None:
+        return False
+    token = new_token()
+    get_account_repository().create_verification(hash_token(token), account.id, VERIFY_TTL_S)
+    link = f"{get_settings().web_app_url.rstrip('/')}/verify/{token}"
+    try:
+        sender.send(
+            account.email,
+            translate("ui.auth.verify.mail.subject", account.lang),
+            translate("ui.auth.verify.mail.body", account.lang).replace("{link}", link),
+        )
+    except Exception as error:
+        logger.warning("could not send a verification email: %s", type(error).__name__)
+        return False
+    return True
+
+
+def _mark_verified(account: Account) -> None:
+    """Record the proof, and grant what waited on it: MASTER_EMAIL becomes master."""
+    accounts = get_account_repository()
+    accounts.mark_verified(account.id)
+    account.email_verified = True
+    if get_settings().is_master_email(account.email) and account.role != "master":
+        accounts.set_role(account.id, "master")
+        account.role = "master"
+
 def _open_session(account: Account, request: Request) -> dict:
     """Mint a session for the account; the token leaves here once, never stored."""
     token = new_token()
@@ -520,7 +592,14 @@ def _effective_athlete(request: Request, account: Account) -> Optional[Athlete]:
 
 
 def _with_account(payload: dict, account: Account, strava_connected: bool) -> dict:
-    payload["account"] = {"id": account.id, "email": account.email, "role": account.role}
+    payload["account"] = {
+        "id": account.id,
+        "email": account.email,
+        "role": account.role,
+        "email_verified": account.email_verified,
+        # Without a mail provider no link was sent, so the app must not ask for one.
+        "can_verify": get_mail_sender() is not None,
+    }
     payload["strava_connected"] = strava_connected
     payload["is_coach"] = account.is_coach
     payload["is_master"] = account.is_master

@@ -89,12 +89,21 @@ Environment variables:
 
 Roles live in the database (`accounts.role`): `master` (blog + coach), `coach`
 (browses other athletes via the sidebar switcher — their data, pages and training
-diary, never their Strava connection), `athlete`. The account registered with
-`MASTER_EMAIL` is created `master`; promote a coach with
-`update accounts set role = 'coach' where email = '…'`.
+diary, never their Strava connection), `athlete`. Every account starts as
+`athlete`. The account registered with `MASTER_EMAIL` becomes `master` once it
+proves it holds the address — the verification link sent at sign-up, or a
+completed password reset (which also reclaims the address from anyone who
+registered it first). Any other role, or the master by hand when no mail is
+configured:
 
-Without `MAIL_FROM` and a provider, "Forgot your password?" shows "write to
-`MASTER_EMAIL`" instead of sending. With Resend, verify the sending domain first.
+```bash
+railway run python -m api.roles set someone@example.com coach
+railway run python -m api.roles show someone@example.com
+```
+
+Without `MAIL_FROM` and a provider, no verification link is sent and "Forgot your
+password?" shows "write to `MASTER_EMAIL`" instead. With Resend, verify the
+sending domain first.
 
 Sessions are opaque tokens stored hashed in `sessions` (30 days, sliding). The
 JWT sessions of earlier versions are no longer read: after this deploy everyone

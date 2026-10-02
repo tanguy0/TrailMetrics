@@ -19,6 +19,9 @@ class Account:
     email: str
     role: str = "athlete"
     lang: str = "en"
+    # Whether the account has proven it holds `email` (a verification link, or
+    # a completed password reset). Required before MASTER_EMAIL becomes master.
+    email_verified: bool = False
     created_at: Optional[datetime] = None
     last_login_at: Optional[datetime] = None
 

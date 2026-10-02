@@ -382,7 +382,7 @@ create table if not exists accounts (
     role              text not null default 'athlete'
                       check (role in ('athlete', 'coach', 'master')),
     lang              text not null default 'en',
-    email_verified_at timestamptz,                -- reserved: verification flow comes later
+    email_verified_at timestamptz,                -- set by a verification link or a completed reset
     created_at        timestamptz not null default now(),
     last_login_at     timestamptz
 );
@@ -407,6 +407,15 @@ create table if not exists sessions (
 create index if not exists sessions_account_idx on sessions (account_id);
 
 create table if not exists password_resets (
+    token_hash  bytea primary key,
+    account_id  uuid not null references accounts(id) on delete cascade,
+    expires_at  timestamptz not null,
+    used_at     timestamptz
+);
+
+-- Proof that the account holds its address. Gates what must not go to whoever
+-- merely typed an email first — today, the `master` role of MASTER_EMAIL.
+create table if not exists email_verifications (
     token_hash  bytea primary key,
     account_id  uuid not null references accounts(id) on delete cascade,
     expires_at  timestamptz not null,
@@ -447,4 +456,5 @@ alter table race_plans enable row level security;
 alter table accounts enable row level security;
 alter table sessions enable row level security;
 alter table password_resets enable row level security;
+alter table email_verifications enable row level security;
 alter table login_attempts enable row level security;

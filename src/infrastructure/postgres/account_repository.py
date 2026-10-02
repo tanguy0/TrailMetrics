@@ -12,7 +12,8 @@ from psycopg import errors
 from src.domain.ports.accounts import Account, Session
 from src.infrastructure.postgres.pool import Database
 
-_ACCOUNT = "select id, email, role, lang, created_at, last_login_at from accounts"
+_COLUMNS = "id, email, role, lang, email_verified_at, created_at, last_login_at"
+_ACCOUNT = f"select {_COLUMNS} from accounts"
 
 
 class AccountExists(Exception):
@@ -30,7 +31,7 @@ class PostgresAccountRepository:
             row = self.db.fetch_one(
                 "insert into accounts (email, password_hash, role, lang) "
                 "values (%s, %s, %s, %s) "
-                "returning id, email, role, lang, created_at, last_login_at",
+                f"returning {_COLUMNS}",
                 (email, password_hash, role, lang),
             )
         except errors.UniqueViolation as error:
@@ -44,8 +45,7 @@ class PostgresAccountRepository:
     def by_email(self, email: str) -> Optional[Tuple[Account, str]]:
         """The account and its password hash — the one read that returns the hash."""
         row = self.db.fetch_one(
-            "select id, email, role, lang, created_at, last_login_at, password_hash "
-            "from accounts where email = %s",
+            f"select {_COLUMNS}, password_hash from accounts where email = %s",
             (email,),
         )
         return (_account(row), row["password_hash"]) if row else None
@@ -59,6 +59,16 @@ class PostgresAccountRepository:
     def touch_login(self, account_id: str) -> None:
         self.db.execute(
             "update accounts set last_login_at = now() where id = %s", (account_id,)
+        )
+
+    def set_role(self, account_id: str, role: str) -> None:
+        self.db.execute("update accounts set role = %s where id = %s", (role, account_id))
+
+    def mark_verified(self, account_id: str) -> None:
+        self.db.execute(
+            "update accounts set email_verified_at = coalesce(email_verified_at, now()) "
+            "where id = %s",
+            (account_id,),
         )
 
     def set_lang(self, account_id: str, lang: str) -> None:
@@ -117,7 +127,8 @@ class PostgresAccountRepository:
         """
         row = self.db.fetch_one(
             "select s.id as session_id, s.expires_at, s.last_seen_at, "
-            "a.id, a.email, a.role, a.lang, a.created_at, a.last_login_at, "
+            "a.id, a.email, a.role, a.lang, a.email_verified_at, a.created_at, "
+            "a.last_login_at, "
             "ath.id as athlete_id "
             "from sessions s join accounts a on a.id = s.account_id "
             "left join athletes ath on ath.account_id = a.id "
@@ -167,6 +178,25 @@ class PostgresAccountRepository:
         )
         return str(row["account_id"]) if row else None
 
+    # --- Email verification ------------------------------------------------
+
+    def create_verification(self, token_hash: bytes, account_id: str, ttl_s: int) -> None:
+        self.db.execute(
+            "insert into email_verifications (token_hash, account_id, expires_at) "
+            "values (%s, %s, now() + make_interval(secs => %s))",
+            (token_hash, account_id, ttl_s),
+        )
+
+    def consume_verification(self, token_hash: bytes) -> Optional[str]:
+        """Mark a live verification token used and return its account — at most once."""
+        row = self.db.fetch_one(
+            "update email_verifications set used_at = now() "
+            "where token_hash = %s and used_at is null and expires_at > now() "
+            "returning account_id",
+            (token_hash,),
+        )
+        return str(row["account_id"]) if row else None
+
     # --- Rate limiting -----------------------------------------------------
 
     def hit(self, key: str, window_s: int) -> int:
@@ -192,6 +222,7 @@ def _account(row) -> Account:
         email=str(row["email"]),
         role=row["role"],
         lang=row["lang"] or "en",
+        email_verified=row.get("email_verified_at") is not None,
         created_at=row.get("created_at"),
         last_login_at=row.get("last_login_at"),
     )
