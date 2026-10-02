@@ -77,6 +77,19 @@ FIXTURES: List[Tuple[str, ChartData, str]] = [
             _trace([330, 320, 315, 318], x=[1, 2, 3, 4], kind=TraceKind.SCATTER, color=Y1),
             _trace([330, 315], x=[1, 4], color=Y1, show_legend=False)]),
      "scatter"),
+    ("weekly_feel", ChartData(
+        x_axis=_DATE, y_axis=_lin(range=[0, 11.5]), y2_axis=_lin(range=[0.5, 3.5]), family="composition",
+        traces=[
+            _trace([5, 6, 8, 3], kind=TraceKind.BAR, color=theme.SUN,
+                   point_colors=[theme.SUN, theme.SUN, theme.DANGER, theme.MOSS]),
+            _trace([2, 3, 1, 2], axis="y2", color=theme.MOSS_INK, end_label=False)]),
+     "composition"),
+    ("records_two_distances", ChartData(
+        x_axis=_DATE, y_axis=_PACE, family="comparison", traces=[
+            _trace([300, 295, 290, 290], kind=TraceKind.STEP, color=Y1, end_label=True),
+            _trace([320, 318, 310, 310], kind=TraceKind.STEP, color=Y2),
+            _trace([300, 290], x=_WEEKS[:2], kind=TraceKind.SCATTER, color=Y1, show_legend=False)]),
+     "comparison"),
     ("stream_with_altitude_background", ChartData(
         x_axis=_lin(), y_axis=_PACE, y2_axis=_lin(), family="function", traces=[
             _trace([500, 900, 1500, 800], x=[0, 1, 2, 3], axis="y2", background=True, color=REF),
