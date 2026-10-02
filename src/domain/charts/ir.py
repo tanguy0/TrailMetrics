@@ -101,6 +101,19 @@ class Trace:
     point_colors: Optional[List[str]] = None
     point_opacity: Optional[List[float]] = None
     point_text: Optional[List[str]] = None
+    # charts.md § v1.2 — what a plot that knows its figure declares. ``None``
+    # leaves the call to the chart's family (see src.domain.charts.families).
+    # ``area``: this line carries the figure's one gradient area (or never does).
+    area: Optional[bool] = None
+    # ``end_label``: a dot and the last value right of the line; on a comparison
+    # it also names the *current* series.
+    end_label: Optional[bool] = None
+    # A flat backdrop (altitude, a course profile): filled to zero in
+    # line-strong, drawn first, out of the legend unless it is the only series.
+    # Not "the area" — a figure may have a background, a band and an area.
+    background: bool = False
+    # Opacity of the ±band ribbon; ``None`` keeps the renderer's default.
+    band_opacity: Optional[float] = None
 
 
 @dataclass
@@ -199,6 +212,12 @@ class ChartData:
     hover_mode: str = "auto"
     # Gap between bars, as a share of each slot; ``None`` keeps Plotly's.
     bargap: Optional[float] = None
+    # charts.md § v1.2 — tracking | comparison | function | oscillation |
+    # composition | scatter. ``None`` lets the renderer classify the figure.
+    family: Optional[str] = None
+    # An oscillation's reference level, drawn as a line-strong rule; ``None``
+    # takes 0 when the data straddles it, else the window's mean.
+    baseline: Optional[float] = None
     # Caption rendered under the figure.
     caption: Optional[str] = None
 

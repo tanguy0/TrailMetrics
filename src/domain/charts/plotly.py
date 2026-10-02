@@ -14,7 +14,8 @@ from typing import Any, List, Optional, Sequence, Tuple
 import numpy as np
 import plotly.graph_objects as go
 
-from src.domain.charts.ir import Axis, AxisKind, ChartData, Marker, Trace, TraceKind
+from src.domain.charts.families import Plan, finite, has_points, plan as family_plan
+from src.domain.charts.ir import Axis, AxisKind, ChartData, Trace, TraceKind
 from src.domain.gap import theme
 from src.domain.plotting_common import (
     CURVE_PALETTE,
@@ -39,6 +40,10 @@ def _is_reference(color: str) -> bool:
     return color.upper() == theme.CHART_REF.upper()
 
 
+def _default_color(index: int) -> str:
+    return CURVE_PALETTE[index % len(CURVE_PALETTE)]
+
+
 # --- v1.1 (charts.md § Plus de caractère) ----------------------------------
 # Every constant below has a twin in web/components/ChartView.tsx.
 
@@ -57,91 +62,39 @@ _MARKER_DASH = "2px,4px"
 _RACE_DOT_PX = 4
 
 
-def _has_points(trace: Trace) -> bool:
-    return any(v is not None for v in trace.y)
-
-
-def _is_athlete_line(trace: Trace, color: str) -> bool:
-    """One of the athlete's own lines — not a reference, not bars or dots."""
-    return (
-        not _is_reference(color)
-        and trace.kind in (TraceKind.LINE, TraceKind.STEP)
-        and _has_points(trace)
-    )
-
-
-def _area_trace(chart: ChartData, colored) -> Optional[int]:
-    """The one trace that gets the area fill: the athlete's series 1.
-
-    The first ``chart-you-1`` line on a plain numeric left axis, with no ±band of
-    its own (the band already fills it) and not stacked. Never a reference, never
-    a second series — one area per figure.
-    """
-    if chart.y_axis.kind is not AxisKind.LINEAR or chart.y_axis.reversed:
-        return None
-    for index, trace, color in colored:
-        if (
-            _is_athlete_line(trace, color)
-            and color.upper() == theme.CHART_YOU_1.upper()
-            and trace.axis != "y2"
-            and trace.band_upper is None
-            and not trace.stack_group
-        ):
-            return index
-    return None
-
-
-# Lines start at zero only when zero is already near the data: within this share
-# of the data's span below its minimum. Power-to-HR (1.2–1.8) stays zoomed in;
-# a volume from a low base keeps its zero.
-_ZERO_REACH = 0.5
 # Headroom either side of the data, as a share of its span (Plotly's autorange
 # pads about the same).
 _RANGE_PAD = 0.05
-
-
-def _finite(values) -> List[float]:
-    out = []
-    for value in values or []:
-        try:
-            number = float(value)
-        except (TypeError, ValueError):
-            continue
-        if np.isfinite(number):
-            out.append(number)
-    return out
+# A backdrop (altitude, profile): line-strong at this opacity, no stroke.
+_BACKGROUND_ALPHA = 0.35
+# An oscillation's reference level.
+_BASELINE_WIDTH = 1
 
 
 def area_y_range(chart: ChartData) -> Optional[Tuple[float, float, float]]:
-    """The left axis's range when series 1 carries an area: ``(lo, hi, data_max)``.
+    """The left axis's range when the figure carries an area: ``(lo, hi, data_max)``.
 
-    ``fill: tozeroy`` would otherwise pull zero into Plotly's autorange on every
-    such chart. Computed from the data instead, so the area never decides the
-    axis: bars always start at zero (their length is the value), lines only when
-    zero is within reach of the data. The fill runs on below ``lo`` and is
-    clipped there. An explicit ``y_axis.range`` is kept as given; ``None`` means
-    a chart with no data to fit.
+    An area is the sign of a quantity that accumulates (charts.md § v1.2), so it
+    starts at zero — on the data's side of it. The range is set explicitly anyway,
+    padded like Plotly's own autorange, so the gradient can fade over exactly what
+    is visible. An explicit ``y_axis.range`` is kept as given; ``None`` means a
+    chart with no data to fit.
     """
-    primary = [t for t in chart.traces if t.axis != "y2" or chart.y2_axis is None]
+    primary = [
+        t for t in chart.traces
+        if (t.axis != "y2" or chart.y2_axis is None) and not t.background
+    ]
     values = [
         v for t in primary
-        for v in _finite(t.y) + _finite(t.band_upper) + _finite(t.band_lower)
+        for v in finite(t.y) + finite(t.band_upper) + finite(t.band_lower)
     ]
     if not values:
         return None
     lo, hi = min(values), max(values)
     if chart.y_axis.range:
         return chart.y_axis.range[0], chart.y_axis.range[1], hi
-
-    has_bars = any(t.kind is TraceKind.BAR and _has_points(t) for t in primary)
-    span = hi - lo or abs(hi) or 1.0
-    # Zero joins the range when bars need it or the data already nearly reaches it.
-    if lo >= 0 and (has_bars or lo <= _ZERO_REACH * span):
-        lo = 0.0
-    elif hi <= 0 and (has_bars or -hi <= _ZERO_REACH * span):
-        hi = 0.0
-    span = hi - lo or abs(hi) or 1.0
-    pad = _RANGE_PAD * span
+    lo, hi = min(lo, 0.0), max(hi, 0.0)
+    pad = _RANGE_PAD * (hi - lo or 1.0)
     return (lo if lo == 0 else lo - pad), (hi if hi == 0 else hi + pad), max(values)
 
 
@@ -153,7 +106,7 @@ def resolve_hover_mode(chart: ChartData) -> str:
     """
     if chart.hover_mode not in ("auto", "closest"):
         return chart.hover_mode
-    plotted = [t for t in chart.traces if _has_points(t)]
+    plotted = [t for t in chart.traces if has_points(t)]
     if plotted and all(t.kind is TraceKind.SCATTER for t in plotted):
         return "closest"
     return "x unified"
@@ -204,37 +157,32 @@ def render_chart(chart: ChartData) -> go.Figure:
 
     _add_bands(fig, chart)
     colored = [
-        (index, trace, trace.color or CURVE_PALETTE[index % len(CURVE_PALETTE)])
+        (index, trace, trace.color or _default_color(index))
         for index, trace in enumerate(chart.traces)
     ]
-    # References first so they sit underneath; `legendrank` keeps the legend in
-    # the chart's own order regardless.
-    colored.sort(key=lambda item: not _is_reference(item[2]))
+    # Backdrops first, then references, so both sit underneath the athlete's
+    # lines; `legendrank` keeps the legend in the chart's own order regardless.
+    colored.sort(key=lambda item: (not item[1].background, not _is_reference(item[2])))
 
-    area = _area_trace(chart, colored)
-    area_range = area_y_range(chart) if area is not None else None
-    athlete_lines = [i for i, trace, color in colored if _is_athlete_line(trace, color)]
-    # End labels sit right of the plot, where a right-hand axis keeps its ticks:
-    # a dual-axis chart goes without them.
-    end_labels = chart.y2_axis is None and bool(athlete_lines)
-    # The main series' value leads the unified hover in sun-ink.
-    main = area if area is not None else (athlete_lines[0] if athlete_lines else None)
+    decided = family_plan(chart)
+    area_range = area_y_range(chart) if decided.area is not None else None
+    lonely = _lonely_background(chart)
 
     for index, trace, color in colored:
+        if trace.background:
+            _add_background(fig, trace, chart, show_legend=lonely)
+            continue
         _add_band(fig, trace, chart, color)
         _add_trace(
-            fig, trace, chart, color, rank=index + 1,
-            area=area_range if index == area else None,
-            main=index == main,
-            # With one athlete line its end label names it well enough; with
-            # several, only the legend says which is which.
-            hide_legend=end_labels and len(athlete_lines) == 1 and index in athlete_lines,
+            fig, trace, chart, color, rank=index + 1, plan=decided, index=index,
+            area=area_range if index == decided.area else None,
         )
-        if end_labels and index in athlete_lines:
+        if index in decided.end_labels:
             _add_end_label(fig, trace, chart, color)
+    _add_baseline(fig, chart, decided)
     _add_badges(fig, chart)
     _add_markers(fig, chart)
-    if end_labels:
+    if decided.end_labels:
         fig.update_layout(margin={**MARGIN, "r": _END_LABEL_MARGIN_R})
 
     _apply_axis(fig.update_xaxes, chart.x_axis)
@@ -265,6 +213,44 @@ def render_chart(chart: ChartData) -> go.Figure:
         if chart.bargap is not None:
             fig.update_layout(bargap=chart.bargap)
     return fig
+
+
+def _lonely_background(chart: ChartData) -> bool:
+    """A backdrop joins the legend only when it is the figure's only series."""
+    return not any(has_points(t) and not t.background for t in chart.traces)
+
+
+def _add_background(fig: go.Figure, trace: Trace, chart: ChartData, *, show_legend: bool) -> None:
+    """A flat line-strong fill to zero, no stroke — never "the area" (charts.md § v1.2)."""
+    background = dict(
+        x=_encode(trace.x, chart.x_axis),
+        y=_encode(trace.y, _y_axis_for(trace, chart)),
+        name=trace.name,
+        mode="lines",
+        line=dict(width=0, color=theme.LINE_STRONG),
+        fill="tozeroy",
+        fillcolor=rgba(theme.LINE_STRONG, _BACKGROUND_ALPHA),
+        showlegend=show_legend and trace.show_legend,
+        legendgroup=trace.legend_group or trace.name,
+    )
+    if trace.hover_text is not None:
+        background["customdata"] = list(trace.hover_text)
+    if trace.hover_template:
+        background["hovertemplate"] = trace.hover_template
+    if trace.axis == "y2" and chart.y2_axis is not None:
+        background["yaxis"] = "y2"
+    fig.add_trace(go.Scatter(**background))
+
+
+def _add_baseline(fig: go.Figure, chart: ChartData, decided: Plan) -> None:
+    """An oscillation's reference level, a line-strong rule across the plot."""
+    if decided.baseline is None:
+        return
+    y = _encode([decided.baseline], chart.y_axis)[0]
+    fig.add_shape(
+        type="line", xref="paper", yref="y", x0=0, x1=1, y0=y, y1=y,
+        line=dict(color=theme.LINE_STRONG, width=_BASELINE_WIDTH), layer="below",
+    )
 
 
 def _add_end_label(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> None:
@@ -416,9 +402,9 @@ def _float_or_nan(value: Any) -> float:
 
 def _add_trace(
     fig: go.Figure, trace: Trace, chart: ChartData, color: str, rank: int,
-    *, area: Optional[Tuple[float, float, float]] = None, main: bool = False,
-    hide_legend: bool = False,
+    *, plan: Plan, index: int, area: Optional[Tuple[float, float, float]] = None,
 ) -> None:
+    main = index == plan.main
     y_axis = _y_axis_for(trace, chart)
     x = _encode(trace.x, chart.x_axis)
     y = _encode(trace.y, y_axis)
@@ -428,9 +414,9 @@ def _add_trace(
         y=y,
         name=trace.name,
         legendgroup=trace.legend_group or trace.name,
-        showlegend=trace.show_legend and not hide_legend,
+        showlegend=trace.show_legend and index not in plan.hidden_legend,
         legendrank=rank,
-        opacity=trace.opacity,
+        opacity=plan.opacities.get(index, trace.opacity),
     )
     if trace.axis == "y2" and chart.y2_axis is not None:
         common["yaxis"] = "y2"
@@ -458,7 +444,9 @@ def _add_trace(
         fig.add_trace(go.Bar(**bar))
         return
 
-    width = min(trace.width, _REF_WIDTH) if _is_reference(color) else trace.width
+    width = plan.widths.get(index, trace.width)
+    if _is_reference(color):
+        width = min(width, _REF_WIDTH)
     line = dict(color=color, width=width)
     dash = DASH_BY_LINESTYLE.get(trace.dash, "solid")
     if dash != "solid":
@@ -468,13 +456,14 @@ def _add_trace(
         line["shape"] = shape
 
     scatter = dict(line=line, **common)
+    size = plan.marker_sizes.get(index, trace.marker_size)
     if trace.kind is TraceKind.SCATTER:
         scatter["mode"] = "markers"
-        scatter["marker"] = dict(color=color, size=trace.marker_size)
+        scatter["marker"] = dict(color=trace.point_colors or color, size=size)
     else:
         scatter["mode"] = "lines+markers" if trace.markers else "lines"
         if trace.markers:
-            scatter["marker"] = dict(color=color, size=trace.marker_size)
+            scatter["marker"] = dict(color=trace.point_colors or color, size=size)
 
     if trace.kind is TraceKind.AREA:
         scatter["fillcolor"] = rgba(color, 0.35 if trace.stack_group else 0.2)
@@ -482,9 +471,9 @@ def _add_trace(
         # A hairline keeps stacked bands readable without dominating the fill.
         scatter["line"] = dict(color=color, width=0.35)
     elif area is not None:
-        # Series 1's area: the colour at AREA_ALPHA_TOP at the data's top, fading
-        # to nothing at the bottom of the *visible* axis (charts.md § v1.1) — not
-        # at zero, which may be far below a zoomed-in range.
+        # The figure's one area (tracking, or a declared one — the fatigue): the
+        # colour at AREA_ALPHA_TOP at the data's top, fading to nothing at the
+        # bottom of the *visible* axis — not at zero, which may be far below.
         scatter["fill"] = "tozeroy"
         scatter["fillgradient"] = dict(
             type="vertical",
@@ -518,7 +507,7 @@ def _add_band(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> Non
         x=ring_x,
         y=ring_y,
         fill="toself",
-        fillcolor=rgba(color, _BAND_ALPHA),
+        fillcolor=rgba(color, trace.band_opacity if trace.band_opacity is not None else _BAND_ALPHA),
         line=dict(width=0),
         hoverinfo="skip",
         showlegend=False,

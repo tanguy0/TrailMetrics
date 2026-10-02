@@ -196,6 +196,12 @@ export interface Trace {
   point_colors: string[] | null;
   point_opacity: number[] | null;
   point_text: string[] | null;
+  /** charts.md § v1.2 — declared by a plot that knows its figure; null = the family decides. */
+  area?: boolean | null;
+  end_label?: boolean | null;
+  /** A flat backdrop (altitude, profile): line-strong fill, drawn first. */
+  background?: boolean;
+  band_opacity?: number | null;
 }
 
 /**
@@ -237,6 +243,14 @@ export interface Marker {
   label: string;
 }
 
+export type ChartFamily =
+  | "tracking"
+  | "comparison"
+  | "function"
+  | "oscillation"
+  | "composition"
+  | "scatter";
+
 export interface ChartData {
   title: string;
   x_axis: Axis;
@@ -258,6 +272,10 @@ export interface ChartData {
   hover_mode: string;
   /** Gap between bars as a share of each slot; null keeps Plotly's. */
   bargap?: number | null;
+  /** charts.md § v1.2: tracking | comparison | function | oscillation | composition | scatter. */
+  family?: ChartFamily | null;
+  /** An oscillation's reference level; null = 0 if the data straddles it, else the mean. */
+  baseline?: number | null;
   caption: string | null;
 }
 
