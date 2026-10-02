@@ -19,29 +19,29 @@ _SUMMARY = (
 
 
 class PostgresRacePlanRepository:
-    """Race plans for one athlete. Scoping happens here, not in the caller."""
+    """Race plans for one account. Scoping happens here, not in the caller."""
 
-    def __init__(self, db: Database, athlete_id: int):
+    def __init__(self, db: Database, account_id: str):
         self.db = db
-        self.athlete_id = athlete_id
+        self.account_id = account_id
 
     def list(self) -> List[Dict[str, Any]]:
         rows = self.db.fetch_all(
-            f"{_SUMMARY} where athlete_id = %s order by updated_at desc",
-            (self.athlete_id,),
+            f"{_SUMMARY} where account_id = %s order by updated_at desc",
+            (self.account_id,),
         )
         return [_payload(row) for row in rows]
 
     def get(self, plan_id: str) -> Optional[Dict[str, Any]]:
         row = self.db.fetch_one(
-            f"{_SUMMARY} where athlete_id = %s and id = %s", (self.athlete_id, plan_id)
+            f"{_SUMMARY} where account_id = %s and id = %s", (self.account_id, plan_id)
         )
         return _payload(row) if row else None
 
     def gpx(self, plan_id: str) -> Optional[bytes]:
         row = self.db.fetch_one(
-            "select gpx_gz from race_plans where athlete_id = %s and id = %s",
-            (self.athlete_id, plan_id),
+            "select gpx_gz from race_plans where account_id = %s and id = %s",
+            (self.account_id, plan_id),
         )
         return gzip.decompress(bytes(row["gpx_gz"])) if row else None
 
@@ -51,9 +51,9 @@ class PostgresRacePlanRepository:
     ) -> Dict[str, Any]:
         plan_id = f"race_{uuid4().hex[:10]}"
         self.db.execute(
-            "insert into race_plans (id, athlete_id, title, gpx_name, gpx_gz, params, "
+            "insert into race_plans (id, account_id, title, gpx_name, gpx_gz, params, "
             "distance_m, elevation_gain_m) values (%s, %s, %s, %s, %s, %s, %s, %s)",
-            (plan_id, self.athlete_id, title, gpx_name, gzip.compress(gpx),
+            (plan_id, self.account_id, title, gpx_name, gzip.compress(gpx),
              json.dumps(params), distance_m, elevation_gain_m),
         )
         return self.get(plan_id)
@@ -71,15 +71,15 @@ class PostgresRacePlanRepository:
             fields += ["gpx_gz = %s", "gpx_name = %s"]
             values += [gzip.compress(gpx), gpx_name or ""]
         self.db.execute(
-            f"update race_plans set {', '.join(fields)} where athlete_id = %s and id = %s",
-            (*values, self.athlete_id, plan_id),
+            f"update race_plans set {', '.join(fields)} where account_id = %s and id = %s",
+            (*values, self.account_id, plan_id),
         )
         return self.get(plan_id)
 
     def delete(self, plan_id: str) -> None:
         self.db.execute(
-            "delete from race_plans where athlete_id = %s and id = %s",
-            (self.athlete_id, plan_id),
+            "delete from race_plans where account_id = %s and id = %s",
+            (self.account_id, plan_id),
         )
 
 

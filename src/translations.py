@@ -1081,6 +1081,67 @@ TRANSLATIONS = {
         "fr": "Une erreur est survenue. Réessayez.",
     },
 
+    # --- Level assessment (v2): design/specs/level.md ------------------------
+    "ui.level.error.half_cooper_range": {
+        "en": "Six minutes all out lands between {low} and {high} m — check the distance.",
+        "fr": "Six minutes à fond, c’est entre {low} et {high} m — vérifiez la distance.",
+    },
+    "ui.level.error.cs_inconsistent": {
+        "en": "The two distances are not consistent with each other.",
+        "fr": "Les deux distances ne sont pas cohérentes.",
+    },
+    "ui.level.error.records_empty": {
+        "en": "Add at least one record.", "fr": "Ajoutez au moins un record.",
+    },
+    "ui.level.error.record_invalid": {
+        "en": "Each record needs a distance and a time.",
+        "fr": "Chaque record a besoin d’une distance et d’un temps.",
+    },
+    "ui.level.error.record_pace": {
+        "en": "A record’s pace must be between 2:00 and 12:00 /km.",
+        "fr": "L’allure d’un record doit être entre 2:00 et 12:00 /km.",
+    },
+    "ui.level.error.record_duration": {
+        "en": "A record must last between 3 minutes and 6 hours: outside that, the model "
+              "says nothing reliable.",
+        "fr": "Un record doit durer entre 3 minutes et 6 heures : en dehors, le modèle ne "
+              "dit rien de fiable.",
+    },
+    "ui.level.error.hr_max": {
+        "en": "Max heart rate must be between 120 and 230 bpm.",
+        "fr": "La FCmax doit être entre 120 et 230 bpm.",
+    },
+    "ui.level.error.invalid": {
+        "en": "Some values are missing or not numbers.",
+        "fr": "Des valeurs manquent ou ne sont pas des nombres.",
+    },
+    "ui.level.error.method": {"en": "Unknown test.", "fr": "Test inconnu."},
+    "ui.level.note.field_vma": {
+        "en": "Field test rule (distance ÷ 100): {vma} km/h.",
+        "fr": "Test de terrain (distance ÷ 100) : {vma} km/h.",
+    },
+    "ui.level.note.cs_ratio": {
+        "en": "Your critical speed is {ratio} % of your VMA (around 90 % is typical).",
+        "fr": "Votre vitesse critique vaut {ratio} % de votre VMA (autour de 90 % en général).",
+    },
+    "ui.level.note.records_consistent": {
+        "en": "Your records are consistent (±{spread} VDOT).",
+        "fr": "Vos records sont cohérents (±{spread} VDOT).",
+    },
+    "ui.level.note.records_short_better": {
+        "en": "Your {short_m} m is clearly better than your {long_m} m: the VMA comes from "
+              "the middle of your records, and your endurance zones may be optimistic.",
+        "fr": "Votre {short_m} m est nettement meilleur que votre {long_m} m : la VMA retenue "
+              "vient du milieu de vos records, et vos zones d’endurance sont peut-être "
+              "optimistes.",
+    },
+    "ui.level.note.records_long_better": {
+        "en": "Your {long_m} m is clearly better than your {short_m} m: your speed has room "
+              "to grow, and your fast zones may be conservative.",
+        "fr": "Votre {long_m} m est nettement meilleur que votre {short_m} m : votre vitesse "
+              "a de la marge, et vos zones rapides sont peut-être prudentes.",
+    },
+
     # --- Home without Strava (v2): design/tagg/access.md § Accueil dégradé ------
     "ui.home.account.kicker": {"en": "TAGG account", "fr": "Compte TAGG"},
     "ui.home.account.since": {"en": "Account created {date}", "fr": "Compte créé le {date}"},

@@ -431,10 +431,29 @@ create table if not exists login_attempts (
     primary key (key, window_start)
 );
 
--- Saved plans move to the account (filled from `athletes.account_id` when a
--- Strava athlete is attached; read by account from the Tools PR on).
+-- Saved plans belong to the account (design/tagg/access.md: saving needs an
+-- account, not Strava). `athlete_id` stays for plans saved before accounts; they
+-- move over when that athlete is attached (`link_athlete`).
 alter table race_plans add column if not exists account_id uuid
     references accounts(id) on delete cascade;
+alter table race_plans alter column athlete_id drop not null;
+create index if not exists race_plans_account_updated_idx
+    on race_plans (account_id, updated_at desc);
+
+-- Level assessments (design/specs/level.md). Inputs and result as JSON: the
+-- three tests take different inputs, and the result is the LevelEstimate the
+-- tool showed — kept as shown, not recomputed, so "estimated on …" stays true.
+create table if not exists level_estimates (
+    id          uuid primary key default gen_random_uuid(),
+    account_id  uuid not null references accounts(id) on delete cascade,
+    method      text not null,
+    inputs      jsonb not null,
+    result      jsonb not null,
+    created_at  timestamptz not null default now()
+);
+
+create index if not exists level_estimates_account_created_idx
+    on level_estimates (account_id, created_at desc);
 
 -- --- Row-level security -----------------------------------------------------
 
@@ -457,4 +476,5 @@ alter table accounts enable row level security;
 alter table sessions enable row level security;
 alter table password_resets enable row level security;
 alter table email_verifications enable row level security;
+alter table level_estimates enable row level security;
 alter table login_attempts enable row level security;

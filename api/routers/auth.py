@@ -45,6 +45,7 @@ from api.deps import (
     get_account_repository,
     get_activity_repository,
     get_athlete_repository,
+    get_level_repository,
     get_token_service,
     invalidate_caches,
     language,
@@ -456,7 +457,7 @@ def me(
     that athlete's. An account with no Strava gets the same shape, emptied."""
     athlete = _effective_athlete(request, account)
     if athlete is None:
-        return _with_account(account_without_strava_payload(account), account, False)
+        return _without_strava(account)
     return _me_payload(request, account, athlete)
 
 
@@ -492,7 +493,7 @@ def update_me(
     if athlete is None:
         if touched.keys() - {"lang"}:
             raise HTTPException(status.HTTP_409_CONFLICT, detail=STRAVA_NOT_CONNECTED)
-        return _with_account(account_without_strava_payload(account), account, False)
+        return _without_strava(account)
 
     athletes = get_athlete_repository()
     if "lang" in touched:
@@ -591,6 +592,29 @@ def _effective_athlete(request: Request, account: Account) -> Optional[Athlete]:
     return athlete
 
 
+def _without_strava(account: Account) -> dict:
+    """``/auth/me`` before Strava. The Zones card is the one that can be full: its
+    VMA and HRmax come from the latest level estimate (design/tagg/access.md)."""
+    payload = account_without_strava_payload(account)
+    latest = get_level_repository(account.id).latest()
+    if latest:
+        payload["vma_pace_s_per_km"] = latest["result"].get("vma_pace_s_per_km")
+        payload["hr_max"] = latest["result"].get("hr_max")
+    payload["level_estimate"] = _estimate_meta(latest)
+    return _with_account(payload, account, False)
+
+
+def _estimate_meta(latest: Optional[dict]) -> Optional[dict]:
+    """What the Zones card's "estimated on … · method" line needs."""
+    if not latest:
+        return None
+    return {
+        "method": latest["method"],
+        "created_at": latest["created_at"],
+        "vma_pace_s_per_km": latest["result"].get("vma_pace_s_per_km"),
+    }
+
+
 def _with_account(payload: dict, account: Account, strava_connected: bool) -> dict:
     payload["account"] = {
         "id": account.id,
@@ -629,4 +653,8 @@ def _me_payload(request: Request, account: Account, athlete: Athlete) -> dict:
     # (and `id`) but drops the tokens.
     connected = get_athlete_repository().get_credentials(athlete.id) is not None
     payload["strava_authorized"] = connected
+    # Only the account's own estimate: a coach's would describe the wrong runner.
+    payload["level_estimate"] = (
+        None if viewing_as else _estimate_meta(get_level_repository(account.id).latest())
+    )
     return _with_account(payload, account, True)

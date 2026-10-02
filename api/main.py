@@ -36,6 +36,7 @@ from api.routers import (
     race_plan,
     registry,
     render,
+    tools,
     training,
 )
 from api.security import constant_time_equals, hash_token
@@ -228,6 +229,7 @@ app.include_router(coach.router)
 app.include_router(blog.router)
 app.include_router(race_plan.router)
 app.include_router(race_plan.saved_router)
+app.include_router(tools.router)
 
 
 @app.get("/health", tags=["ops"])

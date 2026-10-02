@@ -41,6 +41,7 @@ from src.infrastructure.postgres.activity_comment_repository import (
 from src.infrastructure.postgres.account_repository import PostgresAccountRepository
 from src.infrastructure.postgres.activity_repository import PostgresActivityRepository
 from src.infrastructure.postgres.athlete_repository import PostgresAthleteRepository
+from src.infrastructure.postgres.level_repository import PostgresLevelRepository
 from src.infrastructure.postgres.page_repository import PostgresPageRepository
 from src.infrastructure.postgres.planned_item_repository import (
     PostgresPlannedItemRepository,
@@ -177,8 +178,12 @@ def get_precompute_repository(athlete_id: int) -> PostgresPrecomputeRepository:
     return PostgresPrecomputeRepository(get_database(), athlete_id)
 
 
-def get_race_plan_repository(athlete_id: int) -> PostgresRacePlanRepository:
-    return PostgresRacePlanRepository(get_database(), athlete_id)
+def get_race_plan_repository(account_id: str) -> PostgresRacePlanRepository:
+    return PostgresRacePlanRepository(get_database(), account_id)
+
+
+def get_level_repository(account_id: str) -> PostgresLevelRepository:
+    return PostgresLevelRepository(get_database(), account_id)
 
 
 # --- Per-athlete caches ----------------------------------------------------

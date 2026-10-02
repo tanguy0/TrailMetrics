@@ -1,13 +1,14 @@
 """Analysis CRUD.
 
-Every athlete starts with the three analyses the product ships (GAP simulator, race
-comparator, long-term progress). They are **stored pages like any other** — seeded on
-first listing, edited in place, saved through the same endpoint — and differ only in
-carrying a ``builtin_key``, which makes them undeletable.
+Analyses are the athlete's own, made to measure (design/tagg/access.md § Outils).
+The analyses the product ships (GAP simulator, race comparator, long-term
+progress, durability) are no longer seeded into every account: they are
+**templates**, offered by "New analysis → from a template", and a page made from
+one is an ordinary page — editable, deletable. The two that drew people in (the
+GAP curve, durability) became designed pages in the Tools tab.
 
-They used to be generated per request and served read-only, on the theory that they
-were examples to duplicate. That failed the race comparator outright: its whole point
-is a hand-picked set of workouts, and there was no way to pick one.
+Athletes seeded before keep their defaults, ``builtin_key`` and all, which still
+makes them undeletable — nothing they built on is taken away.
 """
 
 from datetime import date, datetime
@@ -25,14 +26,9 @@ from api.deps import (
 from api.serialization import page_payload, page_summary_payload
 from src.domain.ports.storage import Athlete
 from src.domain.spec.pages import PageSpec, PanelSpec
-from src.usecases.ensure_default_analyses import (
-    EnsureDefaultAnalyses,
-    EnsureDefaultAnalysesInput,
-)
+from src import dashboards
 
 router = APIRouter(prefix="/pages", tags=["pages"])
-
-_seeder = EnsureDefaultAnalyses()
 
 
 class SavePageRequest(BaseModel):
@@ -47,6 +43,10 @@ class NewPageRequest(BaseModel):
     icon: str = Field(default="📊", max_length=8)
 
 
+class FromTemplateRequest(BaseModel):
+    key: str = Field(min_length=1, max_length=60)
+
+
 class DuplicateRequest(BaseModel):
     name: Optional[str] = Field(default=None, max_length=120)
 
@@ -55,19 +55,44 @@ class DuplicateRequest(BaseModel):
 def list_pages(
     athlete: Athlete = Depends(current_athlete), lang: str = Depends(language)
 ) -> dict:
-    """Every analysis, defaults first — seeding any the athlete is missing.
-
-    Seeded here rather than at sign-up because the defaults are built from the
-    athlete's date range, which is empty until their first import. Listing is the first
-    thing the Analysis screen does, so by then there is a history to shape them around.
-    """
-    repository = get_page_repository(athlete.id)
-    oldest, newest = _athlete_range(athlete)
-    _seeder.execute(EnsureDefaultAnalysesInput(
-        pages=repository, oldest=oldest, newest=newest, lang=lang,
-    ))
-    pages = repository.list_pages()
+    """Every analysis the athlete has — older accounts' defaults first."""
+    pages = get_page_repository(athlete.id).list_pages()
     return {"pages": [page_summary_payload(page) for page in pages]}
+
+
+@router.get("/templates")
+def list_templates(
+    athlete: Athlete = Depends(current_athlete), lang: str = Depends(language)
+) -> dict:
+    """The analyses a new one can start from: name, description, icon."""
+    oldest, newest = _athlete_range(athlete)
+    templates = []
+    for key in dashboards.BUILDERS:
+        page = dashboards.build(key, oldest, newest, lang)
+        templates.append({
+            "key": key, "name": page.name, "description": page.description, "icon": page.icon,
+        })
+    return {"templates": templates}
+
+
+@router.post("/from-template", status_code=status.HTTP_201_CREATED)
+def create_from_template(
+    payload: FromTemplateRequest,
+    athlete: Athlete = Depends(current_athlete),
+    lang: str = Depends(language),
+) -> dict:
+    """A new analysis built from a template over the athlete's current history.
+
+    An ordinary page from then on: no ``builtin_key``, so it can be deleted, and
+    making a second one from the same template is fine.
+    """
+    oldest, newest = _athlete_range(athlete)
+    page = dashboards.build(payload.key, oldest, newest, lang)
+    if page is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No such template.")
+    page.builtin_key = None
+    get_page_repository(athlete.id).save(page)
+    return page_payload(page)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
