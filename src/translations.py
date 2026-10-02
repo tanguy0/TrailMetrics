@@ -507,6 +507,10 @@ TRANSLATIONS = {
         "en": "None of the selected activities has per-second data.",
         "fr": "Aucune des activités sélectionnées n'a de données par seconde.",
     },
+    "plot.stream.too_many_compared": {
+        "en": "More than {limit} activities overlaid: remove some to compare them clearly.",
+        "fr": "Plus de {limit} activités superposées : retirez-en pour bien les comparer.",
+    },
     "plot.stream.truncated": {
         "en": "Showing the first {shown} of {total} activities — raise the limit to "
         "see more.",

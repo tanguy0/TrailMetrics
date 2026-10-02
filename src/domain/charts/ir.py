@@ -76,7 +76,8 @@ class Trace:
     kind: TraceKind = TraceKind.LINE
     color: Optional[str] = None
     # Which y-axis this series is measured against: "y" (left) or "y2" (right).
-    # Only meaningful when the chart defines a ``y2_axis``.
+    # Only meaningful when the chart defines a ``y2_axis``. A ``background`` may
+    # also take "y3": a hidden axis of its own, when both visible ones are taken.
     axis: str = "y"
     # matplotlib-style code ("-", "--", "-.", ":"); mapped to a Plotly dash.
     dash: str = "-"

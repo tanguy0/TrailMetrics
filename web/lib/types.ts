@@ -179,7 +179,7 @@ export interface Trace {
   kind: TraceKind;
   color: string | null;
   /** Which y-axis this series is measured against; only used when `y2_axis` is set. */
-  axis: "y" | "y2";
+  axis: "y" | "y2" | "y3";
   dash: string;
   width: number;
   markers: boolean;

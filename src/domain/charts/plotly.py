@@ -69,6 +69,22 @@ _RANGE_PAD = 0.05
 _BACKGROUND_ALPHA = 0.35
 # An oscillation's reference level.
 _BASELINE_WIDTH = 1
+# An axis holding only a backdrop frames its relief, not zero: a bit below the
+# low point, more above the high one (the course profile's own rule).
+_BACKGROUND_PAD_LOW = 0.15
+_BACKGROUND_PAD_HIGH = 0.3
+# The hidden axis a backdrop moves to when both visible axes are taken.
+_BACKGROUND_AXIS = "y3"
+
+
+def background_range(values: Sequence[float]) -> Optional[List[float]]:
+    """The range an axis of backdrops only takes, or ``None`` with no data."""
+    data = finite(values)
+    if not data:
+        return None
+    lo, hi = min(data), max(data)
+    span = hi - lo or 1.0
+    return [lo - _BACKGROUND_PAD_LOW * span, hi + _BACKGROUND_PAD_HIGH * span]
 
 
 def area_y_range(chart: ChartData) -> Optional[Tuple[float, float, float]]:
@@ -205,6 +221,7 @@ def render_chart(chart: ChartData) -> go.Figure:
         # Axis kwargs win: they carry the coloured title when one is set.
         secondary.update(_axis_kwargs(chart.y2_axis))
         fig.update_layout(yaxis2=secondary)
+    _frame_backgrounds(fig, chart)
     fig.update_layout(hovermode=resolve_hover_mode(chart))
     if any(t.kind is TraceKind.BAR for t in chart.traces):
         # Bars from different series sit side by side unless explicitly stacked.
@@ -239,7 +256,39 @@ def _add_background(fig: go.Figure, trace: Trace, chart: ChartData, *, show_lege
         background["hovertemplate"] = trace.hover_template
     if trace.axis == "y2" and chart.y2_axis is not None:
         background["yaxis"] = "y2"
+    elif trace.axis == _BACKGROUND_AXIS:
+        background["yaxis"] = _BACKGROUND_AXIS
     fig.add_trace(go.Scatter(**background))
+
+
+def _frame_backgrounds(fig: go.Figure, chart: ChartData) -> None:
+    """Range every axis that only holds backdrops to their relief.
+
+    The hidden third axis is created here; a visible axis that also carries a
+    real series, or that has an explicit range, is left alone.
+    """
+    for name, axis, layout_key in (("y", chart.y_axis, "yaxis"), ("y2", chart.y2_axis, "yaxis2"),
+                                   (_BACKGROUND_AXIS, None, "yaxis3")):
+        on_axis = [t for t in chart.traces if _axis_name(t, chart) == name]
+        if not on_axis or not all(t.background for t in on_axis):
+            continue
+        if axis is not None and axis.range:
+            continue
+        framed = background_range([v for t in on_axis for v in t.y])
+        if framed is None:
+            continue
+        if name == _BACKGROUND_AXIS:
+            fig.update_layout(yaxis3=dict(overlaying="y", visible=False, range=framed))
+        else:
+            fig.update_layout(**{f"{layout_key}_range": framed})
+
+
+def _axis_name(trace: Trace, chart: ChartData) -> str:
+    if trace.axis == "y2" and chart.y2_axis is not None:
+        return "y2"
+    if trace.axis == _BACKGROUND_AXIS:
+        return _BACKGROUND_AXIS
+    return "y"
 
 
 def _add_baseline(fig: go.Figure, chart: ChartData, decided: Plan) -> None:
@@ -488,6 +537,9 @@ def _y_axis_for(trace: Trace, chart: ChartData) -> Axis:
     """The axis a trace is measured against — its values are encoded for that axis."""
     if trace.axis == "y2" and chart.y2_axis is not None:
         return chart.y2_axis
+    if trace.axis == _BACKGROUND_AXIS:
+        # The hidden backdrop axis is plain numbers (altitude), whatever the left is.
+        return Axis(kind=AxisKind.LINEAR)
     return chart.y_axis
 
 

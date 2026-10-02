@@ -72,6 +72,39 @@ const PALETTE: FamilyPalette = {
 const RANGE_PAD = 0.05;
 const BACKGROUND_ALPHA = 0.35;
 const BASELINE_WIDTH = 1;
+// Mirror `_BACKGROUND_PAD_*` / `_BACKGROUND_AXIS`: an axis of backdrops only
+// frames their relief; the hidden third axis takes one when both are taken.
+const BACKGROUND_PAD_LOW = 0.15;
+const BACKGROUND_PAD_HIGH = 0.3;
+const BACKGROUND_AXIS = "y3";
+const HIDDEN_AXIS: Axis = {
+  title: "", kind: "linear", reversed: false, tick_format: null, suffix: null,
+  range: null, dtick: null, color: null,
+};
+
+/** Mirrors `background_range`. */
+function backgroundRange(values: (number | null)[]): number[] | null {
+  const data = finite(values);
+  if (!data.length) return null;
+  const lo = Math.min(...data);
+  const hi = Math.max(...data);
+  const span = hi - lo || 1;
+  return [lo - BACKGROUND_PAD_LOW * span, hi + BACKGROUND_PAD_HIGH * span];
+}
+
+/** Mirrors `_frame_backgrounds`: the range of each axis holding backdrops only. */
+function backgroundFrames(chart: ChartData): Partial<Record<"y" | "y2" | "y3", number[]>> {
+  const axisOf = (t: Trace) => (t.axis === "y2" && chart.y2_axis ? "y2" : t.axis === BACKGROUND_AXIS ? "y3" : "y");
+  const frames: Partial<Record<"y" | "y2" | "y3", number[]>> = {};
+  const explicit = { y: chart.y_axis.range, y2: chart.y2_axis?.range ?? null, y3: null };
+  (["y", "y2", "y3"] as const).forEach((name) => {
+    const onAxis = chart.traces.filter((t) => axisOf(t) === name);
+    if (!onAxis.length || !onAxis.every((t) => t.background) || explicit[name]) return;
+    const framed = backgroundRange(onAxis.flatMap((t) => t.y));
+    if (framed) frames[name] = framed;
+  });
+  return frames;
+}
 
 const finite = (values: (number | null)[] | null | undefined): number[] =>
   (values ?? []).filter((v): v is number => v != null && Number.isFinite(v));
@@ -223,7 +256,8 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
   ordered.forEach(({ trace, index, color }) => {
     // A trace's values are encoded against the axis it is actually measured on.
     const onSecondary = trace.axis === "y2" && Boolean(chart.y2_axis);
-    const yAxis = onSecondary ? chart.y2_axis! : chart.y_axis;
+    const onHidden = trace.axis === BACKGROUND_AXIS;
+    const yAxis = onSecondary ? chart.y2_axis! : onHidden ? HIDDEN_AXIS : chart.y_axis;
     const x = encode(trace.x, chart.x_axis);
     const y = encode(trace.y, yAxis);
 
@@ -238,7 +272,7 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
         legendgroup: trace.legend_group || trace.name,
         ...(trace.hover_text ? { customdata: trace.hover_text } : {}),
         ...(trace.hover_template ? { hovertemplate: trace.hover_template } : {}),
-        ...(onSecondary ? { yaxis: "y2" } : {}),
+        ...(onSecondary ? { yaxis: "y2" } : onHidden ? { yaxis: BACKGROUND_AXIS } : {}),
       });
       return;
     }
@@ -482,6 +516,7 @@ function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
   const stacked = chart.traces.some((t) => t.stack_group);
   const hasBars = chart.traces.some((t) => t.kind === "bar");
   const { plan, areaRange } = roles(chart);
+  const frames = backgroundFrames(chart);
   const shapes = [...toShapes(chart), ...baselineShapes(chart, plan), ...markerShapes(chart)];
   const annotations = [
     ...(chart.badges?.length ? toAnnotations(chart, width) : []),
@@ -520,7 +555,9 @@ function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
       nticks: Y_NTICKS,
       // The area's range is set, not left to the fill (see areaYRange).
       ...(areaRange ? { range: [areaRange[0], areaRange[1]] } : {}),
+      ...(frames.y ? { range: frames.y } : {}),
     },
+    ...(frames.y3 ? { yaxis3: { overlaying: "y", visible: false, range: frames.y3 } } : {}),
     ...(chart.y2_axis
       ? {
           yaxis2: {
@@ -530,6 +567,7 @@ function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
             showline: false,
             overlaying: "y",
             side: "right",
+            ...(frames.y2 ? { range: frames.y2 } : {}),
           },
         }
       : {}),

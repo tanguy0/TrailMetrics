@@ -24,6 +24,7 @@ object works over in-memory streams or over a database.
 """
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
@@ -165,6 +166,11 @@ class ResolvedPanelData:
     def activity_label(self, activity_id: int) -> str:
         summary = self._summary(int(activity_id))
         return summary.label if summary else f"Activity {activity_id}"
+
+    def activity_start(self, activity_id: int) -> Optional[datetime]:
+        """When an activity started, or ``None`` when it is not known here."""
+        summary = self._summary(int(activity_id))
+        return summary.start_date if summary else None
 
     def _summary(self, activity_id: int) -> Optional[ActivitySummary]:
         return self._summary_cache().get(activity_id)
