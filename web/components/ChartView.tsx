@@ -330,6 +330,8 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
         ...common,
         type: "bar",
         marker,
+        ...(trace.point_widths ? { width: trace.point_widths } : {}),
+        ...(trace.bar_base != null ? basedBars(trace, yAxis) : {}),
         ...(trace.point_text
           ? {
               text: trace.point_text,
@@ -399,7 +401,17 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
   return out;
 }
 
-/** Today as a dotted sun line; a race as a terra dot on the x-axis. */
+/** Mirrors `_based_bars`: bars from `bar_base`, their `y` read as a length (ms on a duration axis). */
+function basedBars(trace: Trace, axis: Axis): Record<string, unknown> {
+  const base = trace.bar_base!;
+  const scale = axis.kind === "duration" ? 1000 : 1;
+  return {
+    y: trace.y.map((v) => (v == null ? null : (v - base) * scale)),
+    base: encode([base], axis)[0],
+  };
+}
+
+/** Today as a dotted sun line; a race or aid station as a terra dot; a boundary as a thin rule. */
 function markerShapes(chart: ChartData): Record<string, unknown>[] {
   return (chart.markers ?? []).flatMap((marker): Record<string, unknown>[] => {
     const x = encode([marker.x], chart.x_axis)[0];
@@ -409,7 +421,13 @@ function markerShapes(chart: ChartData): Record<string, unknown>[] {
         line: { color: theme.todayMarker, width: 1, dash: MARKER_DASH },
       }];
     }
-    if (marker.kind === "race") {
+    if (marker.kind === "boundary") {
+      return [{
+        type: "line", xref: "x", yref: "y domain", x0: x, x1: x, y0: 0, y1: 1,
+        line: { color: theme.line, width: 1 }, layer: "below",
+      }];
+    }
+    if (marker.kind === "race" || marker.kind === "aid") {
       return [{
         type: "circle", xref: "x", yref: "y domain",
         xsizemode: "pixel", ysizemode: "pixel", xanchor: x, yanchor: 0,
@@ -423,13 +441,13 @@ function markerShapes(chart: ChartData): Record<string, unknown>[] {
 
 /** The markers' mono labels: above the plot for today, above the dot for a race. */
 function markerAnnotations(chart: ChartData): Record<string, unknown>[] {
-  return (chart.markers ?? []).map((marker) => ({
+  return (chart.markers ?? []).filter((marker) => marker.kind !== "boundary").map((marker) => ({
     x: encode([marker.x], chart.x_axis)[0],
     xref: "x",
     y: marker.kind === "today" ? 1 : 0,
     yref: "y domain",
     yanchor: "bottom",
-    yshift: marker.kind === "race" ? 2 * RACE_DOT_PX + 2 : 0,
+    yshift: marker.kind === "today" ? 0 : 2 * RACE_DOT_PX + 2,
     text: marker.label,
     showarrow: false,
     font: {
@@ -583,6 +601,44 @@ function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
   };
 }
 
+/**
+ * The hovered section takes a forest-tint slab (charts.md § v1.2 — Plan de
+ * course), between the boundary rules either side of the cursor. Browser only:
+ * it is interaction, which the exported figure has no use for.
+ */
+function tintHoveredSection(Plotly: Plotly, element: HTMLElement, chart: ChartData): void {
+  const cuts = (chart.markers ?? [])
+    .filter((m) => m.kind === "boundary")
+    .map((m) => Number(m.x))
+    .sort((a, b) => a - b);
+  if (!cuts.length) return;
+  const xs = chart.traces.flatMap((t) => t.x.map(Number)).filter(Number.isFinite);
+  const edges = [Math.min(...xs), ...cuts, Math.max(...xs)];
+  const plotted = element as HTMLElement & {
+    on?: (event: string, handler: (event: { points?: { x: unknown }[] }) => void) => void;
+    removeAllListeners?: (event: string) => void;
+    layout?: { shapes?: unknown[] };
+  };
+  if (!plotted.on) return;
+  // A redraw (resize, new chart) binds again; drop the last binding first.
+  plotted.removeAllListeners?.("plotly_hover");
+  plotted.removeAllListeners?.("plotly_unhover");
+  const base = () => (plotted.layout?.shapes ?? []).filter((s) => (s as { name?: string }).name !== "hovered");
+  plotted.on("plotly_hover", (event) => {
+    const x = Number(event.points?.[0]?.x);
+    const i = edges.findIndex((edge, k) => k < edges.length - 1 && x >= edge && x <= edges[k + 1]);
+    if (i < 0) return;
+    Plotly.relayout(element, {
+      shapes: [...base(), {
+        name: "hovered", type: "rect", xref: "x", yref: "y domain",
+        x0: edges[i], x1: edges[i + 1], y0: 0, y1: 1,
+        fillcolor: theme.forestTint, line: { width: 0 }, layer: "below",
+      }],
+    });
+  });
+  plotted.on("plotly_unhover", () => Plotly.relayout(element, { shapes: base() }));
+}
+
 const CONFIG = {
   displaylogo: false,
   responsive: true,
@@ -601,14 +657,15 @@ export function ChartView({ chart }: { chart: ChartData }) {
 
     const draw = () =>
       loadPlotly()
-        .then((Plotly) => {
+        .then(async (Plotly) => {
           if (disposed) return;
-          return Plotly.react(
+          await Plotly.react(
             element,
             toPlotlyTraces(chart),
             layoutFor(chart, element.clientWidth),
             CONFIG,
           );
+          tintHoveredSection(Plotly, element, chart);
         })
         .catch((error: Error) => !disposed && setFailure(error.message));
 

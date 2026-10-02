@@ -302,6 +302,15 @@ def _add_baseline(fig: go.Figure, chart: ChartData, decided: Plan) -> None:
     )
 
 
+def _based_bars(trace: Trace, axis: Axis) -> dict:
+    """Bars from ``bar_base`` to each value: Plotly reads a bar's ``y`` as its
+    length from ``base``, and on a duration axis that length is in milliseconds."""
+    base = float(trace.bar_base)
+    scale = 1000.0 if axis.kind is AxisKind.DURATION else 1.0
+    lengths = [None if v is None else (float(v) - base) * scale for v in trace.y]
+    return dict(y=lengths, base=_encode([base], axis)[0])
+
+
 def _add_end_label(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> None:
     """A dot on the line's last point and its value beside it, in its colour."""
     last = _last_point(trace)
@@ -338,7 +347,12 @@ def _add_markers(fig: go.Figure, chart: ChartData) -> None:
                 text=marker.label, showarrow=False,
                 font=dict(family=theme.FONT_MONO, size=_END_LABEL_FONT_SIZE, color=theme.SUN_INK),
             )
-        elif marker.kind == "race":
+        elif marker.kind == "boundary":
+            fig.add_shape(
+                type="line", xref="x", yref="y domain", x0=x, x1=x, y0=0, y1=1,
+                line=dict(color=theme.LINE, width=1), layer="below",
+            )
+        elif marker.kind in ("race", "aid"):
             fig.add_shape(
                 type="circle", xref="x", yref="y domain",
                 xsizemode="pixel", ysizemode="pixel", xanchor=x, yanchor=0,
@@ -488,6 +502,10 @@ def _add_trace(
         if trace.point_opacity:
             marker["opacity"] = trace.point_opacity
         bar = dict(marker=marker, **common)
+        if trace.point_widths:
+            bar["width"] = list(trace.point_widths)
+        if trace.bar_base is not None:
+            bar.update(_based_bars(trace, _y_axis_for(trace, chart)))
         if trace.point_text:
             bar.update(
                 text=trace.point_text, textposition="outside", cliponaxis=False,

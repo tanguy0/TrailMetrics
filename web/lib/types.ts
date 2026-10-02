@@ -205,6 +205,9 @@ export interface Trace {
   /** A flat backdrop (altitude, profile): line-strong fill, drawn first. */
   background?: boolean;
   band_opacity?: number | null;
+  /** Bars only: where every bar starts (in y units), and each bar's width in x units. */
+  bar_base?: number | null;
+  point_widths?: number[] | null;
 }
 
 /**
@@ -239,9 +242,12 @@ export interface Badge {
   short: string | null;
 }
 
-/** A date pinned on the x-axis: today (dotted sun line) or a race (terra dot). */
+/**
+ * A point pinned on the x-axis: today (dotted sun line), a race or an aid
+ * station (terra dot, named), or a section boundary (thin rule, no label).
+ */
 export interface Marker {
-  kind: "today" | "race";
+  kind: "today" | "race" | "aid" | "boundary";
   x: number | string;
   label: string;
 }

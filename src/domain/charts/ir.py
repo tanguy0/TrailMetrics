@@ -119,6 +119,11 @@ class Trace:
     background: bool = False
     # Opacity of the ±band ribbon; ``None`` keeps the renderer's default.
     band_opacity: Optional[float] = None
+    # Bars only: where every bar starts (in ``y`` units — a pace in s/km on a pace
+    # axis), so bars can rise from the slow end of a reversed axis; and each bar's
+    # own width in ``x`` units (a section's length). ``None`` keeps zero / even bars.
+    bar_base: Optional[float] = None
+    point_widths: Optional[List[float]] = None
 
 
 @dataclass
@@ -175,11 +180,13 @@ class Marker:
     """A point in time pinned on a date axis (charts.md § v1.1 — repères).
 
     ``kind`` is ``"today"`` — a dotted sun line across the plot with a mono label
-    above it — or ``"race"`` — a terra dot sitting on the x-axis, named by
-    ``label``. Both are the renderer's to draw; a plot only says where.
+    above it — ``"race"`` or ``"aid"`` — a terra dot sitting on the x-axis, named
+    by ``label`` (a race on a calendar, an aid station on a course) — or
+    ``"boundary"`` — a thin line-coloured rule, no label (a section limit). All
+    are the renderer's to draw; a plot only says where. Not only on date axes.
     """
 
-    kind: str  # today | race
+    kind: str  # today | race | aid | boundary
     x: Any
     label: str = ""
 

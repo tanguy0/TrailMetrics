@@ -26,6 +26,7 @@ from src.domain.charts.ir import (
     CellFormat,
     ChartData,
     Column,
+    Marker,
     PlotOutput,
     TableData,
     Trace,
@@ -50,6 +51,12 @@ ELEVATION_COLOR = theme.BALANCED_RUNNER
 PACE_COLOR = theme.PRIMARY
 SECTION_COLORS = {CLIMB: theme.TERRACOTTA, DESCENT: theme.CHART_YOU_4, FLAT: theme.MOSS}
 LEG_COLORS = [theme.SUNRISE, theme.MOSS]
+# charts.md § v1.2 — Plan de course. A section's pace bar reads its gap to the
+# plan's average pace: slower than +3 % terra, faster than −3 % moss, forest in
+# between. Bars rise from the slow end of the (reversed) pace axis.
+_PACE_TOLERANCE = 0.03
+_PACE_BAR_FLOOR = 1.08
+_PACE_BAR_OPACITY = 0.6  # light enough for the course profile to read through
 
 # Points drawn on the detailed chart. The plan itself runs on a 10 m grid; a
 # browser does not need 17k points to draw a 170 km line.
@@ -125,8 +132,11 @@ def _elevation_trace(plan: RacePlan, lang: str) -> Trace:
         name=translate("race_plan.series.elevation", lang),
         x=(course.distance[idx] / 1000).round(3).tolist(),
         y=course.elevation_smooth[idx].round(1).tolist(),
-        kind=TraceKind.AREA,
+        kind=TraceKind.LINE,
         color=ELEVATION_COLOR,
+        # The course profile is the backdrop of every plan chart: flat, drawn
+        # first, never "the area" (charts.md § v1.2).
+        background=True,
         hover_template="%{y:.0f} m<extra>%{fullData.name}</extra>",
     )
 
@@ -243,6 +253,7 @@ def _profile_output(plan: RacePlan, lang: str) -> PlotOutput:
         hover_template="%{customdata}<extra>%{fullData.name}</extra>",
     )
     chart = ChartData(
+        family="function",
         title=translate("race_plan.chart.profile", lang),
         x_axis=_distance_axis(lang),
         y_axis=_elevation_axis(plan, lang),
@@ -284,18 +295,19 @@ def _sections_output(plan: RacePlan, lang: str) -> PlotOutput:
             hover_text=[_section_hover(s, lang) for s in members],
             hover_template="%{customdata}<extra></extra>",
         ))
-    traces.append(_step_trace(sections, translate("race_plan.series.section_pace", lang), lang))
+    traces.append(_pace_bars(plan, sections, translate("race_plan.series.section_pace", lang)))
 
     chart = ChartData(
+        family="function",
         title=translate("race_plan.chart.sections", lang),
         x_axis=_distance_axis(lang),
         y_axis=_elevation_axis(plan, lang),
         y2_axis=_pace_axis(lang),
         traces=traces,
-        bands=[
-            Band(x0=round(s.start_m / 1000, 3), x1=round(s.end_m / 1000, 3),
-                 color=SECTION_COLORS[s.kind], opacity=0.16)
-            for s in sections
+        # Section limits as thin rules; the hovered section tints in the browser.
+        markers=[
+            Marker(kind="boundary", x=round(s.start_m / 1000, 3))
+            for s in sections[1:]
         ],
         badges=[
             Badge(x=round((s.start_m + s.end_m) / 2000, 3), text=str(s.index),
@@ -343,6 +355,36 @@ def _sections_output(plan: RacePlan, lang: str) -> PlotOutput:
     return PlotOutput(charts=[chart], tables=[table])
 
 
+def _pace_bars(plan: RacePlan, sections: List[Stretch], name: str) -> Trace:
+    """One bar per section, as wide as the section, coloured by its gap to the
+    plan's average pace."""
+    average = plan.average_pace_s_per_km
+    paces = [s.pace_s_per_km for s in sections]
+
+    def color(pace: float) -> str:
+        gap = pace / average - 1 if average else 0.0
+        if gap > _PACE_TOLERANCE:
+            return theme.TERRA
+        if gap < -_PACE_TOLERANCE:
+            return theme.MOSS
+        return theme.FOREST
+
+    return Trace(
+        name=name,
+        x=[round((s.start_m + s.end_m) / 2000, 3) for s in sections],
+        y=[round(p, 1) for p in paces],
+        kind=TraceKind.BAR,
+        color=PACE_COLOR,
+        axis="y2",
+        opacity=_PACE_BAR_OPACITY,
+        point_colors=[color(p) for p in paces],
+        point_widths=[round(s.distance_m / 1000, 3) for s in sections],
+        bar_base=round(max(paces) * _PACE_BAR_FLOOR, 1),
+        hover_text=[fmt_pace(p) for p in paces],
+        hover_template="%{customdata}<extra>%{fullData.name}</extra>",
+    )
+
+
 def _section_hover(s: Stretch, lang: str) -> str:
     return (
         f"<b>{s.index}. {_kind_label(s.kind, lang)}</b><br>"
@@ -376,30 +418,21 @@ def _legs_output(plan: RacePlan, lang: str, start_clock_s: Optional[float]) -> P
     names = [_station_name(leg, lang, i == len(legs) - 1) for i, leg in enumerate(legs)]
     arrivals = [leg.end_m for leg in legs]
 
-    stations = Trace(
-        name=translate("race_plan.series.aid_stations", lang),
-        x=[round(m / 1000, 3) for m in arrivals],
-        y=[round(_elevation_at(plan, m), 1) for m in arrivals],
-        kind=TraceKind.SCATTER,
-        color=theme.TERRACOTTA,
-        marker_size=11,
-        hover_text=[
-            f"<b>{name}</b><br>km {leg.end_m / 1000:.1f} · "
-            f"{translate('race_plan.hover.arrival', lang)} {fmt_hms(leg.end_time_s)}"
-            + (f" ({_clock(leg.end_time_s, start_clock_s, lang)})" if start_clock_s is not None else "")
-            for name, leg in zip(names, legs)
-        ],
-        hover_template="%{customdata}<extra></extra>",
-    )
     chart = ChartData(
+        family="function",
         title=translate("race_plan.chart.aid_stations", lang),
         x_axis=_distance_axis(lang),
         y_axis=_elevation_axis(plan, lang),
         y2_axis=_pace_axis(lang),
         traces=[
             _elevation_trace(plan, lang),
-            stations,
             _step_trace(legs, translate("race_plan.series.leg_pace", lang), lang),
+        ],
+        # Aid stations drawn like a race on a calendar: a terra dot on the x-axis,
+        # named; the arrival time stays in the badge row above.
+        markers=[
+            Marker(kind="aid", x=round(m / 1000, 3), label=name)
+            for name, m in zip(names, arrivals)
         ],
         bands=[
             Band(x0=round(leg.start_m / 1000, 3), x1=round(leg.end_m / 1000, 3),
