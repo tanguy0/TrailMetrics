@@ -639,49 +639,50 @@ input[type="radio"] {
 
 /* --- Home screen ---------------------------------------------------------- */
 
-.hero {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
+/* The hero (tm-hero) is the design system's; only what Home adds to it lives
+   here. The email under the name is still a click-to-edit tile, stripped of
+   its chrome and caption so it reads as one more line of the hero. */
+.home-hero {
   margin-bottom: 1.25rem;
 }
 
-.hero__name {
-  font-size: 30px;
-}
-
-/* Plain text under the name, not a tile: strip the tile's chrome and caption,
-   keep only the (still click-to-edit) value. */
-.hero__email .tm-kpi {
+.hero-email .tm-kpi {
   background: none;
   border: none;
   padding: 0;
-  margin-top: 0.15rem;
   box-shadow: none;
 }
 
-.hero__email .tm-kpi__label {
+.hero-email .tm-kpi__label {
   display: none;
 }
 
-.hero__email .tm-kpi__num {
-  font: 500 13px/20px var(--font-sans);
-  color: var(--ink-muted);
+.hero-email .tm-kpi__num,
+.hero-email .kpi__unset {
+  font: 400 13px/18px var(--font-sans);
+  color: var(--on-hero-muted);
 }
 
-.hero__meta {
-  color: var(--ink-muted);
-  font-size: 0.9rem;
-  margin: 0.4rem 0 0;
+.hero-email .kpi__button {
+  color: inherit;
+  border-bottom-color: var(--on-hero-line);
 }
 
-.hero__avatar {
-  width: 3.75rem;
-  height: 3.75rem;
-  border-radius: 50%;
-  margin-left: auto;
-  border: 3px solid var(--sun);
-  object-fit: cover;
+.home-hero__action {
+  flex: none;
+}
+
+/* A card's headline tiles, between its lede and its chart. */
+.kpi-grid--headline {
+  margin-bottom: var(--space-4);
+}
+
+.progress-card__heading .section-title {
+  margin: 0;
+}
+
+.records__new {
+  margin-left: var(--space-2);
 }
 
 /* Athlete History beside Athlete Health Metrics. Stretched to equal height —
