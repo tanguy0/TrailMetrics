@@ -155,6 +155,14 @@ class AuthApiTest(unittest.TestCase):
         self.assertEqual(body["account"]["role"], "athlete")
         self.assertEqual(body["lang"], "fr")
 
+    def test_session_reports_the_tier(self):
+        token = self.token_for("ana")
+        response = self.client.get("/auth/session", headers=self.bearer(token))
+        self.assertEqual(response.json()["strava_connected"], False)
+        self.exchange(token, ATHLETE_BASE + 9)
+        response = self.client.get("/auth/session", headers=self.bearer(token))
+        self.assertEqual(response.json()["strava_connected"], True)
+
     def test_register_says_when_the_address_is_taken(self):
         self.token_for("ana")
         response = self.client.post(

@@ -832,9 +832,9 @@ TRANSLATIONS = {
     # No "Pro", "Premium" or "Unlock" anywhere.
     "ui.visitor.lede": {
         "en": "TAGG analyses your runs and helps you improve. Two tools are open to "
-              "everyone; the rest opens when you connect Strava.",
+              "everyone; the rest opens with a free account.",
         "fr": "TAGG analyse vos sorties et vous aide à progresser. Deux outils sont "
-              "ouverts à tous ; le reste s’ouvre en connectant Strava.",
+              "ouverts à tous ; le reste s’ouvre avec un compte gratuit.",
     },
     "ui.visitor.open.title": {"en": "Without an account", "fr": "Sans compte"},
     "ui.visitor.open.tier": {"en": "Free · now", "fr": "Gratuit · maintenant"},
@@ -1347,30 +1347,6 @@ TRANSLATIONS = {
     "ui.pages.plot_count.one": {"en": "{count} plot", "fr": "{count} graphique"},
     "ui.pages.plot_count.many": {"en": "{count} plots", "fr": "{count} graphiques"},
 
-    # Email — asked for once, right after the first sign-in.
-    "ui.email.title": {
-        "en": "One last thing: your email", "fr": "Une dernière chose : votre email",
-    },
-    "ui.email.body": {
-        "en": "Strava does not share email addresses, so we have to ask. It is how "
-              "we reach you about your account and about what changes in the app.",
-        "fr": "Strava ne communique pas les adresses email, nous devons donc vous la "
-              "demander. C'est ainsi que nous vous joignons au sujet de votre compte "
-              "et des évolutions de l'application.",
-    },
-    "ui.email.label": {"en": "Email address", "fr": "Adresse email"},
-    "ui.email.placeholder": {"en": "you@example.com", "fr": "vous@exemple.com"},
-    "ui.email.submit": {"en": "Continue", "fr": "Continuer"},
-    "ui.email.invalid": {
-        "en": "That does not look like an email address.",
-        "fr": "Cela ne ressemble pas à une adresse email.",
-    },
-    "ui.email.missing": {
-        "en": "We still need your email address.",
-        "fr": "Il nous manque encore votre adresse email.",
-    },
-    "ui.email.provide": {"en": "Add it now", "fr": "L'ajouter maintenant"},
-    "ui.home.health.email": {"en": "Email", "fr": "Email"},
 
     # Import — the automatic pass that runs when you connect.
     "ui.home.import.auto": {

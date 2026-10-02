@@ -388,6 +388,22 @@ def disconnect_strava(account: Account = Depends(current_account)) -> dict:
     return {"ok": True}
 
 
+@router.get("/session")
+def session(request: Request, account: Account = Depends(current_account)) -> dict:
+    """Who is signed in and which tier they reach — cheap, for the web app's shell.
+
+    Read on every server render to pick the rail and the page variant, so it is
+    the session lookup and nothing else: no activity summaries, unlike ``/me``.
+    """
+    return {
+        "account": {"id": account.id, "email": account.email, "role": account.role},
+        "strava_connected": request.state.account_athlete_id is not None,
+        "is_coach": account.is_coach,
+        "is_master": account.is_master,
+        "lang": account.lang,
+    }
+
+
 @router.get("/me")
 def me(
     request: Request,
