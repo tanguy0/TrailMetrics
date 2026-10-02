@@ -515,6 +515,39 @@ export interface DurabilitySummary {
   n_activities: number;
 }
 
+export interface CoachingRequest {
+  id: string;
+  account_id: string;
+  message: string;
+  phone: string | null;
+  phone_e164: string | null;
+  contact: "email" | "phone";
+  status: "pending" | "accepted" | "declined" | "withdrawn";
+  created_at: string;
+  decided_at: string | null;
+}
+
+export interface CoachingState {
+  coached: boolean;
+  request: CoachingRequest | null;
+  can_request_again_at: string | null;
+  email: string;
+  proof: { coached_count: number } | null;
+}
+
+export interface CoachBoard {
+  pending: (CoachingRequest & { email: string; display_name: string | null })[];
+  coached: {
+    account_id: string;
+    email: string;
+    athlete_id: number | null;
+    display_name: string;
+    profile_url: string | null;
+    since: string;
+    last_activity: string | null;
+  }[];
+}
+
 export interface PageTemplate {
   key: string;
   name: string;

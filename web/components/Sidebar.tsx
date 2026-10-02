@@ -32,7 +32,6 @@ interface Item {
   needs: Tier;
 }
 
-const RANK: Record<Tier, number> = { visitor: 0, account: 1, strava: 2, coached: 3 };
 const GROUP: Record<Exclude<Tier, "visitor">, string> = {
   account: "nav.group_account",
   strava: "nav.group_strava",
@@ -48,7 +47,14 @@ async function signOut() {
 export function Sidebar({ strings, viewer }: { strings: Strings; viewer: Viewer | null }) {
   const t = translator(strings);
   const pathname = usePathname() ?? "";
-  const tier: Tier = viewer?.tier ?? "visitor";
+  const tier = viewer?.tier ?? "visitor";
+  // Not a ladder: coaching is a service, so a coached account without Strava
+  // still opens Coaching, and a coach opens it to answer requests.
+  const opens = (needs: Tier) =>
+    needs === "visitor" ||
+    (needs === "account" && viewer != null) ||
+    (needs === "strava" && tier === "strava") ||
+    (needs === "coached" && Boolean(viewer?.isCoached || viewer?.isCoach));
 
   const brand = (
     <a className="tm-rail__brand" href={viewer ? "/home" : "/"}>
@@ -65,13 +71,12 @@ export function Sidebar({ strings, viewer }: { strings: Strings; viewer: Viewer 
     { href: "/home", label: t("nav.home"), icon: "home", needs: "account" },
     { href: "/tools", label: t("nav.tools"), icon: "ruler", needs: "visitor" },
     { href: "/pages", label: t("nav.analysis"), icon: "chart", needs: "strava" },
-    // Coaching opens with Strava until coaching requests land; then "coached".
-    { href: "/coaching", label: t("nav.coaching"), icon: "calendar", needs: "strava" },
+    { href: "/coaching", label: t("nav.coaching"), icon: "calendar", needs: "coached" },
     { href: "/blog", label: t("nav.blog"), icon: "newspaper", needs: "visitor" },
   ];
-  const open = items.filter((item) => RANK[item.needs] <= RANK[tier]);
+  const open = items.filter((item) => opens(item.needs));
   const lockedTiers = (["account", "strava", "coached"] as const).filter(
-    (needs) => RANK[needs] > RANK[tier] && items.some((item) => item.needs === needs),
+    (needs) => !opens(needs) && items.some((item) => item.needs === needs),
   );
 
   return (

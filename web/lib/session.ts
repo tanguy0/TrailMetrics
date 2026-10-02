@@ -74,6 +74,8 @@ export interface Viewer {
   tier: "account" | "strava";
   isCoach: boolean;
   isMaster: boolean;
+  /** Accepted by a coach (design/specs/coaching.md): opens the Coaching page. */
+  isCoached: boolean;
 }
 
 export const getViewer = cache(async (): Promise<Viewer | null> => {
@@ -90,6 +92,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
       strava_connected: boolean;
       is_coach: boolean;
       is_master: boolean;
+      is_coached: boolean;
     };
     return {
       email: body.account.email,
@@ -97,6 +100,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
       tier: body.strava_connected ? "strava" : "account",
       isCoach: body.is_coach,
       isMaster: body.is_master,
+      isCoached: body.is_coached,
     };
   } catch {
     return null;

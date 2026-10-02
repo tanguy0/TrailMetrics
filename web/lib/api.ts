@@ -16,6 +16,9 @@ import type {
   BlogPost,
   BlogPostSummary,
   CoachAthlete,
+  CoachBoard,
+  CoachingRequest,
+  CoachingState,
   DurabilitySummary,
   GapSummary,
   HomeSummary,
@@ -141,6 +144,20 @@ export const updateProfile = (
 /** Email a fresh verification link to the signed-in account. */
 export const resendVerification = () =>
   request<{ sent: boolean; verified: boolean }>("/auth/verify/resend", { method: "POST" });
+
+// --- Coaching --------------------------------------------------------------
+
+export const getCoachingState = () => request<CoachingState>("/coaching/me");
+export const putCoachingRequest = (body: {
+  message: string;
+  contact: "email" | "phone";
+  phone: string | null;
+}) => request<{ request: CoachingRequest }>("/coaching/request", { method: "PUT", body: JSON.stringify(body) });
+export const withdrawCoachingRequest = () =>
+  request<{ withdrawn: boolean }>("/coaching/request", { method: "DELETE" });
+export const getCoachBoard = () => request<CoachBoard>("/coaching/requests");
+export const decideCoachingRequest = (id: string, decision: "accept" | "decline") =>
+  request<{ request: CoachingRequest }>(`/coaching/requests/${id}/${decision}`, { method: "POST" });
 
 // --- Tools -----------------------------------------------------------------
 

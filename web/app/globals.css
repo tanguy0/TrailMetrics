@@ -2383,3 +2383,107 @@ a.tm-segment__item {
   flex-direction: column;
   gap: var(--space-4);
 }
+
+/* --- Coaching (design/specs/coaching.md) ------------------------------------ */
+
+.coaching {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.coaching-bar {
+  padding-bottom: 0;
+}
+
+.coaching-offer__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* The diary's empty week on the offer: day, planned, done. */
+.coaching-preview__title {
+  font: 500 11px/16px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--on-hero-muted);
+}
+
+.coaching-preview__row {
+  display: grid;
+  grid-template-columns: 18px 1fr 1fr;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.coaching-preview__day {
+  font: 500 11px/16px var(--font-mono);
+  color: var(--on-hero-muted);
+}
+
+.coaching-preview__slot {
+  min-height: 22px;
+  border: 1px solid var(--on-hero-line);
+  border-radius: var(--radius-md);
+  padding: 2px 8px;
+  font: 400 11px/16px var(--font-sans);
+  color: var(--on-hero-muted);
+}
+
+.coaching-request {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 640px;
+}
+
+.coaching-request__contact {
+  align-self: flex-start;
+}
+
+.coaching-request__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.coaching-request__message {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.coaching-board__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.coaching-board__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--line);
+}
+
+.coaching-board__who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .tm-offer {
+    grid-template-columns: 1fr;
+  }
+
+  .coaching-board__item {
+    flex-direction: column;
+  }
+}

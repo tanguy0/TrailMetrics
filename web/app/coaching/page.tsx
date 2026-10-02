@@ -1,12 +1,13 @@
 /**
- * The Coaching tab (formerly Training): the planned/done diary.
+ * The Coaching tab (formerly Training).
  *
- * A server component so the session decides before anything renders, and so the
- * translated strings are in the first paint rather than fetched afterwards — the
- * same shell `home/page.tsx` and `pages/page.tsx` use.
+ * A visitor gets the teaser (an account is what opens the offer and its form);
+ * any account gets `CoachingScreen`, which picks between the offer, the diary
+ * and the coach's board from `/coaching/me`. Server-side only to decide the
+ * visitor case before anything renders, as elsewhere.
  */
 
-import { TrainingScreen } from "@/components/TrainingScreen";
+import { CoachingScreen } from "@/components/CoachingScreen";
 import { Teaser } from "@/components/Teaser";
 import { getViewer } from "@/lib/session";
 import { translator } from "@/lib/strings";
@@ -14,11 +15,7 @@ import { loadStrings } from "@/lib/strings.server";
 
 export default async function CoachingPage() {
   const strings = await loadStrings();
-  // A visitor, or an account without Strava, stays here: the page's empty
-  // structure and what the next tier would put in it (design/tagg/access.md).
   const viewer = await getViewer();
-  if (viewer?.tier !== "strava") {
-    return <Teaser page="training" tier={viewer ? "account" : "visitor"} t={translator(strings)} />;
-  }
-  return <TrainingScreen strings={strings} />;
+  if (!viewer) return <Teaser page="training" t={translator(strings)} />;
+  return <CoachingScreen strings={strings} isCoach={viewer.isCoach} hasStrava={viewer.tier === "strava"} />;
 }
