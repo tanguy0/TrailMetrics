@@ -115,6 +115,15 @@ def _config(params: Dict[str, Any]) -> DurabilityConfig:
 
 # --- 1. Observed vs modelled drift -------------------------------------------
 
+# charts.md § v1.2 — cas particulier: a function of elapsed time, no end labels.
+# The observations' interquartile band is the figure's fill (series 1 at 10 %),
+# the median dots on it without a line; the personal model a 2.2 px line, the
+# population prior the reference grey dashed 5-4. On the projection the
+# personal model's band takes the observations' place — never two bands.
+_BAND_OPACITY = 0.10
+_MEDIAN_MARKER_SIZE = 6  # r 3
+_PERSONAL_WIDTH = 2.2
+
 def _drift_chart(fitted, config: DurabilityConfig, params: Dict[str, Any], lang: str):
     bin_h = float(params.get("bin_minutes") or 20) / 60.0
     show_observed = bool(params.get("show_observed", True))
@@ -144,12 +153,12 @@ def _drift_chart(fitted, config: DurabilityConfig, params: Dict[str, Any], lang:
                 name=_name(label, translate("durability.series.observed", lang)),
                 x=[round(float(c), 3) for c in centers],
                 y=obs_q[:, 1].round(2).tolist(),
-                kind=TraceKind.LINE,
+                kind=TraceKind.SCATTER,
                 color=color,
-                markers=True,
-                width=1.5,
+                marker_size=_MEDIAN_MARKER_SIZE,
                 band_upper=obs_q[:, 2].round(2).tolist(),
                 band_lower=obs_q[:, 0].round(2).tolist(),
+                band_opacity=_BAND_OPACITY,
                 hover_template="%{x:.2f} h<br>%{y:+.1f} %<extra>%{fullData.name}</extra>",
             ))
         traces.append(Trace(
@@ -162,12 +171,13 @@ def _drift_chart(fitted, config: DurabilityConfig, params: Dict[str, Any], lang:
             traces.append(Trace(
                 name=_name(label, translate("durability.series.personal", lang)),
                 x=[round(float(c), 3) for c in centers], y=[round(v, 2) for v in ind_mean],
-                kind=TraceKind.LINE, color=color, width=2.0,
+                kind=TraceKind.LINE, color=color, width=_PERSONAL_WIDTH,
                 hover_template="%{x:.2f} h<br>%{y:+.1f} %<extra>%{fullData.name}</extra>",
             ))
     if not traces:
         return None
     return ChartData(
+        family="function",
         title=translate("durability.chart.drift", lang),
         x_axis=Axis(title=translate("durability.axis.elapsed", lang), kind=AxisKind.LINEAR,
                     tick_format=",.1f"),
@@ -231,8 +241,9 @@ def _projection_chart(fitted, config: DurabilityConfig, lang: str):
             traces.append(Trace(
                 name=_name(label, translate("durability.series.personal", lang)),
                 x=hours.round(3).tolist(), y=curve(model.coefficients).round(2).tolist(),
-                kind=TraceKind.LINE, color=color, width=2.0,
+                kind=TraceKind.LINE, color=color, width=_PERSONAL_WIDTH,
                 band_upper=upper.round(2).tolist(), band_lower=lower.round(2).tolist(),
+                band_opacity=_BAND_OPACITY,
                 hover_template="%{x:.1f} h<br>+%{y:.1f} %<extra>%{fullData.name}</extra>",
             ))
     if not traces:
@@ -241,6 +252,7 @@ def _projection_chart(fitted, config: DurabilityConfig, lang: str):
         f"{_typical_intensity(m, config) * 100:.0f} %" for _, m in fitted
     )
     return ChartData(
+        family="function",
         title=translate("durability.chart.projection", lang),
         x_axis=Axis(title=translate("durability.axis.elapsed", lang), kind=AxisKind.LINEAR,
                     tick_format=",.0f"),
