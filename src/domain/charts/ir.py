@@ -95,6 +95,12 @@ class Trace:
     hover_template: Optional[str] = None
     legend_group: Optional[str] = None
     show_legend: bool = True
+    # Per-point overrides, bars only (charts.md § v1.1 — barres sémantiques): a
+    # colour, an opacity and a label above the bar, one entry per point. ``None``
+    # keeps the trace-wide ``color`` / ``opacity`` and no label.
+    point_colors: Optional[List[str]] = None
+    point_opacity: Optional[List[float]] = None
+    point_text: Optional[List[str]] = None
 
 
 @dataclass
@@ -147,6 +153,20 @@ class Badge:
 
 
 @dataclass
+class Marker:
+    """A point in time pinned on a date axis (charts.md § v1.1 — repères).
+
+    ``kind`` is ``"today"`` — a dotted sun line across the plot with a mono label
+    above it — or ``"race"`` — a terra dot sitting on the x-axis, named by
+    ``label``. Both are the renderer's to draw; a plot only says where.
+    """
+
+    kind: str  # today | race
+    x: Any
+    label: str = ""
+
+
+@dataclass
 class ChartData:
     """One figure: axes plus the traces drawn on them.
 
@@ -171,9 +191,14 @@ class ChartData:
     # Shaded x-stretches drawn behind the traces, and a row of tags above them.
     bands: List[Band] = field(default_factory=list)
     badges: List[Badge] = field(default_factory=list)
+    # Dates worth pointing at: today, a race.
+    markers: List[Marker] = field(default_factory=list)
     height: int = 460
-    # "closest" | "x unified" — the latter suits stacked areas.
-    hover_mode: str = "closest"
+    # "auto" | "closest" | "x unified". Auto is the renderer's call: unified
+    # (charts.md § v1.1) unless the chart is a scatter, where "closest" reads.
+    hover_mode: str = "auto"
+    # Gap between bars, as a share of each slot; ``None`` keeps Plotly's.
+    bargap: Optional[float] = None
     # Caption rendered under the figure.
     caption: Optional[str] = None
 
@@ -367,6 +392,7 @@ def _chart_from_dict(raw: Dict[str, Any]) -> ChartData:
         chart.traces.append(trace)
     chart.bands = [_dataclass_from_dict(Band, b) for b in (raw.get("bands") or [])]
     chart.badges = [_dataclass_from_dict(Badge, b) for b in (raw.get("badges") or [])]
+    chart.markers = [_dataclass_from_dict(Marker, m) for m in (raw.get("markers") or [])]
     return chart
 
 

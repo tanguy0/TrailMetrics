@@ -374,6 +374,7 @@ TRANSLATIONS = {
     },
     "plot.fitness_fatigue.fitness": {"en": "Fitness", "fr": "Fitness"},
     "plot.fitness_fatigue.fatigue": {"en": "Fatigue", "fr": "Fatigue"},
+    "plot.fitness_fatigue.form": {"en": "Form", "fr": "Forme"},
     "plot.fitness_fatigue.y": {
         "en": "Training load (Relative Effort)",
         "fr": "Charge d'entraînement (Effort relatif)",

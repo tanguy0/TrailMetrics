@@ -64,7 +64,7 @@ _FEELING_COLOR = {
     "fort": theme.PRIMARY,
 }
 # Light enough that the curve, the gridlines and the tags all still read over it.
-_FEELING_OPACITY = 0.15
+_FEELING_OPACITY = 0.10  # bands stay at 10 % (charts.md § v1.1)
 
 # The fitness tag: arrow, ink/border colour, fill, and the full wording. The
 # wording and the ±1 threshold below are read straight from the `ui.*` keys the

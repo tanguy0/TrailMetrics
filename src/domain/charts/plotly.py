@@ -14,14 +14,16 @@ from typing import Any, List, Optional, Sequence
 import numpy as np
 import plotly.graph_objects as go
 
-from src.domain.charts.ir import Axis, AxisKind, ChartData, Trace, TraceKind
+from src.domain.charts.ir import Axis, AxisKind, ChartData, Marker, Trace, TraceKind
 from src.domain.gap import theme
 from src.domain.plotting_common import (
     CURVE_PALETTE,
     DASH_BY_LINESTYLE,
+    MARGIN,
     axis_style,
     base_figure,
     durations_to_datetimes,
+    fmt_hms,
     rgba,
 )
 
@@ -35,6 +37,88 @@ _REF_WIDTH = 1.5
 
 def _is_reference(color: str) -> bool:
     return color.upper() == theme.CHART_REF.upper()
+
+
+# --- v1.1 (charts.md § Plus de caractère) ----------------------------------
+# Every constant below has a twin in web/components/ChartView.tsx.
+
+# Rounded bar tops.
+_BAR_RADIUS = 4
+# The end-of-line dot (r 4) and its value label, just right of the last point.
+_END_MARKER_SIZE = 8
+_END_LABEL_SHIFT = 9
+_END_LABEL_FONT_SIZE = 11
+# Right margin once lines carry an end label, so the label is not clipped.
+_END_LABEL_MARGIN_R = 52
+# Label above a highlighted bar (the three tallest of a slope histogram).
+_BAR_LABEL_FONT_SIZE = 11
+# Today's dotted line, and a race's dot on the x-axis.
+_MARKER_DASH = "2px,4px"
+_RACE_DOT_PX = 4
+
+
+def _has_points(trace: Trace) -> bool:
+    return any(v is not None for v in trace.y)
+
+
+def _is_athlete_line(trace: Trace, color: str) -> bool:
+    """One of the athlete's own lines — not a reference, not bars or dots."""
+    return (
+        not _is_reference(color)
+        and trace.kind in (TraceKind.LINE, TraceKind.STEP)
+        and _has_points(trace)
+    )
+
+
+def _area_trace(chart: ChartData, colored) -> Optional[int]:
+    """The one trace that gets the area fill: the athlete's series 1.
+
+    The first ``chart-you-1`` line on a plain numeric left axis, with no ±band of
+    its own (the band already fills it) and not stacked. Never a reference, never
+    a second series — one area per figure.
+    """
+    if chart.y_axis.kind is not AxisKind.LINEAR:
+        return None
+    for index, trace, color in colored:
+        if (
+            _is_athlete_line(trace, color)
+            and color.upper() == theme.CHART_YOU_1.upper()
+            and trace.axis != "y2"
+            and trace.band_upper is None
+            and not trace.stack_group
+        ):
+            return index
+    return None
+
+
+def resolve_hover_mode(chart: ChartData) -> str:
+    """Unified hover (charts.md § v1.1) unless the chart is a scatter.
+
+    "closest" is treated as "auto" too: it was the IR's default before v1.1, and
+    outputs cached back then still carry it.
+    """
+    if chart.hover_mode not in ("auto", "closest"):
+        return chart.hover_mode
+    plotted = [t for t in chart.traces if _has_points(t)]
+    if plotted and all(t.kind is TraceKind.SCATTER for t in plotted):
+        return "closest"
+    return "x unified"
+
+
+def end_label_text(value: float, axis: Axis) -> str:
+    """A line's last value as its end label reads it: ``4:21``, ``68``, ``1.42``."""
+    if axis.kind is AxisKind.DURATION:
+        return fmt_hms(value)
+    magnitude = abs(value)
+    decimals = 0 if magnitude >= 10 else 1 if magnitude >= 1 else 2
+    return f"{value:,.{decimals}f}" + (axis.suffix or "")
+
+
+def _last_point(trace: Trace):
+    for x, y in zip(reversed(trace.x), reversed(trace.y)):
+        if y is not None and not (isinstance(y, float) and np.isnan(y)):
+            return x, y
+    return None
 
 
 # Plotly line shape per trace kind; only STEP differs from a plain line.
@@ -72,10 +156,31 @@ def render_chart(chart: ChartData) -> go.Figure:
     # References first so they sit underneath; `legendrank` keeps the legend in
     # the chart's own order regardless.
     colored.sort(key=lambda item: not _is_reference(item[2]))
+
+    area = _area_trace(chart, colored)
+    athlete_lines = [i for i, trace, color in colored if _is_athlete_line(trace, color)]
+    # End labels sit right of the plot, where a right-hand axis keeps its ticks:
+    # a dual-axis chart goes without them.
+    end_labels = chart.y2_axis is None and bool(athlete_lines)
+    # The main series' value leads the unified hover in sun-ink.
+    main = area if area is not None else (athlete_lines[0] if athlete_lines else None)
+
     for index, trace, color in colored:
         _add_band(fig, trace, chart, color)
-        _add_trace(fig, trace, chart, color, rank=index + 1)
+        _add_trace(
+            fig, trace, chart, color, rank=index + 1,
+            area=index == area,
+            main=index == main,
+            # With one athlete line its end label names it well enough; with
+            # several, only the legend says which is which.
+            hide_legend=end_labels and len(athlete_lines) == 1 and index in athlete_lines,
+        )
+        if end_labels and index in athlete_lines:
+            _add_end_label(fig, trace, chart, color)
     _add_badges(fig, chart)
+    _add_markers(fig, chart)
+    if end_labels:
+        fig.update_layout(margin={**MARGIN, "r": _END_LABEL_MARGIN_R})
 
     _apply_axis(fig.update_xaxes, chart.x_axis)
     _apply_axis(fig.update_yaxes, chart.y_axis)
@@ -94,13 +199,64 @@ def render_chart(chart: ChartData) -> go.Figure:
         # Axis kwargs win: they carry the coloured title when one is set.
         secondary.update(_axis_kwargs(chart.y2_axis))
         fig.update_layout(yaxis2=secondary)
-    if chart.hover_mode:
-        fig.update_layout(hovermode=chart.hover_mode)
+    fig.update_layout(hovermode=resolve_hover_mode(chart))
     if any(t.kind is TraceKind.BAR for t in chart.traces):
         # Bars from different series sit side by side unless explicitly stacked.
         stacked = any(t.stack_group for t in chart.traces)
         fig.update_layout(barmode="stack" if stacked else "group")
+        if chart.bargap is not None:
+            fig.update_layout(bargap=chart.bargap)
     return fig
+
+
+def _add_end_label(fig: go.Figure, trace: Trace, chart: ChartData, color: str) -> None:
+    """A dot on the line's last point and its value beside it, in its colour."""
+    last = _last_point(trace)
+    if last is None:
+        return
+    axis = _y_axis_for(trace, chart)
+    x = _encode([last[0]], chart.x_axis)[0]
+    y = _encode([last[1]], axis)[0]
+    fig.add_trace(go.Scatter(
+        x=[x], y=[y], mode="markers",
+        marker=dict(color=color, size=_END_MARKER_SIZE),
+        hoverinfo="skip", showlegend=False, cliponaxis=False,
+        legendgroup=trace.legend_group or trace.name,
+    ))
+    fig.add_annotation(
+        x=x, y=y, xref="x", yref="y",
+        text=end_label_text(float(last[1]), axis),
+        showarrow=False, xanchor="left", xshift=_END_LABEL_SHIFT,
+        font=dict(family=theme.FONT_MONO, size=_END_LABEL_FONT_SIZE, color=color),
+    )
+
+
+def _add_markers(fig: go.Figure, chart: ChartData) -> None:
+    """Today as a dotted sun line with its label; a race as a terra dot on the axis."""
+    for marker in chart.markers:
+        x = _encode([marker.x], chart.x_axis)[0]
+        if marker.kind == "today":
+            fig.add_shape(
+                type="line", xref="x", yref="y domain", x0=x, x1=x, y0=0, y1=1,
+                line=dict(color=theme.TODAY_MARKER, width=1, dash=_MARKER_DASH),
+            )
+            fig.add_annotation(
+                x=x, xref="x", y=1, yref="y domain", yanchor="bottom",
+                text=marker.label, showarrow=False,
+                font=dict(family=theme.FONT_MONO, size=_END_LABEL_FONT_SIZE, color=theme.SUN_INK),
+            )
+        elif marker.kind == "race":
+            fig.add_shape(
+                type="circle", xref="x", yref="y domain",
+                xsizemode="pixel", ysizemode="pixel", xanchor=x, yanchor=0,
+                x0=-_RACE_DOT_PX, x1=_RACE_DOT_PX, y0=0, y1=2 * _RACE_DOT_PX,
+                fillcolor=theme.RACE_MARKER, line_width=0,
+            )
+            fig.add_annotation(
+                x=x, xref="x", y=0, yref="y domain", yanchor="bottom", yshift=2 * _RACE_DOT_PX + 2,
+                text=marker.label, showarrow=False,
+                font=dict(family=theme.FONT_MONO, size=_END_LABEL_FONT_SIZE, color=theme.RACE_MARKER),
+            )
 
 
 def _add_bands(fig: go.Figure, chart: ChartData) -> None:
@@ -200,7 +356,10 @@ def _float_or_nan(value: Any) -> float:
         return float("nan")
 
 
-def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str, rank: int) -> None:
+def _add_trace(
+    fig: go.Figure, trace: Trace, chart: ChartData, color: str, rank: int,
+    *, area: bool = False, main: bool = False, hide_legend: bool = False,
+) -> None:
     y_axis = _y_axis_for(trace, chart)
     x = _encode(trace.x, chart.x_axis)
     y = _encode(trace.y, y_axis)
@@ -210,7 +369,7 @@ def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str, rank:
         y=y,
         name=trace.name,
         legendgroup=trace.legend_group or trace.name,
-        showlegend=trace.show_legend,
+        showlegend=trace.show_legend and not hide_legend,
         legendrank=rank,
         opacity=trace.opacity,
     )
@@ -220,9 +379,24 @@ def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str, rank:
         common["customdata"] = list(trace.hover_text)
     if trace.hover_template:
         common["hovertemplate"] = trace.hover_template
+    elif main and _y_axis_for(trace, chart).kind is AxisKind.LINEAR:
+        # The main series leads the unified hover, its value bold in sun-ink.
+        common["hovertemplate"] = (
+            f"%{{fullData.name}} : <b><span style='color:{theme.SUN_INK}'>%{{y}}</span></b>"
+            "<extra></extra>"
+        )
 
     if trace.kind is TraceKind.BAR:
-        fig.add_trace(go.Bar(marker=dict(color=color), **common))
+        marker: dict = dict(color=trace.point_colors or color, cornerradius=_BAR_RADIUS)
+        if trace.point_opacity:
+            marker["opacity"] = trace.point_opacity
+        bar = dict(marker=marker, **common)
+        if trace.point_text:
+            bar.update(
+                text=trace.point_text, textposition="outside", cliponaxis=False,
+                textfont=dict(family=theme.FONT_MONO, size=_BAR_LABEL_FONT_SIZE, color=theme.INK_MUTED),
+            )
+        fig.add_trace(go.Bar(**bar))
         return
 
     width = min(trace.width, _REF_WIDTH) if _is_reference(color) else trace.width
@@ -248,6 +422,14 @@ def _add_trace(fig: go.Figure, trace: Trace, chart: ChartData, color: str, rank:
         scatter["stackgroup"] = trace.stack_group or "area"
         # A hairline keeps stacked bands readable without dominating the fill.
         scatter["line"] = dict(color=color, width=0.35)
+    elif area:
+        # Series 1's area: the colour at AREA_ALPHA_TOP at the top, fading to
+        # nothing at the bottom (charts.md § v1.1).
+        scatter["fill"] = "tozeroy"
+        scatter["fillgradient"] = dict(
+            type="vertical",
+            colorscale=[[0, rgba(color, 0)], [1, rgba(color, theme.AREA_ALPHA_TOP)]],
+        )
 
     fig.add_trace(go.Scatter(**scatter))
 

@@ -13,8 +13,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { durationToEpoch, toCsv, downloadCsv } from "@/lib/format";
-import { curvePalette, dashByCode, isReference, rgba, theme } from "@/lib/theme";
+import { Callout } from "@/components/Callout";
+import { durationToEpoch, formatHms, toCsv, downloadCsv } from "@/lib/format";
+import { AREA_ALPHA_TOP, curvePalette, dashByCode, isReference, rgba, theme, tokens } from "@/lib/theme";
 import type { Axis, ChartData, Trace } from "@/lib/types";
 
 // Resolved once per session; `plotly.js-dist-min` has no types of its own.
@@ -35,6 +36,83 @@ const REF_WIDTH = 1.5;
 const MARGIN = { l: 44, r: 16, t: 16, b: 32 };
 
 const AXIS_FONT = { family: theme.fontMono, size: 11, color: theme.chartAxis };
+
+// --- v1.1 (charts.md § Plus de caractère); each mirrors src/domain/charts/plotly.py.
+const BAR_RADIUS = 4;
+const END_MARKER_SIZE = 8; // r 4
+const END_LABEL_SHIFT = 9;
+const END_LABEL_FONT_SIZE = 11;
+const END_LABEL_MARGIN_R = 52;
+const BAR_LABEL_FONT_SIZE = 11;
+const MARKER_DASH = "2px,4px";
+const RACE_DOT_PX = 4;
+
+/** Mirrors `SPIKES` in src/domain/plotting_common.py. */
+const SPIKES = {
+  showspikes: true,
+  spikecolor: theme.lineStrong,
+  spikedash: "2px,4px",
+  spikethickness: 1,
+  spikemode: "across",
+  spikesnap: "cursor",
+};
+const Y_NTICKS = 5;
+
+const hasPoints = (trace: Trace) => trace.y.some((v) => v != null);
+
+/** One of the athlete's own lines — not a reference, not bars or dots. */
+function isAthleteLine(trace: Trace, color: string): boolean {
+  return !isReference(color) && (trace.kind === "line" || trace.kind === "step") && hasPoints(trace);
+}
+
+/** Mirrors `_area_trace`: the first chart-you-1 line on a plain numeric left axis. */
+function areaTrace(chart: ChartData, colored: { trace: Trace; index: number; color: string }[]): number | null {
+  if (chart.y_axis.kind !== "linear") return null;
+  const found = colored.find(
+    ({ trace, color }) =>
+      isAthleteLine(trace, color) &&
+      color.toLowerCase() === tokens["chart-you-1"] &&
+      trace.axis !== "y2" &&
+      !trace.band_upper &&
+      !trace.stack_group,
+  );
+  return found ? found.index : null;
+}
+
+/** Mirrors `resolve_hover_mode`: unified unless the chart is a scatter. */
+function hoverMode(chart: ChartData): string {
+  if (chart.hover_mode !== "auto" && chart.hover_mode !== "closest") return chart.hover_mode;
+  const plotted = chart.traces.filter(hasPoints);
+  return plotted.length && plotted.every((t) => t.kind === "scatter") ? "closest" : "x unified";
+}
+
+/** Mirrors `end_label_text`: `4:21`, `68`, `1.42`. */
+function endLabelText(value: number, axis: Axis): string {
+  if (axis.kind === "duration") return formatHms(value);
+  const magnitude = Math.abs(value);
+  const decimals = magnitude >= 10 ? 0 : magnitude >= 1 ? 1 : 2;
+  return (
+    value.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) +
+    (axis.suffix ?? "")
+  );
+}
+
+function lastPoint(trace: Trace): [number | string | null, number] | null {
+  for (let i = trace.y.length - 1; i >= 0; i--) {
+    const y = trace.y[i];
+    if (y != null && !Number.isNaN(y)) return [trace.x[i], y];
+  }
+  return null;
+}
+
+/**
+ * The y-axis title moves into the card's sub-line (charts.md § v1.1: no axis
+ * title when the card carries the unit). A dual-axis chart keeps both titles —
+ * tinted to their series, they are what says which line each scale measures.
+ */
+function unitInCard(chart: ChartData): string | null {
+  return !chart.y2_axis && chart.y_axis.title ? chart.y_axis.title : null;
+}
 
 /** Mirrors `axis_style` in src/domain/plotting_common.py. */
 function axisStyle(grid: boolean): Record<string, unknown> {
@@ -102,8 +180,24 @@ function axisLayout(axis: Axis, grid: boolean): Record<string, unknown> {
   return layout;
 }
 
+/** Which traces get the v1.1 treatment: the area, the main hover, end labels. */
+function roles(chart: ChartData) {
+  const colored = chart.traces.map((trace, index) => ({
+    trace,
+    index,
+    color: trace.color || curvePalette[index % curvePalette.length],
+  }));
+  const area = areaTrace(chart, colored);
+  const athleteLines = colored.filter(({ trace, color }) => isAthleteLine(trace, color)).map((c) => c.index);
+  // Right of the plot is where a right-hand axis keeps its ticks.
+  const endLabels = !chart.y2_axis && athleteLines.length > 0;
+  const main = area ?? athleteLines[0] ?? null;
+  return { area, athleteLines, endLabels, main };
+}
+
 function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = [];
+  const { area, athleteLines, endLabels, main } = roles(chart);
 
   // References first so they sit underneath; `legendrank` keeps the legend in the
   // chart's own order regardless (same as the Python renderer).
@@ -147,16 +241,40 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
       y,
       name: trace.name,
       legendgroup: trace.legend_group || trace.name,
-      showlegend: trace.show_legend,
+      // With one athlete line its end label names it; with several, the legend does.
+      showlegend:
+        trace.show_legend && !(endLabels && athleteLines.length === 1 && athleteLines.includes(index)),
       legendrank: index + 1,
       opacity: trace.opacity,
       ...(onSecondary ? { yaxis: "y2" } : {}),
     };
     if (trace.hover_text) common.customdata = trace.hover_text;
     if (trace.hover_template) common.hovertemplate = trace.hover_template;
+    else if (index === main && yAxis.kind === "linear") {
+      // The main series leads the unified hover, its value bold in sun-ink.
+      common.hovertemplate =
+        `%{fullData.name} : <b><span style='color:${theme.sunInk}'>%{y}</span></b><extra></extra>`;
+    }
 
     if (trace.kind === "bar") {
-      out.push({ ...common, type: "bar", marker: { color } });
+      const marker: Record<string, unknown> = {
+        color: trace.point_colors ?? color,
+        cornerradius: BAR_RADIUS,
+      };
+      if (trace.point_opacity) marker.opacity = trace.point_opacity;
+      out.push({
+        ...common,
+        type: "bar",
+        marker,
+        ...(trace.point_text
+          ? {
+              text: trace.point_text,
+              textposition: "outside",
+              cliponaxis: false,
+              textfont: { family: theme.fontMono, size: BAR_LABEL_FONT_SIZE, color: theme.inkMuted },
+            }
+          : {}),
+      });
       return;
     }
 
@@ -178,11 +296,102 @@ function toPlotlyTraces(chart: ChartData): Record<string, unknown>[] {
       scatter.stackgroup = trace.stack_group || "area";
       scatter.fillcolor = rgba(color, trace.stack_group ? 0.35 : 0.2);
       scatter.line = { color, width: 0.35 };
+    } else if (index === area) {
+      // Series 1's area: AREA_ALPHA_TOP at the top, fading to nothing.
+      scatter.fill = "tozeroy";
+      scatter.fillgradient = {
+        type: "vertical",
+        colorscale: [
+          [0, rgba(color, 0)],
+          [1, rgba(color, AREA_ALPHA_TOP)],
+        ],
+      };
     }
     out.push(scatter);
+
+    // The end-of-line dot; its value label is an annotation (see endAnnotations).
+    const last = endLabels && athleteLines.includes(index) ? lastPoint(trace) : null;
+    if (last) {
+      out.push({
+        x: encode([last[0]], chart.x_axis),
+        y: encode([last[1]], yAxis),
+        type: "scatter",
+        mode: "markers",
+        marker: { color, size: END_MARKER_SIZE },
+        hoverinfo: "skip",
+        showlegend: false,
+        cliponaxis: false,
+        legendgroup: trace.legend_group || trace.name,
+      });
+    }
   });
 
   return out;
+}
+
+/** Today as a dotted sun line; a race as a terra dot on the x-axis. */
+function markerShapes(chart: ChartData): Record<string, unknown>[] {
+  return (chart.markers ?? []).flatMap((marker): Record<string, unknown>[] => {
+    const x = encode([marker.x], chart.x_axis)[0];
+    if (marker.kind === "today") {
+      return [{
+        type: "line", xref: "x", yref: "y domain", x0: x, x1: x, y0: 0, y1: 1,
+        line: { color: theme.todayMarker, width: 1, dash: MARKER_DASH },
+      }];
+    }
+    if (marker.kind === "race") {
+      return [{
+        type: "circle", xref: "x", yref: "y domain",
+        xsizemode: "pixel", ysizemode: "pixel", xanchor: x, yanchor: 0,
+        x0: -RACE_DOT_PX, x1: RACE_DOT_PX, y0: 0, y1: 2 * RACE_DOT_PX,
+        fillcolor: theme.raceMarker, line: { width: 0 },
+      }];
+    }
+    return [];
+  });
+}
+
+/** The markers' mono labels: above the plot for today, above the dot for a race. */
+function markerAnnotations(chart: ChartData): Record<string, unknown>[] {
+  return (chart.markers ?? []).map((marker) => ({
+    x: encode([marker.x], chart.x_axis)[0],
+    xref: "x",
+    y: marker.kind === "today" ? 1 : 0,
+    yref: "y domain",
+    yanchor: "bottom",
+    yshift: marker.kind === "race" ? 2 * RACE_DOT_PX + 2 : 0,
+    text: marker.label,
+    showarrow: false,
+    font: {
+      family: theme.fontMono,
+      size: END_LABEL_FONT_SIZE,
+      color: marker.kind === "today" ? theme.sunInk : theme.raceMarker,
+    },
+  }));
+}
+
+/** Each athlete line's last value, right of its end dot, in its colour. */
+function endAnnotations(chart: ChartData): Record<string, unknown>[] {
+  const { athleteLines, endLabels } = roles(chart);
+  if (!endLabels) return [];
+  return athleteLines.flatMap((index) => {
+    const trace = chart.traces[index];
+    const last = lastPoint(trace);
+    if (!last) return [];
+    const yAxis = trace.axis === "y2" && chart.y2_axis ? chart.y2_axis : chart.y_axis;
+    const color = trace.color || curvePalette[index % curvePalette.length];
+    return [{
+      x: encode([last[0]], chart.x_axis)[0],
+      y: encode([last[1]], yAxis)[0],
+      xref: "x",
+      yref: "y",
+      text: endLabelText(last[1], yAxis),
+      showarrow: false,
+      xanchor: "left",
+      xshift: END_LABEL_SHIFT,
+      font: { family: theme.fontMono, size: END_LABEL_FONT_SIZE, color },
+    }];
+  });
 }
 
 /** Bands as full-height rectangles behind the traces. */
@@ -233,6 +442,15 @@ function toAnnotations(chart: ChartData, width: number): Record<string, unknown>
 function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
   const stacked = chart.traces.some((t) => t.stack_group);
   const hasBars = chart.traces.some((t) => t.kind === "bar");
+  const { endLabels } = roles(chart);
+  const shapes = [...toShapes(chart), ...markerShapes(chart)];
+  const annotations = [
+    ...(chart.badges?.length ? toAnnotations(chart, width) : []),
+    ...endAnnotations(chart),
+    ...markerAnnotations(chart),
+  ];
+  // The card carries the unit, so the figure drops the y-axis title.
+  const yAxis = unitInCard(chart) ? { ...chart.y_axis, title: "" } : chart.y_axis;
   return {
     paper_bgcolor: theme.bgChart,
     plot_bgcolor: theme.bgChart,
@@ -249,18 +467,16 @@ function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
       itemwidth: 30,
       font: { family: theme.fontSans, color: theme.inkMuted, size: 12 },
     },
-    margin: MARGIN,
+    margin: endLabels ? { ...MARGIN, r: END_LABEL_MARGIN_R } : MARGIN,
     height: chart.height,
-    // On a dual-axis chart the shared x-value is the only thing the two series
-    // genuinely have in common, so read them together rather than one at a time.
-    hovermode: chart.y2_axis ? "x unified" : chart.hover_mode || "closest",
+    hovermode: hoverMode(chart),
     hoverlabel: {
       bgcolor: theme.bgSurface,
       bordercolor: theme.line,
       font: { family: theme.fontSans, color: theme.ink, size: 12 },
     },
-    xaxis: axisLayout(chart.x_axis, false),
-    yaxis: axisLayout(chart.y_axis, true),
+    xaxis: { ...axisLayout(chart.x_axis, false), ...SPIKES },
+    yaxis: { ...axisLayout(yAxis, true), nticks: Y_NTICKS },
     ...(chart.y2_axis
       ? {
           yaxis2: {
@@ -274,8 +490,9 @@ function layoutFor(chart: ChartData, width: number): Record<string, unknown> {
         }
       : {}),
     ...(hasBars ? { barmode: stacked ? "stack" : "group" } : {}),
-    ...(chart.bands?.length ? { shapes: toShapes(chart) } : {}),
-    ...(chart.badges?.length ? { annotations: toAnnotations(chart, width) } : {}),
+    ...(hasBars && chart.bargap != null ? { bargap: chart.bargap } : {}),
+    ...(shapes.length ? { shapes } : {}),
+    ...(annotations.length ? { annotations } : {}),
   };
 }
 
@@ -336,7 +553,7 @@ export function ChartView({ chart }: { chart: ChartData }) {
   }, [chart]);
 
   if (failure) {
-    return <p className="note note--error">Could not draw the chart: {failure}</p>;
+    return <Callout tone="terra">Could not draw the chart: {failure}</Callout>;
   }
 
   return (
@@ -345,6 +562,7 @@ export function ChartView({ chart }: { chart: ChartData }) {
       {chart.title && (
         <figcaption className="tm-plot__title chart__title">{chart.title}</figcaption>
       )}
+      {unitInCard(chart) && <p className="tm-plot__sub chart__unit">{unitInCard(chart)}</p>}
       <div ref={node} className="chart__canvas" />
       {chart.caption && <p className="tm-plot__sub chart__caption">{chart.caption}</p>}
       <button
