@@ -264,6 +264,26 @@ class AuthApiTest(ApiTestCase):
         reused = self.client.post("/auth/reset/confirm", json=confirm, headers=SERVICE)
         self.assertEqual(reused.status_code, 400)
 
+    def test_operator_reset_link_without_mail(self):
+        import contextlib
+        import io
+
+        from api import roles
+
+        old = self.token_for("boss")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(roles.main(["reset-link", f"boss@{DOMAIN}"]), 0)
+        token = out.getvalue().split()[0].rsplit("/", 1)[1]
+        response = self.client.post(
+            "/auth/reset/confirm", json={"token": token, "password": "choisi par le vrai boss"},
+            headers=SERVICE,
+        )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(self.me(old).status_code, 401)
+        # Completing it proves the address: MASTER_EMAIL becomes master.
+        self.assertEqual(self.me(response.json()["session_token"]).json()["account"]["role"], "master")
+
     # --- Strava attachment ------------------------------------------------------------
 
     def test_strava_new_athlete_is_created_attached(self):

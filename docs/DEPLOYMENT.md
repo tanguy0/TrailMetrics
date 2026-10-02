@@ -82,10 +82,9 @@ Environment variables:
 | `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | from step 2 |
 | `ENCRYPTION_KEY` | generated — Fernet key encrypting Strava tokens at rest |
 | `SERVICE_TOKEN` | generated — **must match the web app's** |
-| `WEB_APP_URL` | `https://your-app.vercel.app` |
-| `MASTER_EMAIL` | the operator's email — the account registered with it is `master` |
-| `MAIL_FROM` | sender of reset emails, e.g. `TAGG <no-reply@your-domain>` |
-| `MAIL_RESEND_API_KEY` | Resend API key (or `MAIL_SMTP_HOST` / `_PORT` / `_USER` / `_PASSWORD`) |
+| `WEB_APP_URL` | `https://taggcoaching.vercel.app` |
+| `MASTER_EMAIL` | the operator's email — becomes `master` once proven, shown as the contact without mail |
+| `MAIL_*` | **leave unset** for now — see *Mail* below |
 
 Roles live in the database (`accounts.role`): `master` (blog + coach), `coach`
 (browses other athletes via the sidebar switcher — their data, pages and training
@@ -93,17 +92,44 @@ diary, never their Strava connection), `athlete`. Every account starts as
 `athlete`. The account registered with `MASTER_EMAIL` becomes `master` once it
 proves it holds the address — the verification link sent at sign-up, or a
 completed password reset (which also reclaims the address from anyone who
-registered it first). Any other role, or the master by hand when no mail is
-configured:
+registered it first). Any other role — and the master, while no mail is
+configured — is set by hand, either in the Supabase SQL editor:
 
-```bash
-railway run python -m api.roles set someone@example.com coach
-railway run python -m api.roles show someone@example.com
+```sql
+update accounts set role = 'master' where email = 'tanguy.blervacque@gmail.com';
+update accounts set role = 'coach' where email = 'someone@example.com';
 ```
 
-Without `MAIL_FROM` and a provider, no verification link is sent and "Forgot your
-password?" shows "write to `MASTER_EMAIL`" instead. With Resend, verify the
-sending domain first.
+or from a shell in the API container (`railway ssh`):
+
+```bash
+python -m api.roles set someone@example.com coach
+python -m api.roles show someone@example.com
+```
+
+### Mail
+
+The deployment runs **without mail**: `MAIL_FROM` is unset, so nothing is sent.
+No verification link at sign-up (the Home reminder stays hidden), no coaching
+notification, and "Forgot your password?" shows "write to `MASTER_EMAIL`"
+instead of a form. A reset is then done by hand: check that the person writing
+does own the address, then send them a link —
+
+```bash
+python -m api.roles reset-link someone@example.com   # in a `railway ssh` shell
+```
+
+— valid 30 minutes, single use, and it signs out every device, exactly like
+the emailed one. Completing it also proves the address (so it is how the
+master account can verify itself, too).
+
+Why not just send from Gmail: the web app lives on `taggcoaching.vercel.app`,
+whose DNS is Vercel's, so no mail service can be authorized to send for it
+(SPF/DKIM/DMARC, required by Gmail, Yahoo and Microsoft); and Railway blocks
+outbound SMTP below the Pro plan. Turning mail on later needs no code: buy a
+domain (e.g. `taggcoaching.com`, ~10 $/year), verify `mail.<domain>` at Resend
+(free tier), then set `MAIL_FROM=TAGG <no-reply@mail.<domain>>` and
+`MAIL_RESEND_API_KEY`. Resend is an HTTPS API, so the SMTP block does not apply.
 
 Sessions are opaque tokens stored hashed in `sessions` (30 days, sliding). The
 JWT sessions of earlier versions are no longer read: after this deploy everyone
@@ -160,17 +186,23 @@ the app has an audience.
 components and route handlers, so neither reaches the browser bundle. Do not rename
 them with a `NEXT_PUBLIC_` prefix — that would publish the service token.
 
-Once both are deployed, set `WEB_APP_URL` on the API to the real Vercel URL and
-redeploy it.
+Once both are deployed, set `WEB_APP_URL` on the API to the real Vercel URL
+(`https://taggcoaching.vercel.app`) and redeploy it. The same URL goes in
+`NEXT_PUBLIC_APP_URL` on Vercel (build-time: redeploy after changing it) and its
+host in the Strava app's *Authorization Callback Domain*.
 
 ## 5. First run
 
-1. Open the app and **Connect with Strava**.
-2. **Import my activities.** This is the slow part: Strava allows 100 requests per 15
+1. Open the app and **create your account** with `MASTER_EMAIL`, then make it
+   `master` (SQL editor or `api.roles`, see above) — without mail there is no
+   verification link to do it for you.
+2. **Connect Strava** from Home: an athlete who signed in before accounts gets
+   their history and saved plans back.
+3. **Import my activities.** This is the slow part: Strava allows 100 requests per 15
    minutes, so a long history takes a while. It runs in the background, writes rows in
    batches, and is resumable — re-running continues where it stopped, because
    already-stored activities are skipped.
-3. Set your weight to unlock the power and power-to-heart-rate metrics.
+4. Set your weight to unlock the power and power-to-heart-rate metrics.
 
 ## Operational notes
 
