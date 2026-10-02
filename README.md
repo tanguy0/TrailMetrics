@@ -206,8 +206,10 @@ The analytics primitives it shared (`gap/`, `races/metrics.py`, `races/smoothing
   That listing is walked by every sync anyway, which is why
   `set_relative_efforts` can refresh the whole history for free, and why a column
   added after an import backfills on the next sync instead of needing a re-import.
-* **Strava returns no email address**, under any scope. The app asks for one at
-  `/welcome`, immediately after the first sign-in, and stores it on `athletes.email`.
+* **Identity is an account, not Strava** (design/specs/auth.md). Email + password
+  (argon2id), opaque revocable sessions; a Strava athlete attaches to an account
+  through `athletes.account_id`. Strava returns no email address under any scope,
+  which is one reason it no longer signs anyone in. `athletes.email` is legacy.
 * **Activities without per-second streams** (manual entries, activities Strava won't
   serve) still get a feature row from the activity summary, so they count in volume
   trends. Plots that need full traces skip them *and say how many they skipped*.
