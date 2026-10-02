@@ -1,27 +1,31 @@
-"""The coach's athlete roster.
+"""The coach's athlete roster — the rail's "Athlete" switcher.
 
-A coach is an account whose ``role`` is coach or master. Everything about
-actually *viewing* another athlete's account happens for free: ``current_athlete_id``
-(api/deps.py) resolves to the athlete named by the ``X-View-As-Athlete-Id`` header
-instead of the signed-in coach's own id, so every endpoint already scoped to
-``athlete.id`` picks it up with no change. This router only answers "who can I
-switch to."
+A coach is an account whose ``role`` is coach or master, and its roster is the
+athletes it coaches (``coaching``, design/specs/coaching.md) — not every
+athlete. Viewing one happens for free: ``current_athlete_id`` (api/deps.py)
+resolves to the athlete named by the ``X-View-As-Athlete-Id`` header, after
+checking the same table, so every endpoint scoped to ``athlete.id`` picks it up.
 """
 
 from fastapi import APIRouter, Depends
 
-from api.deps import get_athlete_repository, require_coach
-from api.serialization import athlete_summary_payload
+from api.deps import get_coaching_repository, require_coach
 from src.domain.ports.accounts import Account
 
 router = APIRouter(prefix="/coach", tags=["coach"])
 
 
 @router.get("/athletes")
-def list_athletes(_: Account = Depends(require_coach)) -> dict:
+def list_athletes(coach: Account = Depends(require_coach)) -> dict:
+    """The coached athletes that can be viewed — those with Strava attached."""
     return {
         "athletes": [
-            athlete_summary_payload(athlete)
-            for athlete in get_athlete_repository().list_all()
+            {
+                "id": row["athlete_id"],
+                "display_name": row["display_name"],
+                "profile_url": row["profile_url"],
+            }
+            for row in get_coaching_repository().coached_by(coach.id)
+            if row["athlete_id"] is not None
         ]
     }

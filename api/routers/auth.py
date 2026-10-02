@@ -45,6 +45,7 @@ from api.deps import (
     get_account_repository,
     get_activity_repository,
     get_athlete_repository,
+    get_coaching_repository,
     get_level_repository,
     get_token_service,
     invalidate_caches,
@@ -442,6 +443,9 @@ def session(request: Request, account: Account = Depends(current_account)) -> di
         "strava_connected": request.state.account_athlete_id is not None,
         "is_coach": account.is_coach,
         "is_master": account.is_master,
+        # Opens the Coaching page (design/specs/coaching.md: the predicate, not
+        # an environment variable).
+        "is_coached": get_coaching_repository().is_coached(account.id),
         "email_verified": account.email_verified,
         "lang": account.lang,
     }

@@ -40,6 +40,7 @@ from src.infrastructure.postgres.activity_comment_repository import (
 )
 from src.infrastructure.postgres.account_repository import PostgresAccountRepository
 from src.infrastructure.postgres.activity_repository import PostgresActivityRepository
+from src.infrastructure.postgres.coaching_repository import PostgresCoachingRepository
 from src.infrastructure.postgres.athlete_repository import PostgresAthleteRepository
 from src.infrastructure.postgres.level_repository import PostgresLevelRepository
 from src.infrastructure.postgres.page_repository import PostgresPageRepository
@@ -136,6 +137,11 @@ def get_athlete_repository() -> AthleteRepository:
 @lru_cache(maxsize=1)
 def get_account_repository() -> PostgresAccountRepository:
     return PostgresAccountRepository(get_database())
+
+
+@lru_cache(maxsize=1)
+def get_coaching_repository() -> PostgresCoachingRepository:
+    return PostgresCoachingRepository(get_database())
 
 
 @lru_cache(maxsize=1)
@@ -347,7 +353,8 @@ def current_athlete_id(request: Request, account: Account = Depends(current_acco
 
     A coach account (``role`` coach or master) can override this via the
     ``X-View-As-Athlete-Id`` header the web app attaches while browsing another
-    athlete's account (see web/app/api/proxy). Every endpoint keyed on this
+    athlete's account (see web/app/api/proxy) — but only for an athlete it
+    coaches (a row in ``coaching``); any other id is ignored. Every endpoint keyed on this
     dependency — which is nearly all of them — picks that up for free; the one
     exception is guarded explicitly with :func:`block_when_viewing_as`. The
     account's own athlete is still recorded on ``request.state`` for that check.
@@ -361,7 +368,11 @@ def current_athlete_id(request: Request, account: Account = Depends(current_acco
             target_id = int(view_as)
         except ValueError:
             target_id = None
-        if target_id is not None and target_id != real_id:
+        if (
+            target_id is not None
+            and target_id != real_id
+            and get_coaching_repository().coaches_athlete(account.id, target_id)
+        ):
             return target_id
     if real_id is None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=STRAVA_NOT_CONNECTED)

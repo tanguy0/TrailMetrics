@@ -30,6 +30,7 @@ from api.routers import (
     auth,
     blog,
     coach,
+    coaching,
     home,
     pages,
     precompute,
@@ -226,6 +227,7 @@ app.include_router(training.router)
 app.include_router(precompute.router)
 app.include_router(assets.router)
 app.include_router(coach.router)
+app.include_router(coaching.router)
 app.include_router(blog.router)
 app.include_router(race_plan.router)
 app.include_router(race_plan.saved_router)

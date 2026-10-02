@@ -47,11 +47,7 @@ class ApiTestCase(unittest.TestCase):
         )
         config._settings = settings
         main.settings = settings
-        for cached in (
-            deps.get_database, deps.get_account_repository, deps.get_athlete_repository,
-            deps.get_activity_repository, deps.get_token_service, mail.get_mail_sender,
-        ):
-            cached.cache_clear()
+        cls._clear_singletons(deps, mail)
         cls.deps = deps
         cls.main = main
         cls.db = deps.get_database()
@@ -61,8 +57,19 @@ class ApiTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls._clean()
-        cls.deps.get_database.cache_clear()
         cls.db.close()
+        import api.mail as mail
+
+        # Every process singleton holds the pool this class just closed; the
+        # next class must not inherit any of them.
+        cls._clear_singletons(cls.deps, mail)
+
+    @staticmethod
+    def _clear_singletons(*modules):
+        for module in modules:
+            for value in vars(module).values():
+                if callable(getattr(value, "cache_clear", None)):
+                    value.cache_clear()
 
     @classmethod
     def _clean(cls):

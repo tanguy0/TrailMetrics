@@ -1244,6 +1244,94 @@ TRANSLATIONS = {
     "ui.pages.new.from_template": {"en": "From a template", "fr": "À partir d’un modèle"},
     "ui.pages.new.title": {"en": "New analysis", "fr": "Nouvelle analyse"},
 
+    # --- Coaching (v2): design/specs/coaching.md --------------------------------
+    "ui.coaching.offer.kicker": {"en": "Coached by TAGG", "fr": "Coaché par TAGG"},
+    "ui.coaching.offer.title": {
+        "en": "A plan built on your data, not on a template",
+        "fr": "Un plan construit sur vos données, pas sur un modèle",
+    },
+    "ui.coaching.offer.1": {
+        "en": "A weekly plan fitted to your Strava history",
+        "fr": "Un plan hebdomadaire adapté à votre historique Strava",
+    },
+    "ui.coaching.offer.2": {
+        "en": "Exchanges with your coach, right in the diary",
+        "fr": "Des échanges avec le coach, directement dans le carnet",
+    },
+    "ui.coaching.offer.3": {
+        "en": "Adjustments every week, from what you actually ran",
+        "fr": "Des ajustements chaque semaine, à partir de ce que vous avez couru",
+    },
+    "ui.coaching.offer.proof": {"en": "athletes coached", "fr": "athlètes coachés"},
+    "ui.coaching.offer.preview": {"en": "Your diary", "fr": "Votre carnet"},
+    "ui.coaching.offer.planned": {"en": "Planned", "fr": "Prévu"},
+    "ui.coaching.offer.done": {"en": "Done", "fr": "Réalisé"},
+    "ui.coaching.form.title": {"en": "Ask for coaching", "fr": "Demander un coaching"},
+    "ui.coaching.form.message": {
+        "en": "Your goal, your current training, what you expect",
+        "fr": "Votre objectif, votre entraînement actuel, ce que vous attendez",
+    },
+    "ui.coaching.form.contact": {"en": "How should the coach reach you?", "fr": "Comment le coach vous joint-il ?"},
+    "ui.coaching.form.by_email": {"en": "By email", "fr": "Par e-mail"},
+    "ui.coaching.form.by_phone": {"en": "By phone", "fr": "Par téléphone"},
+    "ui.coaching.form.phone": {"en": "Phone", "fr": "Téléphone"},
+    "ui.coaching.form.send": {"en": "Send my request", "fr": "Envoyer ma demande"},
+    "ui.coaching.form.save": {"en": "Save changes", "fr": "Enregistrer"},
+    "ui.coaching.state.sent": {
+        "en": "Request sent on {date} — the coach will reply by email or phone.",
+        "fr": "Demande envoyée le {date} — le coach vous répond par e-mail ou téléphone.",
+    },
+    "ui.coaching.state.edit": {"en": "Edit", "fr": "Modifier"},
+    "ui.coaching.state.withdraw": {"en": "Withdraw", "fr": "Retirer"},
+    "ui.coaching.state.declined": {
+        "en": "The coach cannot take you on for the moment.",
+        "fr": "Le coach ne peut pas vous prendre pour le moment.",
+    },
+    "ui.coaching.state.again_on": {
+        "en": "You can ask again from {date}.",
+        "fr": "Vous pourrez redemander à partir du {date}.",
+    },
+    "ui.coaching.needs_strava": {
+        "en": "Your diary fills in from your activities: connect Strava.",
+        "fr": "Votre carnet se remplit à partir de vos activités : connectez Strava.",
+    },
+    "ui.coaching.error.coached": {
+        "en": "You are already coached.", "fr": "Vous êtes déjà coaché.",
+    },
+    "ui.coaching.error.phone_needed": {
+        "en": "Enter a phone number, or choose email.",
+        "fr": "Indiquez un numéro, ou choisissez l’e-mail.",
+    },
+    "ui.coaching.error.phone_invalid": {
+        "en": "This does not look like a phone number.",
+        "fr": "Cela ne ressemble pas à un numéro de téléphone.",
+    },
+    "ui.coaching.error.too_soon": {
+        "en": "A new request is possible 30 days after a decline.",
+        "fr": "Une nouvelle demande est possible 30 jours après un refus.",
+    },
+    "ui.coaching.mail.subject": {
+        "en": "TAGG — coaching request from {email}",
+        "fr": "TAGG — demande de coaching de {email}",
+    },
+    "ui.coaching.mail.body": {
+        "en": "New coaching request.\n\nFrom: {email}\nContact: {contact}\n\n{message}\n\n"
+              "Answer it from the Coaching page.",
+        "fr": "Nouvelle demande de coaching.\n\nDe : {email}\nContact : {contact}\n\n{message}\n\n"
+              "Répondez-y depuis la page Coaching.",
+    },
+    "ui.coaching.board.title": {"en": "Athletes", "fr": "Athlètes"},
+    "ui.coaching.board.pending": {"en": "Pending", "fr": "En attente"},
+    "ui.coaching.board.coached": {"en": "Coached", "fr": "Coachés"},
+    "ui.coaching.board.accept": {"en": "Accept", "fr": "Accepter"},
+    "ui.coaching.board.decline": {"en": "Decline", "fr": "Décliner"},
+    "ui.coaching.board.view_as": {"en": "View as", "fr": "Voir comme"},
+    "ui.coaching.board.last_activity": {"en": "Last activity", "fr": "Dernière activité"},
+    "ui.coaching.board.none_pending": {"en": "No pending request.", "fr": "Aucune demande en attente."},
+    "ui.coaching.board.none_coached": {"en": "No athlete yet.", "fr": "Aucun athlète pour l’instant."},
+    "ui.coaching.board.no_strava": {"en": "Strava not connected", "fr": "Strava non connecté"},
+    "ui.coaching.my_athletes": {"en": "My athletes", "fr": "Mes athlètes"},
+
     # --- Level assessment (v2): design/specs/level.md ------------------------
     "ui.level.error.half_cooper_range": {
         "en": "Six minutes all out lands between {low} and {high} m — check the distance.",

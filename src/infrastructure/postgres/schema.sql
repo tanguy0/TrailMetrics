@@ -455,6 +455,38 @@ create table if not exists level_estimates (
 create index if not exists level_estimates_account_created_idx
     on level_estimates (account_id, created_at desc);
 
+-- --- Coaching (v2, design/specs/coaching.md) ---------------------------------
+
+-- A request to be coached. One pending per account (partial unique index); a
+-- decided request stays as a record — declining never deletes.
+create table if not exists coaching_requests (
+    id          uuid primary key default gen_random_uuid(),
+    account_id  uuid not null references accounts(id) on delete cascade,
+    message     text not null default '',
+    phone       text,                               -- as typed
+    phone_e164  text,                               -- normalized when possible
+    contact     text not null check (contact in ('email', 'phone')),
+    status      text not null default 'pending'
+                check (status in ('pending', 'accepted', 'declined', 'withdrawn')),
+    created_at  timestamptz not null default now(),
+    decided_at  timestamptz,
+    decided_by  uuid references accounts(id) on delete set null
+);
+
+create unique index if not exists coaching_requests_one_pending_idx
+    on coaching_requests (account_id) where status = 'pending';
+
+-- Who coaches whom. `is_coached` is "a row exists with athlete_id = me"; the
+-- rail's athlete switcher and the view-as check both read this table.
+create table if not exists coaching (
+    coach_id    uuid not null references accounts(id) on delete cascade,
+    athlete_id  uuid not null references accounts(id) on delete cascade,
+    since       timestamptz not null default now(),
+    primary key (coach_id, athlete_id)
+);
+
+create index if not exists coaching_athlete_idx on coaching (athlete_id);
+
 -- --- Row-level security -----------------------------------------------------
 
 -- No policies defined: this is a default-deny backstop for any role other than
@@ -477,4 +509,6 @@ alter table sessions enable row level security;
 alter table password_resets enable row level security;
 alter table email_verifications enable row level security;
 alter table level_estimates enable row level security;
+alter table coaching_requests enable row level security;
+alter table coaching enable row level security;
 alter table login_attempts enable row level security;
