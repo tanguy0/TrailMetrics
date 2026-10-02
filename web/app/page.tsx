@@ -13,6 +13,7 @@
 import { redirect } from "next/navigation";
 
 import { Icon, type IconName } from "@/components/Icon";
+import { Callout } from "@/components/Callout";
 import { signInHref } from "@/lib/auth";
 import { readSession } from "@/lib/session";
 import { translator, type Translate } from "@/lib/strings";
@@ -48,7 +49,7 @@ export default async function Landing({
 
       <p className="lede">{t("visitor.lede")}</p>
 
-      {error && <p className="note note--error">{error}</p>}
+      {error && <Callout tone="terra">{error}</Callout>}
 
       <div className="tm-access">
         <AccessColumn
@@ -98,7 +99,9 @@ function AccessColumn({
   t: Translate;
 }) {
   return (
-    <div className="tm-access__col">
+    // "With Strava" is the landing's one tinted block (contrast.md § 1): the
+    // column the visitor is being invited into.
+    <div className={`tm-access__col landing__col${locked ? " tm-panel--tint" : ""}`}>
       <div className="tm-access__head">
         {title}
         <span className={`tm-chip tm-chip--${tone}`}>{tier}</span>

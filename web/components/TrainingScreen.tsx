@@ -34,6 +34,7 @@ import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { PageHeader } from "@/components/PageHeader";
 import { SessionDetail } from "@/components/SessionDetail";
+import { Callout } from "@/components/Callout";
 import {
   ApiError,
   createPlannedItem,
@@ -475,7 +476,7 @@ export function TrainingScreen({ strings }: { strings: Strings }) {
     <main className="container">
       <PageHeader kicker={formatDate(todayIso)} title={t("nav.training")} />
 
-      {error && <p className="note note--error">{error}</p>}
+      {error && <Callout tone="terra">{error}</Callout>}
 
       <div className="training-calendar" ref={containerRef}>
         <div ref={topSentinelRef} className="training-sentinel" />
@@ -713,6 +714,10 @@ function WeekSummary({
     ? Math.round(feelingScores.reduce((a, b) => a + b, 0) / feelingScores.length)
     : null;
   const avgFeeling = avgFeelingScore != null ? FEELING_BY_SCORE[avgFeelingScore - 1] : null;
+  // The current week is the screen's one hero (design/tagg/contrast.md § 1):
+  // the same grid, on the hero's dark fill, its running distance as the key
+  // figure. Every other week keeps the cream summary.
+  const isCurrent = days.includes(todayIso);
 
   // Always all 3 — a quiet week reads as zeros in its sport's own colour, not as
   // a column disappearing, so the card's shape never shifts week to week.
@@ -724,7 +729,13 @@ function WeekSummary({
 
   return (
     <div className="training-week__summary">
-      <div className="tm-week-summary week-summary">
+      <div
+        className={
+          isCurrent
+            ? "tm-week-summary tm-hero tm-hero--compact week-summary week-summary--current"
+            : "tm-week-summary week-summary"
+        }
+      >
         <div className="tm-section__kicker week-summary__title" style={{ gridColumn: "1 / -1", gridRow: 1 }}>
           {t("training.week.summary_title")}
         </div>
@@ -746,6 +757,7 @@ function WeekSummary({
             totals={column.totals}
             label={column.label}
             gridColumn={index + 2}
+            isKey={isCurrent && column.sport === "run"}
           />
         ))}
 
@@ -799,11 +811,14 @@ function SportColumn({
   totals,
   label,
   gridColumn,
+  isKey = false,
 }: {
   sport: SportKey;
   totals: { distance_m: number; elevation_gain_m: number; moving_s: number };
   label: string;
   gridColumn: number;
+  /** The hero's key figure (`is-key`, sun): the current week's running distance. */
+  isKey?: boolean;
 }) {
   return (
     <div style={{ display: "contents" }}>
@@ -814,7 +829,7 @@ function SportColumn({
       >
         {label}
       </span>
-      <span className="week-summary__value" style={{ gridColumn, gridRow: 3 }}>
+      <span className={`week-summary__value${isKey ? " is-key" : ""}`} style={{ gridColumn, gridRow: 3 }}>
         {formatDistanceAdaptive(totals.distance_m / 1000)} km
       </span>
       <span className="week-summary__value" style={{ gridColumn, gridRow: 4 }}>

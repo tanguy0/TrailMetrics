@@ -496,6 +496,16 @@ input[type="radio"] {
   color: var(--danger);
 }
 
+/* Callouts sit in the flow the old notes did; a callout carrying several
+   notes stacks them one per line. */
+.tm-callout {
+  margin: 0.5rem 0;
+}
+
+.callout__line {
+  display: block;
+}
+
 .pending {
   display: flex;
   align-items: center;
@@ -1759,6 +1769,28 @@ input[type="radio"] {
   text-overflow: ellipsis;
 }
 
+/* The current week as the screen's hero (tm-hero tm-hero--compact): the grid
+   above keeps its layout, the hero gives the fill; text goes cream, labels and
+   icons muted, the running distance (`is-key`) sun. */
+.week-summary--current {
+  display: grid;
+  padding: 0.65rem var(--week-summary-pad-x);
+}
+
+.week-summary--current .tm-section__kicker,
+.week-summary--current .tm-week-summary__label,
+.week-summary--current .tm-week-summary__icon {
+  color: var(--on-hero-muted);
+}
+
+.week-summary--current .week-summary__value {
+  color: var(--on-forest);
+}
+
+.week-summary--current .week-summary__value.is-key {
+  color: var(--sun);
+}
+
 .training-day {
   min-width: 0;
   min-height: 7rem;
@@ -2087,6 +2119,10 @@ a.new-page {
   color: var(--forest);
 }
 
+.race-plan__hero {
+  margin-bottom: var(--space-4);
+}
+
 .race-plan__form {
   display: flex;
   flex-direction: column;
@@ -2232,4 +2268,11 @@ a.new-page {
 .visitor-more {
   margin: var(--space-8) 0 0;
   color: var(--ink-muted);
+}
+
+/* The landing's two access columns share one inset, so the tinted "With
+   Strava" column and the plain one line up. */
+.landing__col {
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
 }

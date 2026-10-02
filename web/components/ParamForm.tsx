@@ -14,6 +14,7 @@ import { useCallback, useState } from "react";
 import { uploadAsset } from "@/lib/api";
 import { evaluateCondition } from "@/lib/conditions";
 import type { Choice, MetricInfo, ParamSpec } from "@/lib/types";
+import { Callout } from "@/components/Callout";
 
 type Values = Record<string, unknown>;
 
@@ -278,7 +279,7 @@ function ImageField({
         onChange={(event) => onChange(event.target.value)}
       />
 
-      {failure && <p className="note note--error">{failure}</p>}
+      {failure && <Callout tone="terra">{failure}</Callout>}
       {value && (
         // A thumbnail here rather than only in the output: an image that fails to
         // load says so while the URL is still in front of you.

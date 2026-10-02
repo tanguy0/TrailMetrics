@@ -13,6 +13,7 @@ import { ChartView } from "./ChartView";
 import { ImageBlockView, TextBlockView } from "./ContentBlocks";
 import { TableView } from "./TableView";
 import type { PlotResult } from "@/lib/types";
+import { Callout } from "@/components/Callout";
 
 export function PlotOutputView({
   result,
@@ -23,9 +24,9 @@ export function PlotOutputView({
 }) {
   if (result.error) {
     return (
-      <p className="note note--error">
+      <Callout tone="terra">
         <strong>{result.plot_type}</strong> failed: {result.error}
-      </p>
+      </Callout>
     );
   }
 
@@ -75,13 +76,16 @@ export function PlotOutputView({
       {/* A content block that is simply still empty says nothing: its own editor is
           right above it, and "no data for this selection" would be a lie. */}
       {empty && !notes.length && !texts.length && !images.length && (
-        <p className="note">No data for this selection.</p>
+        <Callout>No data for this selection.</Callout>
       )}
-      {notes.map((note, index) => (
-        <p key={index} className="note">
-          {note}
-        </p>
-      ))}
+      {/* One callout per card at most: the notes go in it together. */}
+      {notes.length > 0 && (
+        <Callout>
+          {notes.map((note, index) => (
+            <span className="callout__line" key={index}>{note}</span>
+          ))}
+        </Callout>
+      )}
     </div>
   );
 }

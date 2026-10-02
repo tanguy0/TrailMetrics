@@ -25,6 +25,7 @@ import type {
   SourceMode,
   TimeWindow,
 } from "@/lib/types";
+import { Callout } from "@/components/Callout";
 
 // Running, cycling, hiking and swimming can never be plotted together (GAP,
 // modelled power and records aren't comparable across a foot split, a bike
@@ -263,7 +264,7 @@ function WindowRow({
           Remove
         </button>
       )}
-      {invalid && <span className="note note--error">Start is after end.</span>}
+      {invalid && <span className="tm-chip tm-chip--danger">Start is after end.</span>}
     </div>
   );
 }
@@ -322,7 +323,7 @@ function WindowList({
         </button>
       </div>
       {overlaps.length > 0 && (
-        <p className="note">Windows overlap: {overlaps.join(", ")}. Activities count in both.</p>
+        <Callout>Windows overlap: {overlaps.join(", ")}. Activities count in both.</Callout>
       )}
     </div>
   );
@@ -456,7 +457,7 @@ function SportPicker({
         ))}
       </div>
       {checked.size === 0 && (
-        <p className="note note--error">No sport selected — nothing will be shown.</p>
+        <Callout tone="terra">No sport selected — nothing will be shown.</Callout>
       )}
     </div>
   );
