@@ -310,6 +310,8 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
         traces=traces,
         caption=_caption(metric, aggregation, granularity, lang),
         family=family,
+        # Fitness/fatigue is always daily; elapsed months are not dates.
+        x_bucket=None if x_mode == "elapsed" else ("day" if _is_ff(metric) else granularity),
     )
     output = PlotOutput(charts=[chart], notes=notes)
     if params.get("show_totals"):

@@ -130,6 +130,7 @@ def _group_chart(
     ]
 
     return ChartData(
+        x_bucket=granularity,
         title=title,
         x_axis=Axis(title=translate("plot.ltp.gradient_map.x", lang), kind=AxisKind.DATE),
         y_axis=Axis(title=translate("plot.ltp.gradient_map.y", lang),

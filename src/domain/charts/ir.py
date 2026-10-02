@@ -189,6 +189,9 @@ class Marker:
     kind: str  # today | race | aid | boundary
     x: Any
     label: str = ""
+    # A race in the current period shares today's x on a binned axis: its label
+    # then stacks above today's instead of sitting on the axis.
+    stacked: bool = False
 
 
 @dataclass
@@ -230,6 +233,10 @@ class ChartData:
     # An oscillation's reference level, drawn as a line-strong rule; ``None``
     # takes 0 when the data straddles it, else the window's mean.
     baseline: Optional[float] = None
+    # A date axis binned into periods — day | week | month | quarter | year —
+    # each point sitting on its period's first day. Markers align to it
+    # (src.domain.charts.markers); ``None`` is an unbinned or non-date axis.
+    x_bucket: Optional[str] = None
     # Caption rendered under the figure.
     caption: Optional[str] = None
 

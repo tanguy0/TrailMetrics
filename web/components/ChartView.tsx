@@ -47,6 +47,7 @@ const END_LABEL_MARGIN_R = 52;
 const BAR_LABEL_FONT_SIZE = 11;
 const MARKER_DASH = "2px,4px";
 const RACE_DOT_PX = 4;
+const STACKED_LABEL_SHIFT = 14;
 
 /** Mirrors `SPIKES` in src/domain/plotting_common.py. */
 const SPIKES = {
@@ -444,10 +445,11 @@ function markerAnnotations(chart: ChartData): Record<string, unknown>[] {
   return (chart.markers ?? []).filter((marker) => marker.kind !== "boundary").map((marker) => ({
     x: encode([marker.x], chart.x_axis)[0],
     xref: "x",
-    y: marker.kind === "today" ? 1 : 0,
+    // A race sharing today's x stacks its label above today's, at the top.
+    y: marker.kind === "today" || marker.stacked ? 1 : 0,
     yref: "y domain",
     yanchor: "bottom",
-    yshift: marker.kind === "today" ? 0 : 2 * RACE_DOT_PX + 2,
+    yshift: marker.kind === "today" ? 0 : marker.stacked ? STACKED_LABEL_SHIFT : 2 * RACE_DOT_PX + 2,
     text: marker.label,
     showarrow: false,
     font: {

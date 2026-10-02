@@ -60,6 +60,8 @@ _BAR_LABEL_FONT_SIZE = 11
 # Today's dotted line, and a race's dot on the x-axis.
 _MARKER_DASH = "2px,4px"
 _RACE_DOT_PX = 4
+# A race sharing today's x (binned axis) stacks its label this far above today's.
+_STACKED_LABEL_SHIFT = 14
 
 
 # Headroom either side of the data, as a share of its span (Plotly's autorange
@@ -359,8 +361,11 @@ def _add_markers(fig: go.Figure, chart: ChartData) -> None:
                 x0=-_RACE_DOT_PX, x1=_RACE_DOT_PX, y0=0, y1=2 * _RACE_DOT_PX,
                 fillcolor=theme.RACE_MARKER, line_width=0,
             )
+            # In the current period the label stacks above today's, at the top.
+            top = marker.stacked
             fig.add_annotation(
-                x=x, xref="x", y=0, yref="y domain", yanchor="bottom", yshift=2 * _RACE_DOT_PX + 2,
+                x=x, xref="x", y=1 if top else 0, yref="y domain", yanchor="bottom",
+                yshift=_STACKED_LABEL_SHIFT if top else 2 * _RACE_DOT_PX + 2,
                 text=marker.label, showarrow=False,
                 font=dict(family=theme.FONT_MONO, size=_END_LABEL_FONT_SIZE, color=theme.RACE_MARKER),
             )

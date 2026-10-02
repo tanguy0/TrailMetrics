@@ -115,6 +115,7 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
         bargap=_FORM_BARGAP,
         family="oscillation",
         baseline=0.0,
+        x_bucket="day",
     )
     return PlotOutput(charts=[chart], notes=notes)
 

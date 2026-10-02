@@ -250,6 +250,8 @@ export interface Marker {
   kind: "today" | "race" | "aid" | "boundary";
   x: number | string;
   label: string;
+  /** A race in the current period: its label stacks above today's. */
+  stacked?: boolean;
 }
 
 export type ChartFamily =
@@ -285,6 +287,8 @@ export interface ChartData {
   family?: ChartFamily | null;
   /** An oscillation's reference level; null = 0 if the data straddles it, else the mean. */
   baseline?: number | null;
+  /** A binned date axis (day | week | month | quarter | year); markers align to it. */
+  x_bucket?: string | null;
   caption: string | null;
 }
 

@@ -116,6 +116,7 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
 
     x = [w.start for w in weeks]
     return PlotOutput(charts=[ChartData(
+        x_bucket="week",
         title=translate("plot.weekly_feel.label", lang),
         x_axis=Axis(title="", kind=AxisKind.DATE),
         y_axis=Axis(
