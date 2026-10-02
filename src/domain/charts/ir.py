@@ -64,6 +64,10 @@ class Axis:
     # Tint the axis title and ticks to match the series measured against it. Set on
     # dual-axis charts, where "which axis is this line on?" is otherwise a guess.
     color: Optional[str] = None
+    # Fixed ticks with their own words, for an ordinal scale (feeling: weak / ok /
+    # strong). Both or neither.
+    tick_values: Optional[List[float]] = None
+    tick_labels: Optional[List[str]] = None
 
 
 @dataclass

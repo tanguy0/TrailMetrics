@@ -54,7 +54,6 @@ import type {
   PanelSpec,
   Trace,
 } from "@/lib/types";
-import { tokens } from "@/lib/theme";
 
 const POLL_MS = 2000;
 const WEEKS_SHOWN = 20;
@@ -1278,19 +1277,16 @@ function RecentFormCard({
   );
 }
 
+/** The feeling scale of plots/weekly_feel.py, by its score on the right axis. */
+const FEELING_BY_SCORE = ["faible", "ok", "fort"] as const;
+
 /**
- * The feeling of the last rated week, read off the Feel chart's background
- * bands — each band is one week, coloured by its average feeling (the colours
- * of plots/weekly_feel.py `_FEELING_COLOR`).
+ * The feeling of the last rated week, read off the Feel chart's feeling line —
+ * the series on its right axis, one point per week, scored 1 (weak) to 3 (strong).
  */
 function lastFeeling(chart: ChartData | undefined): "faible" | "ok" | "fort" | null {
-  const band = chart?.bands[chart.bands.length - 1];
-  if (!band) return null;
-  const color = band.color.toLowerCase();
-  if (color === tokens.forest) return "fort";
-  if (color === tokens.sun) return "ok";
-  if (color === tokens.danger) return "faible";
-  return null;
+  const score = lastValue(chart?.traces.find((trace) => trace.axis === "y2")?.y);
+  return score != null ? FEELING_BY_SCORE[Math.round(score) - 1] ?? null : null;
 }
 
 /**

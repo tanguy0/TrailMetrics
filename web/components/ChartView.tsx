@@ -225,6 +225,11 @@ function axisLayout(axis: Axis, grid: boolean): Record<string, unknown> {
 
   if (axis.suffix) layout.ticksuffix = axis.suffix;
   if (axis.dtick != null) layout.dtick = axis.dtick;
+  if (axis.tick_values?.length && axis.tick_labels?.length) {
+    layout.tickmode = "array";
+    layout.tickvals = axis.tick_values;
+    layout.ticktext = axis.tick_labels;
+  }
   // Tints the axis to its series, so a dual-axis chart says which line it measures.
   if (axis.color) {
     layout.title = { text: axis.title, font: { ...AXIS_FONT, color: axis.color } };

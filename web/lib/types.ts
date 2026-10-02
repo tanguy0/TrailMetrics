@@ -170,6 +170,9 @@ export interface Axis {
   dtick: number | null;
   /** Tints the axis to its series; set on dual-axis charts. */
   color: string | null;
+  /** Fixed ticks with their own words, for an ordinal scale. Both or neither. */
+  tick_values?: number[] | null;
+  tick_labels?: string[] | null;
 }
 
 export interface Trace {

@@ -427,6 +427,9 @@ def _axis_kwargs(axis: Axis) -> dict:
         kwargs["ticksuffix"] = axis.suffix
     if axis.dtick is not None:
         kwargs["dtick"] = axis.dtick
+    if axis.tick_values and axis.tick_labels:
+        kwargs.update(tickmode="array", tickvals=list(axis.tick_values),
+                      ticktext=list(axis.tick_labels))
     if axis.color:
         kwargs["title"] = dict(
             text=axis.title or "", font=dict(family=theme.FONT_MONO, size=11, color=axis.color)
