@@ -72,7 +72,7 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
             kind=TraceKind.SCATTER,
             color=color,
             marker_size=8,
-            opacity=0.85,
+            opacity=0.6,
             hover_text=labels,
             hover_template="%{customdata}<extra>%{fullData.name}</extra>",
         ))
@@ -84,7 +84,13 @@ def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
                 notes.append(translate("plot.scatter.trend_unavailable", lang).format(
                     series=label))
 
+    # The legend only says something once there are groups to tell apart.
+    points = [t for t in traces if t.kind is TraceKind.SCATTER]
+    if len(points) == 1:
+        points[0].show_legend = False
+
     chart = ChartData(
+        family="scatter",
         title=translate("plot.scatter.title", lang).format(
             y=metric_label(y_metric, lang), x=metric_label(x_metric, lang)),
         x_axis=metric_axis(x_metric, lang),
@@ -120,8 +126,8 @@ def _trendline(x, y, label: str, color: str, lang: str):
         y=[slope * v + intercept for v in x_line],
         kind=TraceKind.LINE,
         color=color,
-        dash="--",
-        width=1.5,
+        # charts.md § v1.2: a solid 2 px trend in its group's own colour.
+        width=2.0,
         show_legend=False,
         legend_group=label,
         hover_template="<extra></extra>",
