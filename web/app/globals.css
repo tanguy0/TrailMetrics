@@ -2467,6 +2467,13 @@ a.tm-segment__item {
 }
 
 .level-form,
+/* A profile's way on to Analysis, closing its card. */
+.tool-more {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-4);
+}
+
 /* A profile tile (GAP, durability): the terrain, its range in mono, its level chip. */
 .assessment-tile {
   gap: 6px;

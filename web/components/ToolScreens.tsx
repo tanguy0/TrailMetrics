@@ -66,9 +66,7 @@ export function GapScreen({ strings }: { strings: Strings }) {
             </div>
           </>
         )}
-        <p className="body-sm muted">
-          {t("gap_tool.more")} <Link href="/pages">{t("nav.analysis")} →</Link>
-        </p>
+        <MoreDetails t={t} />
       </section>
     </main>
   );
@@ -144,7 +142,19 @@ export function DurabilityScreen({ strings }: { strings: Strings }) {
             </div>
           </>
         )}
+        <MoreDetails t={t} />
       </section>
     </main>
+  );
+}
+
+/** The way from a profile to the full analysis panels, at the end of the card. */
+function MoreDetails({ t }: { t: Translate }) {
+  return (
+    <div className="tool-more">
+      <Link className="tm-btn tm-btn--secondary tm-btn--sm" href="/pages">
+        {t("tools.more_details")}
+      </Link>
+    </div>
   );
 }
