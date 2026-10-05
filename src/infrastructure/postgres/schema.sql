@@ -58,6 +58,10 @@ alter table athletes add column if not exists hr_zone3_end integer;
 alter table athletes add column if not exists hr_zone4_end integer;
 alter table athletes add column if not exists hr_max integer;
 alter table athletes add column if not exists vma_pace_s_per_km double precision;
+-- Pace zones the athlete set by hand on Home ("Update paces"), by zone key:
+-- {"z2": {"fast_s_per_km": 330, "slow_s_per_km": 360}, …}. A zone not in it is
+-- computed from the VMA. Saving a new level estimate clears it.
+alter table athletes add column if not exists pace_overrides jsonb;
 
 -- The UI language the athlete has chosen, read by every endpoint that returns
 -- translated text (see api/deps.py's `language` dependency). Defaults to
@@ -439,6 +443,18 @@ alter table race_plans add column if not exists account_id uuid
 alter table race_plans alter column athlete_id drop not null;
 create index if not exists race_plans_account_updated_idx
     on race_plans (account_id, updated_at desc);
+
+-- The list's thumbnail (route + elevation profile, downsampled), computed on
+-- save. Null for plans saved before it existed: the list fills those in once.
+alter table race_plans add column if not exists preview jsonb;
+
+-- The race itself: when it is and how much it matters (null = not said). With
+-- both set, a coached athlete's plan puts a goal on their diary and keeps it in
+-- step; `goal_item_id` is that goal (a `planned_items` id, not foreign-keyed:
+-- the athlete may delete the goal from the diary, and the next save recreates it).
+alter table race_plans add column if not exists event_date date;
+alter table race_plans add column if not exists importance text;
+alter table race_plans add column if not exists goal_item_id text;
 
 -- Level assessments (design/specs/level.md). Inputs and result as JSON: the
 -- three tests take different inputs, and the result is the LevelEstimate the

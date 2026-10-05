@@ -55,6 +55,10 @@ from src.translations import translate
 
 EFFICIENCY = "efficiency"
 AUTO_LEARNING = "auto_learning"
+# The models the app offers. Only the efficiency model, shown simply as "GAP": the
+# auto-learning model stays in the code (``_curve`` still fits it) but is no longer
+# offered, and a saved panel that still asks for it draws the efficiency model.
+APP_MODELS = (EFFICIENCY,)
 
 # Line styles distinguish model × HR band within one group's colour.
 _DASHES = ["-", "--", "-.", ":"]
@@ -65,15 +69,16 @@ _REFERENCES = {
 }
 
 
-_USES_EFFICIENCY = when.contains("models", EFFICIENCY)
-_USES_AUTO_LEARNING = when.contains("models", AUTO_LEARNING)
 _STRATIFIED = when.nonempty("hr_bands")
 
+# The auto-learning model's own parameters — kept for when it comes back, but not
+# in ``PARAMS``, so no form shows them.
+AUTO_LEARNING_PARAMS: List[ParamSpec] = [
+    number("hr_tolerance", "gap.params.hr_tol", 3.0, min=1, max=30, step=1),
+    number("xgb_bin_width", "gap.params.bin_width", 20.0, min=1, max=200, step=1),
+]
+
 PARAMS: List[ParamSpec] = [
-    multichoice("models", "param.gap_models", [EFFICIENCY, AUTO_LEARNING], choices=[
-        Choice(EFFICIENCY, "gap.models.efficiency"),
-        Choice(AUTO_LEARNING, "gap.models.auto"),
-    ], help_key="gap.models.caption"),
     multichoice("references", "param.gap_references",
                 ["balanced_runner", "kilian"], choices=[
                     Choice("balanced_runner", "gap.refs.balanced"),
@@ -87,15 +92,10 @@ PARAMS: List[ParamSpec] = [
         integer("hr_max", "param.hr_band.max", 150, min=60, max=250),
     ], default=[], max_items=4, help_key="param.hr_bands.help"),
     number("split_min_time", "gap.params.split_min_time", 10.0, min=1, max=300, step=1),
-    integer("efficiency_min_samples", "gap.params.eff_min_samples", 250,
-            min=10, max=5000, visible_when=_USES_EFFICIENCY),
+    integer("efficiency_min_samples", "gap.params.eff_min_samples", 250, min=10, max=5000),
     integer("efficiency_band_min_samples", "gap.params.eff_subset_min_samples", 50,
             min=5, max=2000, help_key="gap.params.eff_subset_help",
-            visible_when=when.all_of(_USES_EFFICIENCY, _STRATIFIED)),
-    number("hr_tolerance", "gap.params.hr_tol", 3.0, min=1, max=30, step=1,
-           visible_when=_USES_AUTO_LEARNING),
-    number("xgb_bin_width", "gap.params.bin_width", 20.0, min=1, max=200, step=1,
-           visible_when=_USES_AUTO_LEARNING),
+            visible_when=_STRATIFIED),
 ]
 
 _PREPROCESSOR = DefaultStreamPreprocessor()
@@ -117,7 +117,7 @@ class CurveUnavailable(Exception):
 
 def compute(resolved: ResolvedPanelData, params: Dict[str, Any]) -> PlotOutput:
     lang = resolved.lang
-    models = [m for m in (params.get("models") or []) if m in (EFFICIENCY, AUTO_LEARNING)]
+    models = list(APP_MODELS)
     bands = _bands(params.get("hr_bands") or [])
     show_std = bool(params.get("show_std", True))
 

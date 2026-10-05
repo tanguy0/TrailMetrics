@@ -12,7 +12,6 @@ from src.domain.durability.config import (
     COMPONENTS,
     DOWNHILL,
     DURATION,
-    PLACEHOLDER,
     PRE_RACE_LOAD,
     SEVERE_INTENSITY,
     THERMAL,
@@ -67,9 +66,9 @@ def durability_notes(model: AthleteDurabilityModel, lang: str, solution=None) ->
     )]
     for reason in model.reasons:
         notes.append(translate(f"durability.reason.{reason}", lang))
-    if model.coefficients.status == PLACEHOLDER:
-        notes.append(translate("durability.note.placeholder", lang).format(
-            version=model.population.version))
+    # The coefficients' calibration status (``status``) travels with them for the
+    # code and the docs, never to the athlete: the app does not narrate its own
+    # internals.
     if solution is not None:
         if solution.reference.source == "target_time":
             notes.append(translate("durability.note.target_reference", lang))

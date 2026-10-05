@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 
 import { Icon } from "@/components/Icon";
 import { getAthlete, listCoachAthletes } from "@/lib/api";
+import type { Translate } from "@/lib/strings";
 import type { Athlete, CoachAthlete } from "@/lib/types";
 
 async function switchTo(athleteId: number | null) {
@@ -26,7 +27,7 @@ async function switchTo(athleteId: number | null) {
   window.location.href = "/home";
 }
 
-export function CoachSwitcher() {
+export function CoachSwitcher({ t }: { t: Translate }) {
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [roster, setRoster] = useState<CoachAthlete[] | null>(null);
   const [open, setOpen] = useState(false);
@@ -54,10 +55,10 @@ export function CoachSwitcher() {
         <span>
           {athlete.viewing_as ? (
             <>
-              Viewing <strong>{athlete.display_name}</strong>
+              {t("coach.switcher.viewing")} <strong>{athlete.display_name}</strong>
             </>
           ) : (
-            <strong>Switch athlete</strong>
+            <strong>{t("coach.switcher.title")}</strong>
           )}
         </span>
         <Icon name={athlete.viewing_as ? "eye" : "users"} />
@@ -68,14 +69,14 @@ export function CoachSwitcher() {
           {athlete.viewing_as && (
             <li>
               <button type="button" onClick={() => switchTo(null)}>
-                ← Back to my account
+                {t("coach.switcher.back")}
               </button>
             </li>
           )}
           {roster === null ? (
-            <li className="shell__switcher-hint">Loading…</li>
+            <li className="shell__switcher-hint">{t("common.loading")}</li>
           ) : roster.length === 0 ? (
-            <li className="shell__switcher-hint">No other athletes yet.</li>
+            <li className="shell__switcher-hint">{t("coach.switcher.empty")}</li>
           ) : (
             roster.map((entry) => (
               <li key={entry.id}>

@@ -109,7 +109,7 @@ def build_gap_simulator(oldest: date, newest: date, lang: str = "en") -> PageSpe
                 description=translate("gap.caption.per_year", lang),
                 source=per_year,
                 plots=[PlotSpec(plot_type="gap_curve", params={
-                    "models": ["efficiency", "auto_learning"],
+                    "models": ["efficiency"],
                     "references": ["balanced_runner", "kilian"],
                     # Off with several years on one figure: a ±1σ ribbon per curve
                     # over five curves hides the curves.

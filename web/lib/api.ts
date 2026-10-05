@@ -36,6 +36,7 @@ import type {
   RacePlanOptions,
   RacePlanParams,
   RacePlanResult,
+  PaceOverrides,
   SavedRacePlan,
   Registry,
   RouteResult,
@@ -134,7 +135,7 @@ export const updateProfile = (
     | "weight_kg" | "birthdate" | "height_cm"
     | "hr_zone1_end" | "hr_zone2_end" | "hr_zone3_end" | "hr_zone4_end"
     | "hr_max" | "vma_pace_s_per_km" | "lang"
-  >>,
+  >> & { pace_overrides?: PaceOverrides | null },
 ) =>
   request<Athlete>("/auth/me", {
     method: "PATCH",
@@ -161,12 +162,16 @@ export const decideCoachingRequest = (id: string, decision: "accept" | "decline"
 
 // --- Tools -----------------------------------------------------------------
 
-/** Estimate a VMA. Works for a visitor; saved and applied for an account. */
+/** Estimate a VMA. Works for everyone; never saved (see `saveLevel`). */
 export const estimateLevel = (body: {
   method: LevelMethod;
   inputs: Record<string, unknown>;
   hr_max?: number | null;
 }) => request<LevelResult>("/tools/level/estimate", { method: "POST", body: JSON.stringify(body) });
+
+/** Save an estimate as the account's level (its Home zones). Needs Strava. */
+export const saveLevel = (body: Parameters<typeof estimateLevel>[0]) =>
+  request<LevelResult>("/tools/level/save", { method: "POST", body: JSON.stringify(body) });
 
 export const getLatestLevel = () =>
   request<{ estimate: { result: Omit<LevelResult, "notes" | "saved_at">; created_at: string } | null }>(
@@ -305,9 +310,10 @@ export const saveRacePlan = (
   title: string,
   params: RacePlanParams,
   gpx: File | null,
+  race: Pick<SavedRacePlan, "event_date" | "importance">,
 ) => {
   const form = new FormData();
-  form.append("meta", JSON.stringify({ title, params }));
+  form.append("meta", JSON.stringify({ title, params, ...race }));
   if (gpx) form.append("gpx", gpx);
   return request<SavedRacePlan>(id ? `/race-plans/${id}` : "/race-plans", {
     method: id ? "PATCH" : "POST",

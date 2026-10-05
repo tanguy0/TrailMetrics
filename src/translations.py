@@ -47,7 +47,7 @@ TRANSLATIONS = {
         "en": "Pick at least one model to plot.",
         "fr": "Choisissez au moins un modèle à afficher.",
     },
-    "gap.models.efficiency": {"en": "Efficiency model", "fr": "Modèle d'efficacité"},
+    "gap.models.efficiency": {"en": "GAP", "fr": "GAP"},
     "gap.models.auto": {"en": "Auto-Learning model", "fr": "Modèle auto-apprenant"},
     "gap.refs.caption": {
         "en": "Optional overlays — uncheck both to hide them.",
@@ -70,13 +70,12 @@ TRANSLATIONS = {
     },
     "gap.params.hr_tol": {"en": "HR tolerance (bpm)", "fr": "Tolérance FC (bpm)"},
     "gap.params.eff_min_samples": {
-        "en": "Efficiency model: min samples per bucket",
-        "fr": "Modèle d'efficacité : nb min. d'échantillons par classe",
+        "en": "GAP: min samples per bucket",
+        "fr": "GAP : nb min. d'échantillons par classe",
     },
     "gap.params.eff_subset_min_samples": {
-        "en": "Efficiency model (per-intensity slice): min samples per bucket",
-        "fr": "Modèle d'efficacité (tranche par intensité) : nb min. "
-        "d'échantillons par classe",
+        "en": "GAP (per-intensity slice): min samples per bucket",
+        "fr": "GAP (tranche par intensité) : nb min. d'échantillons par classe",
     },
     "gap.params.eff_subset_help": {
         "en": "Lower than the full-dataset value because each HR slice has fewer "
@@ -101,15 +100,15 @@ TRANSLATIONS = {
         "référence.",
     },
     "gap.caption.main": {
-        "en": "Colour = data-source group · line style = model and heart-rate band · "
+        "en": "Colour = data-source group · line style = heart-rate band · "
         "dashed = reference curves.",
-        "fr": "Couleur = groupe de la source · style de trait = modèle et zone de "
+        "fr": "Couleur = groupe de la source · style de trait = zone de "
         "fréquence cardiaque · tirets = courbes de référence.",
     },
     "gap.caption.per_year": {
-        "en": "One colour per calendar year, both models. A year whose curve sits "
+        "en": "One colour per calendar year. A year whose curve sits "
         "lower cost you less pace per metre of climb.",
-        "fr": "Une couleur par année civile, les deux modèles. Une année dont la "
+        "fr": "Une couleur par année civile. Une année dont la "
         "courbe est plus basse vous a coûté moins d'allure par mètre de dénivelé.",
     },
     "gap.caption.intensity": {
@@ -1104,16 +1103,19 @@ TRANSLATIONS = {
     "ui.nav.group_coached": {"en": "Coached by TAGG", "fr": "Coaché par TAGG"},
     "ui.tools.race_planning": {"en": "Race Planning", "fr": "Planification de course"},
     "ui.tools.level": {"en": "Level Assessment", "fr": "Évaluation du niveau"},
-    "ui.tools.gap_profile": {"en": "Slope Profile", "fr": "Profil de pente"},
-    "ui.tools.durability": {"en": "Durability", "fr": "Durabilité"},
+    "ui.tools.more_details": {"en": "More details", "fr": "Plus de détails"},
+    "ui.tools.gap_profile": {"en": "GAP Profile", "fr": "Profil GAP"},
+    "ui.tools.durability": {"en": "Durability Profile", "fr": "Profil de durabilité"},
     "ui.tools.keep_plans": {
         "en": "Create an account to keep your plans.",
         "fr": "Créez un compte pour garder vos plans.",
     },
     "ui.tools.keep_zones": {
-        "en": "Create an account to keep your zones.",
-        "fr": "Créez un compte pour garder vos zones.",
+        "en": "Create an account and connect Strava to keep your zones.",
+        "fr": "Créez un compte et connectez Strava pour garder vos zones.",
     },
+    "ui.level.save": {"en": "Save updated estimate", "fr": "Enregistrer la nouvelle estimation"},
+    "ui.level.saving": {"en": "Saving…", "fr": "Enregistrement…"},
     "ui.tools.saved_zones": {
         "en": "Saved: your Home zones now use this VMA.",
         "fr": "Enregistré : les zones de votre Accueil utilisent maintenant cette VMA.",
@@ -1123,8 +1125,8 @@ TRANSLATIONS = {
         "fr": "Votre VMA et vos zones d’entraînement, à partir d’un test ou de vos records.",
     },
     "ui.visitor.tools": {
-        "en": "Slope profile and durability, read from your own runs.",
-        "fr": "Profil de pente et durabilité, lus dans vos propres sorties.",
+        "en": "GAP profile and durability, read from your own runs.",
+        "fr": "Profil GAP et durabilité, lus dans vos propres sorties.",
     },
     "ui.visitor.coaching": {
         "en": "A weekly plan built on your data, with a coach.",
@@ -1186,54 +1188,88 @@ TRANSLATIONS = {
         "en": "Estimated {date} · method: {method}",
         "fr": "Estimée le {date} · méthode : {method}",
     },
-    "ui.home.zones.estimate_link": {
-        "en": "Estimate your zones without Strava →",
-        "fr": "Estimez vos zones sans Strava →",
+    "ui.home.zones.estimate_paces": {"en": "Estimate paces", "fr": "Estimer les allures"},
+    "ui.home.zones.update_paces": {"en": "Update paces", "fr": "Modifier les allures"},
+    "ui.home.zones.save_paces": {"en": "Save paces", "fr": "Enregistrer les allures"},
+    "ui.home.zones.reset_paces": {
+        "en": "Back to computed paces", "fr": "Revenir aux allures calculées",
     },
-    "ui.home.zones.reestimate": {"en": "New estimate →", "fr": "Nouvelle estimation →"},
+    "ui.home.zones.editor_help": {
+        "en": "Leave a zone empty to keep the pace computed from your VMA.",
+        "fr": "Laissez une zone vide pour garder l'allure calculée depuis votre VMA.",
+    },
+    "ui.home.zones.invalid_pace": {
+        "en": "Write paces as m:ss, the faster one first.",
+        "fr": "Écrivez les allures en m:ss, la plus rapide en premier.",
+    },
+    "ui.home.zones.fast": {"en": "Fastest pace", "fr": "Allure la plus rapide"},
+    "ui.home.zones.slow": {"en": "Slowest pace", "fr": "Allure la plus lente"},
+    "ui.home.zones.set_by_hand": {"en": "Set by hand", "fr": "Saisie à la main"},
+    "ui.home.zones.from_vma": {"en": "Computed from VMA", "fr": "Calculée depuis la VMA"},
 
-    # Slope profile tool page
-    "ui.gap_tool.kicker": {"en": "Slope Profile", "fr": "Profil de pente"},
-    "ui.gap_tool.title": {"en": "What climbing costs you", "fr": "Votre coût du dénivelé"},
-    "ui.gap_tool.uphill": {"en": "Cost at +{slope} %", "fr": "Coût à +{slope} %"},
-    "ui.gap_tool.downhill": {"en": "Cost at −{slope} %", "fr": "Coût à −{slope} %"},
-    "ui.gap_tool.flat": {"en": "Flat-equivalent pace", "fr": "Allure plat équivalente"},
-    "ui.gap_tool.flat_note": {"en": "last 12 weeks", "fr": "12 dernières semaines"},
-    "ui.gap_tool.vs_ref": {"en": "{value} vs reference", "fr": "{value} vs référence"},
-    "ui.gap_tool.less_up": {
-        "en": "Uphill, you lose {value} less than the reference runner.",
-        "fr": "En montée, vous perdez {value} de moins que le coureur de référence.",
+    # GAP profile tool page
+    "ui.gap_tool.kicker": {"en": "GAP Profile", "fr": "Profil GAP"},
+    "ui.gap_tool.title": {"en": "What slopes cost you", "fr": "Ce que les pentes vous coûtent"},
+    "ui.gap_tool.lede": {
+        "en": "Where you stand against an average runner, at the same effort, on each kind of slope.",
+        "fr": "Où vous vous situez face à un coureur moyen, à effort égal, sur chaque type de pente.",
     },
-    "ui.gap_tool.more_up": {
-        "en": "Uphill, you lose {value} more than the reference runner.",
-        "fr": "En montée, vous perdez {value} de plus que le coureur de référence.",
+    "ui.gap_tool.terrain.steep_downhill": {"en": "Steep downhill", "fr": "Descente raide"},
+    "ui.gap_tool.terrain.downhill": {"en": "Downhill", "fr": "Descente"},
+    "ui.gap_tool.terrain.uphill": {"en": "Uphill", "fr": "Montée"},
+    "ui.gap_tool.terrain.steep_uphill": {"en": "Steep uphill", "fr": "Montée raide"},
+    "ui.gap_tool.range.steep_downhill": {"en": "below −12 %", "fr": "sous −12 %"},
+    "ui.gap_tool.range.downhill": {"en": "−12 % to −3 %", "fr": "de −12 % à −3 %"},
+    "ui.gap_tool.range.uphill": {"en": "+3 % to +12 %", "fr": "de +3 % à +12 %"},
+    "ui.gap_tool.range.steep_uphill": {"en": "above +12 %", "fr": "au-delà de +12 %"},
+    # The five-level scale shared by the GAP and durability profiles.
+    "ui.assessment.level.poor": {"en": "Poor", "fr": "Faible"},
+    "ui.assessment.level.limited": {"en": "Limited", "fr": "Limité"},
+    "ui.assessment.level.average": {"en": "Average", "fr": "Moyen"},
+    "ui.assessment.level.good": {"en": "Good", "fr": "Bon"},
+    "ui.assessment.level.excellent": {"en": "Excellent", "fr": "Excellent"},
+    "ui.assessment.level.insufficient": {"en": "Insufficient data", "fr": "Données insuffisantes"},
+    "ui.gap_tool.chart": {
+        "en": "Your GAP curve against the balanced runner",
+        "fr": "Votre courbe GAP face au coureur équilibré",
     },
-    "ui.gap_tool.chart": {"en": "Your GAP curve", "fr": "Votre courbe GAP"},
-    "ui.gap_tool.more": {
-        "en": "To tune the model or compare periods, the GAP curves panel is in Analysis.",
-        "fr": "Pour régler le modèle ou comparer des périodes, le panneau Courbes GAP est "
-              "dans Analyses.",
-    },
+    "ui.gap_tool.chart.you": {"en": "You", "fr": "Vous"},
+    "ui.gap_tool.chart.x": {"en": "Gradient", "fr": "Pente"},
+    "ui.gap_tool.chart.y": {"en": "Cost vs flat (×)", "fr": "Coût par rapport au plat (×)"},
 
     # Durability tool page
-    "ui.durability_tool.kicker": {"en": "Durability", "fr": "Durabilité"},
+    "ui.durability_tool.kicker": {"en": "Durability Profile", "fr": "Profil de durabilité"},
     "ui.durability_tool.title": {
         "en": "Your drift on long efforts",
         "fr": "Votre dérive sur l’effort long",
     },
-    "ui.durability_tool.at": {"en": "Extra cost after {hours} h", "fr": "Surcoût après {hours} h"},
-    "ui.durability_tool.confidence": {"en": "Confidence", "fr": "Confiance"},
-    "ui.durability_tool.confidence.personalized": {"en": "personal", "fr": "personnelle"},
-    "ui.durability_tool.confidence.partially_personalized": {"en": "partial", "fr": "partielle"},
-    "ui.durability_tool.confidence.population_only": {"en": "population", "fr": "population"},
-    "ui.durability_tool.runs": {"en": "{count} long runs", "fr": "{count} sorties longues"},
-    "ui.durability_tool.sentence": {
-        "en": "After 4 hours, running costs you {value} more than at the start.",
-        "fr": "Après 4 heures, courir vous coûte {value} de plus qu’au départ.",
+    "ui.durability_tool.lede": {
+        "en": "How well you hold your pace as an effort gets long, against an average runner.",
+        "fr": "Comment vous tenez votre allure quand l’effort s’allonge, face à un coureur moyen.",
     },
-    "ui.durability_tool.vs_population": {
-        "en": "Typical runner: {value}.", "fr": "Coureur type : {value}.",
+    "ui.durability_tool.quality.long_efforts": {"en": "Long efforts", "fr": "Efforts longs"},
+    "ui.durability_tool.quality.hard_efforts": {"en": "Hard efforts", "fr": "Efforts intenses"},
+    "ui.durability_tool.quality.descents": {"en": "Descents", "fr": "Descentes"},
+    "ui.durability_tool.scope.long_efforts": {
+        "en": "time on your feet", "fr": "le temps passé à courir",
     },
+    "ui.durability_tool.scope.hard_efforts": {
+        "en": "time above threshold", "fr": "le temps au-dessus du seuil",
+    },
+    "ui.durability_tool.scope.descents": {
+        "en": "metres of descent", "fr": "les mètres de descente",
+    },
+    "ui.durability_tool.no_data": {
+        "en": "Run a few times for 45 minutes or more and your durability profile appears here.",
+        "fr": "Quelques sorties de 45 minutes ou plus, et votre profil de durabilité apparaît ici.",
+    },
+    "ui.durability_tool.chart": {
+        "en": "Your projected durability against an average runner",
+        "fr": "Votre durabilité projetée face à un coureur moyen",
+    },
+    "ui.durability_tool.chart.x": {"en": "Time running", "fr": "Temps de course"},
+    "ui.durability_tool.chart.y": {"en": "Extra cost", "fr": "Surcoût"},
+    "ui.durability_tool.chart.average": {"en": "Average runner", "fr": "Coureur moyen"},
 
     # Analyses: templates
     "ui.pages.new.blank": {"en": "Blank analysis", "fr": "Analyse vide"},
@@ -1320,16 +1356,17 @@ TRANSLATIONS = {
         "fr": "Nouvelle demande de coaching.\n\nDe : {email}\nContact : {contact}\n\n{message}\n\n"
               "Répondez-y depuis la page Coaching.",
     },
-    "ui.coaching.board.title": {"en": "Athletes", "fr": "Athlètes"},
-    "ui.coaching.board.pending": {"en": "Pending", "fr": "En attente"},
-    "ui.coaching.board.coached": {"en": "Coached", "fr": "Coachés"},
+    "ui.coach.switcher.title": {"en": "Switch athlete", "fr": "Changer d'athlète"},
+    "ui.coach.switcher.viewing": {"en": "Viewing", "fr": "Vous consultez"},
+    "ui.coach.switcher.back": {"en": "← Back to my account", "fr": "← Revenir à mon compte"},
+    "ui.coach.switcher.empty": {"en": "No other athletes yet.", "fr": "Aucun autre athlète pour l’instant."},
+    "ui.chart.download_csv": {"en": "Download data (CSV)", "fr": "Télécharger les données (CSV)"},
+    "ui.chart.error": {"en": "Could not draw the chart: {error}", "fr": "Impossible de dessiner le graphique : {error}"},
+    "ui.coaching.requests.nav": {"en": "Requests", "fr": "Demandes"},
+    "ui.coaching.requests.title": {"en": "Coaching requests", "fr": "Demandes de coaching"},
     "ui.coaching.board.accept": {"en": "Accept", "fr": "Accepter"},
     "ui.coaching.board.decline": {"en": "Decline", "fr": "Décliner"},
-    "ui.coaching.board.view_as": {"en": "View as", "fr": "Voir comme"},
-    "ui.coaching.board.last_activity": {"en": "Last activity", "fr": "Dernière activité"},
     "ui.coaching.board.none_pending": {"en": "No pending request.", "fr": "Aucune demande en attente."},
-    "ui.coaching.board.none_coached": {"en": "No athlete yet.", "fr": "Aucun athlète pour l’instant."},
-    "ui.coaching.board.no_strava": {"en": "Strava not connected", "fr": "Strava non connecté"},
     "ui.coaching.my_athletes": {"en": "My athletes", "fr": "Mes athlètes"},
 
     # --- Level assessment (v2): design/specs/level.md ------------------------
@@ -1497,9 +1534,6 @@ TRANSLATIONS = {
     "ui.home.zones.pace_threshold": {"en": "Threshold", "fr": "Seuil"},
     "ui.home.zones.pace_intervals": {"en": "Intervals", "fr": "Intervalles"},
     "ui.home.zones.pace_reps": {"en": "Reps", "fr": "Répétitions"},
-    "ui.home.zones.unlocked_by_vma": {
-        "en": "Unlocked by giving VMA", "fr": "Débloqué en renseignant la VMA",
-    },
     "ui.home.zones.unlocked_by_hrmax": {
         "en": "Derived from HRmax", "fr": "Déduit de la FCmax",
     },
@@ -1838,7 +1872,7 @@ TRANSLATIONS = {
     "race_plan.aid_station_n": {"en": "Aid station {n}", "fr": "Ravito {n}"},
     "race_plan.next_day": {"en": "(+{n}d)", "fr": "(+{n}j)"},
     "race_plan.curve.personal_efficiency": {
-        "en": "My curve (efficiency model)", "fr": "Ma courbe (modèle d'efficacité)",
+        "en": "My GAP curve", "fr": "Ma courbe GAP",
     },
     "race_plan.curve.personal_auto": {
         "en": "My curve (auto-learning model)", "fr": "Ma courbe (modèle auto-apprenant)",
@@ -1981,12 +2015,6 @@ TRANSLATIONS = {
         "en": "Your durability model could not be fitted; the population model is used.",
         "fr": "Votre modèle de durabilité n'a pas pu être ajusté : le modèle population est "
               "utilisé.",
-    },
-    "durability.note.placeholder": {
-        "en": "Population coefficients are conservative product defaults ({version}), not "
-              "validated individual physiology.",
-        "fr": "Les coefficients population sont des valeurs produit prudentes ({version}), "
-              "pas une physiologie individuelle validée.",
     },
     "durability.note.target_reference": {
         "en": "Intensity is inferred from the target time itself (treated as a full race "
@@ -2160,12 +2188,6 @@ TRANSLATIONS = {
         "en": "Extra cost at finish", "fr": "Surcoût à l'arrivée",
     },
     "ui.race_plan.summary.gap_finish": {"en": "GAP pace at finish", "fr": "Allure GAP à l'arrivée"},
-    "ui.race_plan.summary.durability_model": {"en": "Durability model", "fr": "Modèle de durabilité"},
-    "ui.race_plan.confidence.population_only": {"en": "Population", "fr": "Population"},
-    "ui.race_plan.confidence.partially_personalized": {
-        "en": "Partly personal", "fr": "Partiellement personnel",
-    },
-    "ui.race_plan.confidence.personalized": {"en": "Personal", "fr": "Personnel"},
     "ui.race_plan.section.durability": {"en": "Durability", "fr": "Durabilité"},
     "ui.race_plan.title": {"en": "Race plan", "fr": "Plan de course"},
     "ui.race_plan.intro": {
@@ -2223,6 +2245,15 @@ TRANSLATIONS = {
         "en": "e.g. UTMB 2026", "fr": "ex. UTMB 2026",
     },
     "ui.race_plan.untitled": {"en": "Untitled plan", "fr": "Plan sans titre"},
+    "ui.race_plan.event_date": {"en": "Race date", "fr": "Date de la course"},
+    "ui.race_plan.importance": {"en": "Objective", "fr": "Objectif"},
+    "ui.race_plan.importance.none": {"en": "Not specified", "fr": "Non précisé"},
+    "ui.race_plan.importance.primary": {"en": "Main objective", "fr": "Objectif principal"},
+    "ui.race_plan.importance.secondary": {"en": "Secondary objective", "fr": "Objectif secondaire"},
+    "ui.race_plan.importance_help": {
+        "en": "Coached? With a date and an objective, the race is added to your training plan.",
+        "fr": "Coaché ? Avec une date et un objectif, la course s'ajoute à votre plan d'entraînement.",
+    },
     "ui.race_plan.save": {"en": "Save", "fr": "Enregistrer"},
     "ui.race_plan.saving": {"en": "Saving…", "fr": "Enregistrement…"},
     "ui.race_plan.saved": {"en": "Saved", "fr": "Enregistré"},
@@ -2237,9 +2268,12 @@ TRANSLATIONS = {
         "en": "Choose another file to replace it.",
         "fr": "Choisissez un autre fichier pour le remplacer.",
     },
-    "ui.race_plan.updated": {"en": "Updated {date}", "fr": "Modifié le {date}"},
+    # `{date}` is relative ("5 min ago", "yesterday"), which takes no "le"; past
+    # a week it is a calendar date, which does (`updated_on`).
+    "ui.race_plan.updated": {"en": "Updated {date}", "fr": "Modifié {date}"},
+    "ui.race_plan.updated_on": {"en": "Updated {date}", "fr": "Modifié le {date}"},
     # The plan's hero (design/tagg/components/Hero.md § Plan de course).
-    "ui.race_plan.hero.kicker": {"en": "Race plan · {curve} curve", "fr": "Plan de course · courbe {curve}"},
+    "ui.race_plan.hero.kicker": {"en": "Race plan · {curve}", "fr": "Plan de course · {curve}"},
     "ui.race_plan.hero.personalized": {"en": "personalised", "fr": "personnalisée"},
     "ui.race_plan.hero.gap": {"en": "GAP {pace} /km", "fr": "GAP {pace} /km"},
     "ui.race_plan.hero.real": {"en": "actual {pace} /km", "fr": "réel {pace} /km"},
@@ -2248,8 +2282,8 @@ TRANSLATIONS = {
     "ui.race_plan.hero.aid_stations.one": {"en": "{count} aid station", "fr": "{count} ravito"},
     "ui.race_plan.hero.aid_stations.many": {"en": "{count} aid stations", "fr": "{count} ravitos"},
     "ui.race_plan.hero.drift": {
-        "en": "drift ×{factor} at the finish ({confidence})",
-        "fr": "dérive ×{factor} à l'arrivée ({confidence})",
+        "en": "drift ×{factor} at the finish",
+        "fr": "dérive ×{factor} à l'arrivée",
     },
     "ui.race_plan.hero.gain_loss": {"en": "Gain / loss", "fr": "D+ / D−"},
     "ui.race_plan.hero.gap_pace": {"en": "GAP pace", "fr": "Allure GAP"},

@@ -10,16 +10,17 @@
  * computed server-side (`/tools/level/estimate`), so this screen and Home can
  * never disagree.
  *
- * A visitor gets the full result and one callout: an account keeps it. An
- * account's result is saved and becomes its Home zones; the latest one is shown
- * on arrival.
+ * Estimating never saves. With Strava connected, a "save updated estimate"
+ * button at the bottom makes the shown result the athlete's level — their Home
+ * zones from then on; the latest saved one is shown on arrival. A visitor gets
+ * one callout instead: an account (with Strava) keeps it.
  */
 
 import { useEffect, useState, type FormEvent } from "react";
 
 import { Callout } from "@/components/Callout";
 import { Kpi } from "@/components/Kpi";
-import { ApiError, estimateLevel, getLatestLevel } from "@/lib/api";
+import { ApiError, estimateLevel, getLatestLevel, saveLevel } from "@/lib/api";
 import { registerHref } from "@/lib/auth";
 import { formatNumber, formatPaceInput, formatPaceRange } from "@/lib/format";
 import { translator, type Strings, type Translate } from "@/lib/strings";
@@ -44,7 +45,17 @@ function parseDuration(text: string): number | null {
   return null;
 }
 
-export function LevelScreen({ strings, signedIn }: { strings: Strings; signedIn: boolean }) {
+type EstimateBody = Parameters<typeof estimateLevel>[0];
+
+export function LevelScreen({
+  strings,
+  signedIn,
+  hasStrava,
+}: {
+  strings: Strings;
+  signedIn: boolean;
+  hasStrava: boolean;
+}) {
   const t = translator(strings);
   const [method, setMethod] = useState<LevelMethod>("records");
   const [distance6, setDistance6] = useState("");
@@ -55,6 +66,9 @@ export function LevelScreen({ strings, signedIn }: { strings: Strings; signedIn:
   const [result, setResult] = useState<LevelResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The request behind the shown result, so saving stores exactly what is shown.
+  const [estimated, setEstimated] = useState<EstimateBody | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // An account arrives on its latest estimate, the one its Home zones use.
   useEffect(() => {
@@ -89,12 +103,27 @@ export function LevelScreen({ strings, signedIn }: { strings: Strings; signedIn:
     }
     setBusy(true);
     setError(null);
+    const request: EstimateBody = { method, inputs: body, hr_max: hrMax ? Number(hrMax) : null };
     try {
-      setResult(await estimateLevel({ method, inputs: body, hr_max: hrMax ? Number(hrMax) : null }));
+      setResult(await estimateLevel(request));
+      setEstimated(request);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : t("auth.error.generic"));
     }
     setBusy(false);
+  }
+
+  async function save() {
+    if (!estimated) return;
+    setSaving(true);
+    setError(null);
+    try {
+      setResult(await saveLevel(estimated));
+      setEstimated(null);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : t("auth.error.generic"));
+    }
+    setSaving(false);
   }
 
   return (
@@ -153,6 +182,14 @@ export function LevelScreen({ strings, signedIn }: { strings: Strings; signedIn:
       </form>
 
       {result && <LevelResultCard result={result} signedIn={signedIn} t={t} />}
+
+      {hasStrava && result && estimated && !result.saved_at && (
+        <div className="level-save">
+          <button type="button" className="tm-btn" onClick={save} disabled={saving}>
+            {saving ? t("level.saving") : t("level.save")}
+          </button>
+        </div>
+      )}
     </main>
   );
 }

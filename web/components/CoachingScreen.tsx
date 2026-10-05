@@ -8,9 +8,9 @@
  *    the diary's empty structure as a preview), then the request form in a card.
  *    States: to fill in, sent on … (edit, withdraw), declined.
  *  - Coached: the diary (TrainingScreen) — it needs Strava to fill in.
- *  - Coach: the "Athletes" card (pending requests: accept / decline; coached
- *    athletes: last activity, view as). While viewing an athlete, their diary,
- *    with "My athletes" to come back.
+ *  - Coach: like a coached athlete — their own diary. Requests are answered
+ *    from the rail (`CoachRequests`), athletes opened from its switcher. While
+ *    viewing an athlete, their diary, with "My athletes" to come back.
  *
  * One `bg-hero` on the page, the offer's: nothing else here is a hero.
  */
@@ -20,9 +20,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Callout } from "@/components/Callout";
 import { TrainingScreen } from "@/components/TrainingScreen";
 import {
-  decideCoachingRequest,
   getAthlete,
-  getCoachBoard,
   getCoachingState,
   putCoachingRequest,
   withdrawCoachingRequest,
@@ -30,7 +28,7 @@ import {
 import { connectStravaHref } from "@/lib/auth";
 import { formatDate, formatNumber } from "@/lib/format";
 import { translator, type Strings, type Translate } from "@/lib/strings";
-import type { CoachBoard, CoachingState } from "@/lib/types";
+import type { CoachingState } from "@/lib/types";
 
 async function viewAs(athleteId: number | null) {
   await fetch("/api/view-as", {
@@ -98,15 +96,7 @@ export function CoachingScreen({
     );
   }
 
-  if (isCoach) {
-    return (
-      <main className="container coaching">
-        <CoachBoardCard t={t} />
-      </main>
-    );
-  }
-
-  if (state.coached) {
+  if (state.coached || isCoach) {
     if (hasStrava) return <TrainingScreen strings={strings} />;
     return (
       <main className="container coaching">
@@ -304,94 +294,5 @@ function RequestCard({
         </button>
       </div>
     </form>
-  );
-}
-
-// --- The coach's board ------------------------------------------------------------
-
-function CoachBoardCard({ t }: { t: Translate }) {
-  const [board, setBoard] = useState<CoachBoard | null>(null);
-  const load = useCallback(() => {
-    getCoachBoard().then(setBoard).catch(() => setBoard({ pending: [], coached: [] }));
-  }, []);
-  useEffect(load, [load]);
-
-  const decide = async (id: string, decision: "accept" | "decline") => {
-    await decideCoachingRequest(id, decision).catch(() => undefined);
-    load();
-  };
-
-  return (
-    <section className="card-block coaching-board">
-      <h2 className="tm-section section-title">
-        <span className="section-title__text">{t("coaching.board.title")}</span>
-      </h2>
-
-      <h3 className="card-block__subtitle">{t("coaching.board.pending")}</h3>
-      {board === null ? (
-        <p className="muted">{t("common.loading")}</p>
-      ) : board.pending.length === 0 ? (
-        <p className="body-sm muted">{t("coaching.board.none_pending")}</p>
-      ) : (
-        <ul className="coaching-board__list">
-          {board.pending.map((request) => (
-            <li className="coaching-board__item" key={request.id}>
-              <div className="coaching-board__who">
-                <strong>{request.display_name ?? request.email}</strong>
-                <span className="body-sm muted">
-                  {request.email}
-                  {request.phone ? ` · ${request.phone_e164 ?? request.phone}` : ""}
-                  {" · "}
-                  {formatDate(request.created_at, "short", t("locale"))}
-                </span>
-                {request.message && <p className="body-sm coaching-request__message">{request.message}</p>}
-              </div>
-              <div className="coaching-request__actions">
-                <button type="button" className="tm-btn tm-btn--sm" onClick={() => decide(request.id, "accept")}>
-                  {t("coaching.board.accept")}
-                </button>
-                <button
-                  type="button"
-                  className="tm-btn tm-btn--secondary tm-btn--sm"
-                  onClick={() => decide(request.id, "decline")}
-                >
-                  {t("coaching.board.decline")}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <h3 className="card-block__subtitle">{t("coaching.board.coached")}</h3>
-      {board && board.coached.length === 0 ? (
-        <p className="body-sm muted">{t("coaching.board.none_coached")}</p>
-      ) : (
-        <ul className="coaching-board__list">
-          {(board?.coached ?? []).map((athlete) => (
-            <li className="coaching-board__item" key={athlete.account_id}>
-              <div className="coaching-board__who">
-                <strong>{athlete.display_name}</strong>
-                <span className="body-sm muted">
-                  {t("coaching.board.last_activity")} :{" "}
-                  {athlete.last_activity ? formatDate(athlete.last_activity, "relative", t("locale")) : "—"}
-                </span>
-              </div>
-              {athlete.athlete_id != null ? (
-                <button
-                  type="button"
-                  className="tm-btn tm-btn--secondary tm-btn--sm"
-                  onClick={() => viewAs(athlete.athlete_id)}
-                >
-                  {t("coaching.board.view_as")}
-                </button>
-              ) : (
-                <span className="tm-chip">{t("coaching.board.no_strava")}</span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }

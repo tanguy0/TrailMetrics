@@ -17,6 +17,7 @@
 
 import { usePathname } from "next/navigation";
 
+import { CoachRequests } from "@/components/CoachRequests";
 import { CoachSwitcher } from "@/components/CoachSwitcher";
 import { Icon, type IconName } from "@/components/Icon";
 import { loginHref } from "@/lib/auth";
@@ -49,7 +50,8 @@ export function Sidebar({ strings, viewer }: { strings: Strings; viewer: Viewer 
   const pathname = usePathname() ?? "";
   const tier = viewer?.tier ?? "visitor";
   // Not a ladder: coaching is a service, so a coached account without Strava
-  // still opens Coaching, and a coach opens it to answer requests.
+  // still opens Coaching, and a coach opens it like a coached athlete (their own
+  // diary; requests arrive on the rail, under the switcher).
   const opens = (needs: Tier) =>
     needs === "visitor" ||
     (needs === "account" && viewer != null) ||
@@ -83,7 +85,12 @@ export function Sidebar({ strings, viewer }: { strings: Strings; viewer: Viewer 
     <nav className="tm-rail shell__rail" aria-label={t("nav.analysis")}>
       {brand}
 
-      {viewer?.isCoach && <CoachSwitcher />}
+      {viewer?.isCoach && (
+        <div className="shell__coach">
+          <CoachSwitcher t={t} />
+          <CoachRequests t={t} />
+        </div>
+      )}
 
       {lockedTiers.length === 0 ? (
         <RailList items={open} pathname={pathname} t={t} />

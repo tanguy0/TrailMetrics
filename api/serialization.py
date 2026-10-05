@@ -208,6 +208,7 @@ def athlete_payload(
         "hr_zone4_end": athlete.hr_zone4_end,
         "hr_max": athlete.hr_max,
         "vma_pace_s_per_km": athlete.vma_pace_s_per_km,
+        "pace_overrides": athlete.pace_overrides or {},
         "lang": athlete.lang,
         # Derived here rather than in the browser so every client agrees on it.
         "age": athlete.age_on(date.today()),

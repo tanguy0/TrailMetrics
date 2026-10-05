@@ -422,6 +422,9 @@ export interface Athlete {
   hr_zone4_end: number | null;
   hr_max: number | null;
   vma_pace_s_per_km: number | null;
+  /** Pace zones set by hand on Home, by zone key; absent without Strava. A zone
+   * not in it is computed from the VMA. */
+  pace_overrides?: PaceOverrides;
   /** The athlete's chosen UI language — "en" or "fr". Always set. */
   lang: string;
   age: number | null;
@@ -496,23 +499,32 @@ export interface ZoneDefinitions {
   hr_pace: { key: string; low_pct: number; high_pct: number }[];
 }
 
+/** The five-level scale of the GAP and durability profiles (src/domain/assessment). */
+export type AssessmentLevel = "excellent" | "good" | "average" | "limited" | "poor" | "insufficient";
+
+export interface Assessment {
+  key: string;
+  /** Extra cost against the reference runner, %; `null` without data. Not shown. */
+  extra_cost_pct: number | null;
+  level: AssessmentLevel;
+}
+
 export interface GapSummary {
   available: boolean;
   reason?: string;
-  uphill_factor?: number;
-  downhill_factor?: number;
-  uphill_vs_reference_pct?: number;
-  downhill_vs_reference_pct?: number;
-  flat_pace_s_per_km?: number | null;
-  slope_pct?: number;
+  /** Steep downhill, downhill, uphill, steep uphill — in that order. */
+  terrains: Assessment[];
+  /** The curve the levels were read on, against the balanced runner. */
+  chart?: ChartData;
 }
 
 export interface DurabilitySummary {
-  confidence: "personalized" | "partially_personalized" | "population_only";
-  personal: boolean;
-  extra_cost_pct: Record<string, number>;
-  population_extra_cost_pct: Record<string, number>;
-  n_activities: number;
+  /** Whether the athlete's own long runs inform the profile at all. */
+  available: boolean;
+  /** Long efforts, hard efforts, descents — in that order. */
+  qualities: Assessment[];
+  /** Projected extra cost over a long run, against the average runner. */
+  chart: ChartData | null;
 }
 
 export interface CoachingRequest {
@@ -792,6 +804,23 @@ export interface SavedRacePlan {
   params: RacePlanParams;
   distance_m: number | null;
   elevation_gain_m: number | null;
+  /** Thumbnail data; `null` when the stored GPX cannot be read. */
+  preview: RacePlanPreview | null;
+  /** The race's date (`YYYY-MM-DD`) and weight as an objective; `null` = not said. */
+  event_date: string | null;
+  importance: RacePlanImportance | null;
   created_at: string | null;
   updated_at: string | null;
 }
+
+/** The same two levels as a diary goal's `importance`. */
+export type RacePlanImportance = "primary" | "secondary";
+
+export interface RacePlanPreview {
+  /** `[latitude, longitude]`, downsampled. */
+  route: [number, number][];
+  /** `[km, elevation m]`, downsampled. */
+  profile: [number, number][];
+}
+
+export type PaceOverrides = Record<string, { fast_s_per_km: number; slow_s_per_km: number }>;

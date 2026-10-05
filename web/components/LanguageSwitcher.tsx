@@ -11,6 +11,11 @@
  * A full reload (not `router.refresh()`) afterwards, because the registry and
  * UI-strings caches in `lib/api.ts` are cached in module state for the tab's
  * lifetime and a soft refresh would leave them stale.
+ *
+ * The highlighted option is `current` — the language the page was actually
+ * rendered in (the cookie, read by the layout) — not the stored preference,
+ * which can differ (an account's language vs its Strava athlete's row) and then
+ * lit EN on a French page.
  */
 
 import { useEffect, useState } from "react";
@@ -23,7 +28,7 @@ const LANGUAGES: { code: "en" | "fr"; label: string }[] = [
   { code: "fr", label: "FR" },
 ];
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ current }: { current: string }) {
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -34,7 +39,7 @@ export function LanguageSwitcher() {
   if (!athlete) return null;
 
   const choose = async (code: "en" | "fr") => {
-    if (code === athlete.lang || busy) return;
+    if (code === current || busy) return;
     setBusy(true);
     try {
       await Promise.all([
@@ -60,8 +65,9 @@ export function LanguageSwitcher() {
           type="button"
           className={
             "lang-switch__option" +
-            (athlete.lang === code ? " lang-switch__option--active" : "")
+            (current === code ? " lang-switch__option--active" : "")
           }
+          aria-pressed={current === code}
           disabled={busy}
           onClick={() => choose(code)}
         >

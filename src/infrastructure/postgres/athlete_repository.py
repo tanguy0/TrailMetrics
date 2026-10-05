@@ -5,6 +5,7 @@ a Supabase dashboard session — cannot be replayed against Strava. The key come
 from configuration and never leaves this process.
 """
 
+import json
 from datetime import date, datetime, timezone
 from typing import Optional
 
@@ -42,7 +43,7 @@ class PostgresAthleteRepository(AthleteRepository):
                 updated_at = now()
             returning id, firstname, lastname, profile_url, weight_kg,
                       birthdate, height_cm, email, hr_zone1_end, hr_zone2_end,
-                      hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km, lang
+                      hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km, pace_overrides, lang
             """,
             (athlete.id, athlete.firstname, athlete.lastname,
              athlete.profile_url, athlete.weight_kg),
@@ -53,7 +54,7 @@ class PostgresAthleteRepository(AthleteRepository):
         row = self.db.fetch_one(
             "select id, firstname, lastname, profile_url, weight_kg, "
             "birthdate, height_cm, email, hr_zone1_end, hr_zone2_end, "
-            "hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km, lang "
+            "hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km, pace_overrides, lang "
             "from athletes where id = %s",
             (athlete_id,),
         )
@@ -63,7 +64,7 @@ class PostgresAthleteRepository(AthleteRepository):
         rows = self.db.fetch_all(
             "select id, firstname, lastname, profile_url, weight_kg, "
             "birthdate, height_cm, email, hr_zone1_end, hr_zone2_end, "
-            "hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km, lang "
+            "hr_zone3_end, hr_zone4_end, hr_max, vma_pace_s_per_km, pace_overrides, lang "
             "from athletes order by firstname, lastname"
         )
         return [_athlete(row) for row in rows]
@@ -116,6 +117,13 @@ class PostgresAthleteRepository(AthleteRepository):
             "vma_pace_s_per_km = %s, updated_at = now() where id = %s",
             (hr_zone1_end, hr_zone2_end, hr_zone3_end, hr_zone4_end, hr_max,
              vma_pace_s_per_km, athlete_id),
+        )
+
+    def set_pace_overrides(self, athlete_id: int, overrides: Optional[dict]) -> None:
+        """Replace the hand-set pace zones; ``None`` (or empty) clears them."""
+        self.db.execute(
+            "update athletes set pace_overrides = %s, updated_at = now() where id = %s",
+            (json.dumps(overrides) if overrides else None, athlete_id),
         )
 
     # --- Credentials -------------------------------------------------------
@@ -207,6 +215,10 @@ class PostgresAthleteRepository(AthleteRepository):
         )
 
 
+def _json(value):
+    return json.loads(value) if isinstance(value, str) else value
+
+
 def _athlete(row) -> Athlete:
     return Athlete(
         id=int(row["id"]),
@@ -223,6 +235,7 @@ def _athlete(row) -> Athlete:
         hr_zone4_end=row.get("hr_zone4_end"),
         hr_max=row.get("hr_max"),
         vma_pace_s_per_km=row.get("vma_pace_s_per_km"),
+        pace_overrides=_json(row.get("pace_overrides")),
         lang=row.get("lang") or "en",
     )
 

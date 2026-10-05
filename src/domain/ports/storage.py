@@ -48,6 +48,9 @@ class Athlete:
     hr_zone4_end: Optional[int] = None
     hr_max: Optional[int] = None
     vma_pace_s_per_km: Optional[float] = None
+    # Pace zones set by hand, ``{zone key: {"fast_s_per_km", "slow_s_per_km"}}``;
+    # a zone not in it is computed from the VMA (src.domain.level.zones).
+    pace_overrides: Optional[Dict[str, Dict[str, float]]] = None
     # The UI language the athlete has chosen. Always set — see the schema
     # column's comment for why this, unlike the fields above, is never `None`.
     lang: str = "en"

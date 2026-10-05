@@ -3,7 +3,7 @@
 Public, like the blog: a visitor can upload a GPX and get a plan built on the
 reference GAP curve, with no account and no database. A signed-in athlete gets the
 same endpoint with their own curves on top — which is why auth here is *optional*
-(:func:`_optional_athlete`) rather than a dependency that 401s.
+(:func:`_optional_identity`) rather than a dependency that 401s.
 
 A visitor's GPX is re-sent with every request rather than stored: it is a few
 hundred kilobytes, parsing it is milliseconds next to the plan itself, and their
@@ -20,7 +20,7 @@ fitted on: a new run makes a new key, exactly like a cached plot.
 import json
 import logging
 from datetime import date
-from typing import List, Optional, Tuple
+from typing import List, Literal, Optional, Tuple
 
 import numpy as np
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
@@ -32,6 +32,8 @@ from api.deps import (
     data_source_for,
     get_athlete_repository,
     get_caches,
+    get_coaching_repository,
+    get_planned_item_repository,
     get_plot_output_repository,
     get_race_plan_repository,
     language,
@@ -46,6 +48,7 @@ from src.domain.ports.accounts import Account
 from src.domain.ports.storage import Athlete
 from src.domain.race_plan.gpx import GpxError, parse_gpx
 from src.domain.race_plan.planner import PlanError, build_course
+from src.domain.race_plan.preview import course_preview
 from src.translations import translate
 from src.domain.durability.history import (
     durability_activity_ids,
@@ -101,12 +104,15 @@ class PlanParams(BaseModel):
 class SavedPlanMeta(BaseModel):
     title: str = Field(default="", max_length=200)
     params: PlanParams
+    # The race's date and weight as an objective; both optional ("not said").
+    event_date: Optional[date] = None
+    importance: Optional[Literal["primary", "secondary"]] = None
 
 
 @router.get("/options")
 def options(request: Request, lang: str = Depends(language)) -> dict:
     """Whether the caller is signed in, and which curves they can plan on."""
-    signed_in = _optional_athlete(request) is not None
+    signed_in = _optional_identity(request)[1] is not None
     return {"signed_in": signed_in, "curves": curve_options(signed_in, lang)}
 
 
@@ -120,11 +126,13 @@ def plan(
 ) -> dict:
     """Plan a course: an uploaded ``gpx``, or the stored GPX of saved ``plan_id``."""
     parsed = _parse(params, PlanParams)
-    athlete = _optional_athlete(request)
+    account, athlete = _optional_identity(request)
 
     if gpx is not None:
         payload = _read_gpx(gpx, lang)
-    elif plan_id and athlete is not None:
+    elif plan_id and account is not None:
+        # Saved plans belong to the account, not to Strava: an account without
+        # Strava can reopen its plans too (on the reference curves).
         payload = get_race_plan_repository(account.id).gpx(plan_id)
         if payload is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="race plan not found")
@@ -164,11 +172,18 @@ def plan(
 
 @saved_router.get("")
 def list_saved(account: Account = Depends(current_account)) -> dict:
-    return {"plans": get_race_plan_repository(account.id).list()}
+    repository = get_race_plan_repository(account.id)
+    plans = repository.list()
+    # Plans saved before thumbnails existed get theirs once, here.
+    for plan in plans:
+        if plan["preview"] is None:
+            plan["preview"] = _backfill_preview(repository, plan["id"])
+    return {"plans": plans}
 
 
 @saved_router.post("", status_code=status.HTTP_201_CREATED)
 def create_saved(
+    request: Request,
     meta: str = Form(...),
     gpx: UploadFile = File(...),
     lang: str = Depends(language),
@@ -176,11 +191,14 @@ def create_saved(
 ) -> dict:
     parsed = _parse(meta, SavedPlanMeta)
     payload = _read_gpx(gpx, lang)
-    distance, gain = _course_stats(payload, lang)
-    return get_race_plan_repository(account.id).create(
+    distance, gain, preview = _course_stats(payload, lang)
+    repository = get_race_plan_repository(account.id)
+    created = repository.create(
         parsed.title.strip(), (gpx.filename or "")[:200], payload,
-        parsed.params.model_dump(), distance, gain,
+        parsed.params.model_dump(), distance, gain, preview,
+        event_date=parsed.event_date, importance=parsed.importance,
     )
+    return _sync_goal(request, account, repository, created, lang)
 
 
 @saved_router.get("/{plan_id}")
@@ -193,6 +211,7 @@ def get_saved(plan_id: str, account: Account = Depends(current_account)) -> dict
 
 @saved_router.patch("/{plan_id}")
 def update_saved(
+    request: Request,
     plan_id: str,
     meta: str = Form(...),
     gpx: Optional[UploadFile] = File(None),
@@ -208,27 +227,70 @@ def update_saved(
         payload = repository.gpx(plan_id)
         if payload is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="race plan not found")
-    distance, gain = _course_stats(payload, lang)
+    distance, gain, preview = _course_stats(payload, lang)
     updated = repository.update(
         plan_id,
         title=parsed.title.strip(),
         params=parsed.params.model_dump(),
         distance_m=distance,
         elevation_gain_m=gain,
+        preview=preview,
+        event_date=parsed.event_date,
+        importance=parsed.importance,
         gpx=payload if gpx is not None else None,
         gpx_name=(gpx.filename or "")[:200] if gpx is not None else None,
     )
     if updated is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="race plan not found")
-    return updated
+    return _sync_goal(request, account, repository, updated, lang)
 
 
 @saved_router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_saved(plan_id: str, account: Account = Depends(current_account)) -> None:
-    get_race_plan_repository(account.id).delete(plan_id)
+def delete_saved(
+    request: Request, plan_id: str, account: Account = Depends(current_account)
+) -> None:
+    repository = get_race_plan_repository(account.id)
+    saved = repository.get(plan_id)
+    athlete_id = request.state.account_athlete_id
+    # The goal this plan put on the diary goes with it.
+    if saved is not None and saved["goal_item_id"] and athlete_id is not None:
+        get_planned_item_repository(athlete_id).delete(saved["goal_item_id"])
+    repository.delete(plan_id)
 
 
 # --- Helpers -----------------------------------------------------------------
+
+def _sync_goal(request: Request, account: Account, repository, saved: dict, lang: str) -> dict:
+    """Keep a coached athlete's diary goal in step with this plan; return the plan.
+
+    Only with a date *and* an importance, only for an account that is coached, and
+    only on the account's own diary (never a coachee's a coach is viewing as) —
+    which needs Strava, since the diary is keyed by the Strava athlete. Clearing
+    the date or importance leaves an existing goal where it is.
+    """
+    athlete_id = request.state.account_athlete_id
+    if (
+        not saved["event_date"]
+        or not saved["importance"]
+        or athlete_id is None
+        or not get_coaching_repository().is_coached(account.id)
+    ):
+        return saved
+    items = get_planned_item_repository(athlete_id)
+    title = saved["title"] or translate("ui.race_plan.untitled", lang)
+    when = date.fromisoformat(saved["event_date"])
+    goal = None
+    if saved["goal_item_id"]:
+        goal = items.update(
+            saved["goal_item_id"], date=when, end_date=when, title=title,
+            importance=saved["importance"],
+        )
+    if goal is None:
+        goal = items.create("goal", when, title, "", importance=saved["importance"])
+        repository.set_goal_item(saved["id"], goal["id"])
+        saved = {**saved, "goal_item_id": goal["id"]}
+    return saved
+
 
 def _parse(raw: str, model):
     try:
@@ -247,28 +309,49 @@ def _read_gpx(upload: UploadFile, lang: str) -> bytes:
     return payload
 
 
-def _course_stats(payload: bytes, lang: str) -> Tuple[float, float]:
-    """``(distance, D+)`` of a GPX — and the check that it is plannable at all."""
+def _course_stats(payload: bytes, lang: str) -> Tuple[float, float, dict]:
+    """``(distance, D+, preview)`` of a GPX — and the check that it is plannable at all."""
     try:
-        course = build_course(parse_gpx(payload))
+        points = parse_gpx(payload)
+        course = build_course(points)
     except GpxError as error:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=translate(error.reason_key, lang)
         )
-    return course.total_m, course.elevation_gain()[0]
+    return course.total_m, course.elevation_gain()[0], course_preview(points, course)
 
 
-def _optional_athlete(request: Request) -> Optional[Athlete]:
-    """The signed-in athlete (view-as included), or ``None`` for a visitor."""
+def _backfill_preview(repository, plan_id: str) -> Optional[dict]:
+    """Compute and store a saved plan's missing thumbnail; ``None`` if it cannot be."""
+    payload = repository.gpx(plan_id)
+    if payload is None:
+        return None
+    try:
+        points = parse_gpx(payload)
+        preview = course_preview(points, build_course(points))
+    except GpxError:
+        return None
+    repository.set_preview(plan_id, preview)
+    return preview
+
+
+def _optional_identity(request: Request) -> Tuple[Optional[Account], Optional[Athlete]]:
+    """``(account, athlete)`` of the caller, view-as included; ``None`` for what is missing.
+
+    A visitor has neither; an account without Strava has no athlete.
+    """
     try:
         account = optional_account(request)
-        if account is None:
-            return None
-        return get_athlete_repository().get(current_athlete_id(request, account))
     except HTTPException:
-        # Not signed in — or no database configured, which for this public
-        # endpoint just means nobody can be.
-        return None
+        # No database configured, which for this public endpoint just means
+        # nobody can be signed in.
+        return None, None
+    if account is None:
+        return None, None
+    try:
+        return account, get_athlete_repository().get(current_athlete_id(request, account))
+    except HTTPException:
+        return account, None
 
 
 def _personal_curves(athlete: Athlete):

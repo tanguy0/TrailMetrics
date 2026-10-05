@@ -3,7 +3,23 @@
     TEST_DATABASE_URL=… /path/to/venv/bin/python -m unittest discover -s tests -t . -v
 """
 
-from tests.api_harness import ATHLETE_BASE, ApiTestCase, requires_database
+import json
+
+from tests.api_harness import ATHLETE_BASE, DOMAIN, ApiTestCase, requires_database
+
+def _gpx(points=60) -> bytes:
+    """A 6 km out-and-up line: enough for the planner, small enough to inline."""
+    rows = "".join(
+        f'<trkpt lat="45.{i:04d}" lon="6.0000"><ele>{1000 + 5 * i}</ele></trkpt>'
+        for i in range(points)
+    )
+    return (
+        '<?xml version="1.0"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">'
+        f"<trk><trkseg>{rows}</trkseg></trk></gpx>"
+    ).encode()
+
+
+PLAN_PARAMS = '{"target_time_s": 3600}'
 
 RECORDS = {"method": "records", "inputs": {"records": [
     {"distance_m": 5000, "seconds": 1200}, {"distance_m": 10000, "seconds": 2460},
@@ -28,26 +44,51 @@ class ToolsApiTest(ApiTestCase):
         self.assertEqual(response.status_code, 422)
         self.assertIn("cohérentes", response.json()["detail"])
 
-    def test_an_account_saves_and_home_reads_it_without_strava(self):
+    def test_estimating_never_saves(self):
         token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + 19)
         body = self.client.post(
-            "/tools/level/estimate", json={**RECORDS, "hr_max": 188}, headers=self.bearer(token)
+            "/tools/level/estimate", json=RECORDS, headers=self.bearer(token)
+        ).json()
+        self.assertIsNone(body["saved_at"])
+        latest = self.client.get("/tools/level/latest", headers=self.bearer(token)).json()
+        self.assertIsNone(latest["estimate"])
+
+    def test_saving_needs_strava(self):
+        token = self.token_for("ana")
+        response = self.client.post("/tools/level/save", json=RECORDS, headers=self.bearer(token))
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(self.client.post("/tools/level/save", json=RECORDS).status_code, 401)
+
+    def test_the_saved_estimate_becomes_the_athletes_vma(self):
+        token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + 20)
+        body = self.client.post(
+            "/tools/level/save", json={**RECORDS, "hr_max": 188}, headers=self.bearer(token)
         ).json()
         self.assertIsNotNone(body["saved_at"])
         me = self.me(token).json()
         self.assertEqual(me["vma_pace_s_per_km"], body["vma_pace_s_per_km"])
         self.assertEqual(me["hr_max"], 188)
-        self.assertEqual(me["level_estimate"]["method"], "records")
         latest = self.client.get("/tools/level/latest", headers=self.bearer(token)).json()
         self.assertEqual(latest["estimate"]["result"]["vdot"], body["vdot"])
 
-    def test_the_estimate_becomes_the_athletes_vma(self):
+    def test_paces_set_by_hand_until_the_next_saved_estimate(self):
         token = self.token_for("ana")
-        self.exchange(token, ATHLETE_BASE + 20)
-        body = self.client.post(
-            "/tools/level/estimate", json=RECORDS, headers=self.bearer(token)
+        self.exchange(token, ATHLETE_BASE + 26)
+        z2 = {"fast_s_per_km": 330, "slow_s_per_km": 360}
+        me = self.client.patch(
+            "/auth/me", json={"pace_overrides": {"z2": z2}}, headers=self.bearer(token)
         ).json()
-        self.assertEqual(self.me(token).json()["vma_pace_s_per_km"], body["vma_pace_s_per_km"])
+        self.assertEqual(me["pace_overrides"], {"z2": z2})
+        self.assertEqual(self.me(token).json()["pace_overrides"], {"z2": z2})
+        for bad in ({"z9": z2}, {"z2": {"fast_s_per_km": 400, "slow_s_per_km": 300}}):
+            response = self.client.patch(
+                "/auth/me", json={"pace_overrides": bad}, headers=self.bearer(token)
+            )
+            self.assertEqual(response.status_code, 422)
+        self.client.post("/tools/level/save", json=RECORDS, headers=self.bearer(token))
+        self.assertEqual(self.me(token).json()["pace_overrides"], {})
 
     def test_zone_definitions_are_served(self):
         body = self.client.get("/tools/zones").json()
@@ -60,7 +101,134 @@ class ToolsApiTest(ApiTestCase):
         self.assertEqual(response.json(), {"plans": []})
         self.assertEqual(self.client.get("/race-plans").status_code, 401)
 
-    def test_slope_and_durability_need_strava(self):
+    def test_a_saved_plan_is_planned_from_its_stored_gpx(self):
+        # Regression: planning by ``plan_id`` used to 500 (``account`` undefined).
+        token = self.token_for("ana")
+        saved = self.client.post(
+            "/race-plans",
+            data={"meta": f'{{"title": "Galibier", "params": {PLAN_PARAMS}}}'},
+            files={"gpx": ("course.gpx", _gpx(), "application/gpx+xml")},
+            headers=self.bearer(token),
+        )
+        self.assertEqual(saved.status_code, 201, saved.text)
+        planned = self.client.post(
+            "/race-plan",
+            data={"params": PLAN_PARAMS, "plan_id": saved.json()["id"]},
+            headers=self.bearer(token),
+        )
+        self.assertEqual(planned.status_code, 200, planned.text)
+        self.assertFalse(planned.json()["signed_in"])
+        visitor = self.client.post(
+            "/race-plan", data={"params": PLAN_PARAMS, "plan_id": saved.json()["id"]}
+        )
+        self.assertEqual(visitor.status_code, 400)
+
+    def test_saved_plans_list_a_thumbnail_and_backfill_old_ones(self):
+        token = self.token_for("ana")
+        saved = self.client.post(
+            "/race-plans",
+            data={"meta": f'{{"title": "Galibier", "params": {PLAN_PARAMS}}}'},
+            files={"gpx": ("course.gpx", _gpx(), "application/gpx+xml")},
+            headers=self.bearer(token),
+        ).json()
+        preview = saved["preview"]
+        self.assertEqual(len(preview["route"]), 60)
+        self.assertLessEqual(len(preview["profile"]), 120)
+        self.assertGreater(preview["profile"][-1][1], preview["profile"][0][1])
+        # A plan saved before thumbnails existed gets one from the list.
+        self.db.execute("update race_plans set preview = null where id = %s", (saved["id"],))
+        listed = self.client.get("/race-plans", headers=self.bearer(token)).json()["plans"]
+        self.assertEqual(listed[0]["preview"], preview)
+        row = self.db.fetch_one("select preview from race_plans where id = %s", (saved["id"],))
+        self.assertIsNotNone(row["preview"])
+
+    def test_a_saved_plan_is_planned_with_strava_attached(self):
+        token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + 22)
+        saved = self.client.post(
+            "/race-plans",
+            data={"meta": f'{{"title": "Galibier", "params": {PLAN_PARAMS}}}'},
+            files={"gpx": ("course.gpx", _gpx(), "application/gpx+xml")},
+            headers=self.bearer(token),
+        ).json()
+        planned = self.client.post(
+            "/race-plan",
+            data={"params": PLAN_PARAMS, "plan_id": saved["id"]},
+            headers=self.bearer(token),
+        )
+        self.assertEqual(planned.status_code, 200, planned.text)
+        self.assertTrue(planned.json()["signed_in"])
+
+    def _coached(self, local, athlete_id):
+        token = self.token_for(local)
+        self.exchange(token, athlete_id)
+        request_id = self.client.put(
+            "/coaching/request", json={"message": "Trail en juin"}, headers=self.bearer(token)
+        ).json()["request"]["id"]
+        coach = self.token_for("coach")
+        self.db.execute("update accounts set role = 'coach' where email = %s", (f"coach@{DOMAIN}",))
+        self.client.post(f"/coaching/requests/{request_id}/accept", headers=self.bearer(coach))
+        return token
+
+    def _save(self, token, plan_id=None, **meta):
+        body = {"title": "UTMB", "params": json.loads(PLAN_PARAMS), **meta}
+        if plan_id:
+            return self.client.patch(
+                f"/race-plans/{plan_id}", data={"meta": json.dumps(body)}, headers=self.bearer(token)
+            ).json()
+        return self.client.post(
+            "/race-plans", data={"meta": json.dumps(body)},
+            files={"gpx": ("course.gpx", _gpx(), "application/gpx+xml")},
+            headers=self.bearer(token),
+        ).json()
+
+    def _goals(self, athlete_id):
+        return self.db.fetch_all(
+            "select id, date, title, importance from planned_items "
+            "where athlete_id = %s and kind = 'goal'", (athlete_id,),
+        )
+
+    def test_a_dated_objective_goes_on_a_coached_athletes_diary(self):
+        athlete = ATHLETE_BASE + 23
+        token = self._coached("ana", athlete)
+        saved = self._save(token, event_date="2027-08-27", importance="primary")
+        self.assertEqual(saved["event_date"], "2027-08-27")
+        [goal] = self._goals(athlete)
+        self.assertEqual((str(goal["date"]), goal["title"], goal["importance"]),
+                         ("2027-08-27", "UTMB", "primary"))
+        # Edits follow the plan; clearing the date leaves the goal alone.
+        self._save(token, saved["id"], title="UTMB 2027", event_date="2027-08-28",
+                   importance="secondary")
+        [goal] = self._goals(athlete)
+        self.assertEqual((str(goal["date"]), goal["title"], goal["importance"]),
+                         ("2027-08-28", "UTMB 2027", "secondary"))
+        self._save(token, saved["id"], importance="secondary")
+        self.assertEqual(len(self._goals(athlete)), 1)
+        self.client.delete(f"/race-plans/{saved['id']}", headers=self.bearer(token))
+        self.assertEqual(self._goals(athlete), [])
+
+    def test_no_goal_without_coaching_or_without_both_fields(self):
+        token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + 24)
+        saved = self._save(token, event_date="2027-08-27", importance="primary")
+        self.assertEqual(saved["importance"], "primary")
+        self.assertEqual(self._goals(ATHLETE_BASE + 24), [])
+        coached = self._coached("bob", ATHLETE_BASE + 25)
+        self._save(coached, event_date="2027-08-27")
+        self.assertEqual(self._goals(ATHLETE_BASE + 25), [])
+
+    def test_the_gap_profile_without_runs_says_insufficient_data(self):
+        token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + 27)
+        body = self.client.get("/tools/gap/summary", headers=self.bearer(token)).json()
+        self.assertFalse(body["available"])
+        self.assertEqual(
+            [(t["key"], t["level"]) for t in body["terrains"]],
+            [("steep_downhill", "insufficient"), ("downhill", "insufficient"),
+             ("uphill", "insufficient"), ("steep_uphill", "insufficient")],
+        )
+
+    def test_gap_and_durability_profiles_need_strava(self):
         token = self.token_for("ana")
         for path in ("/tools/gap/summary", "/tools/durability/summary"):
             self.assertEqual(self.client.get(path, headers=self.bearer(token)).status_code, 409)

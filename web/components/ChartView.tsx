@@ -14,6 +14,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Callout } from "@/components/Callout";
+import { useTranslate } from "@/components/StringsProvider";
 import { durationToEpoch, formatHms, toCsv, downloadCsv } from "@/lib/format";
 import { planFor, type FamilyPalette, type Plan } from "@/lib/chartFamily";
 import { AREA_ALPHA_TOP, curvePalette, dashByCode, isReference, rgba, theme, tokens } from "@/lib/theme";
@@ -649,6 +650,7 @@ const CONFIG = {
 };
 
 export function ChartView({ chart }: { chart: ChartData }) {
+  const t = useTranslate();
   const node = useRef<HTMLDivElement>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -699,7 +701,7 @@ export function ChartView({ chart }: { chart: ChartData }) {
   }, [chart]);
 
   if (failure) {
-    return <Callout tone="terra">Could not draw the chart: {failure}</Callout>;
+    return <Callout tone="terra">{t("chart.error", { error: failure })}</Callout>;
   }
 
   return (
@@ -716,7 +718,7 @@ export function ChartView({ chart }: { chart: ChartData }) {
         className="tm-btn tm-btn--secondary tm-btn--sm"
         onClick={() => downloadChartCsv(chart)}
       >
-        Download data (CSV)
+        {t("chart.download_csv")}
       </button>
     </figure>
   );

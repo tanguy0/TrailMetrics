@@ -37,4 +37,4 @@ create table coaching (
 
 - Non coaché : la page-offre décrite dans `access.md` (hero, trois points, aperçu du carnet en fond, formulaire). États : *à remplir*, *envoyée le …* (modifiable / retirer), *déclinée*.
 - Coaché : le carnet actuel.
-- Coach : le carnet de l'athlète sélectionné + la carte **Athlètes** (en attente / coachés) en haut de la page quand aucun athlète n'est sélectionné, ou accessible par un bouton « Mes athlètes » dans le `PageHeader`.
+- Coach : comme un athlète coaché — son propre carnet ; le carnet de l'athlète sélectionné quand il en consulte un (bouton « Mes athlètes » pour revenir). Les demandes en attente arrivent en **notification dans le rail**, sous le sélecteur « Athlète » : un lien « Demandes de coaching » avec leur nombre (`tm-rail__count`), absent à zéro, qui ouvre la liste (accepter / décliner). Les athlètes coachés s'ouvrent depuis le sélecteur.

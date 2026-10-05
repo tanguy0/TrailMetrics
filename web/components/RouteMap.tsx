@@ -57,10 +57,13 @@ function loadLeaflet(): Promise<typeof import("leaflet")> {
 export function RouteMap({
   points,
   height = 260,
+  interactive = true,
 }: {
   /** `[latitude, longitude]` pairs, oldest first. */
   points: [number, number][];
   height?: number;
+  /** `false` for a thumbnail inside a link: no zoom, no drag, clicks go through. */
+  interactive?: boolean;
 }) {
   const container = useRef<HTMLDivElement | null>(null);
   const [failed, setFailed] = useState(false);
@@ -78,7 +81,12 @@ export function RouteMap({
         map = L.map(container.current, {
           // A route is a static picture here; scroll-zoom would hijack the page.
           scrollWheelZoom: false,
-          zoomControl: true,
+          zoomControl: interactive,
+          dragging: interactive,
+          doubleClickZoom: interactive,
+          touchZoom: interactive,
+          boxZoom: interactive,
+          keyboard: interactive,
           attributionControl: true,
         });
 
@@ -118,13 +126,13 @@ export function RouteMap({
       // Leaflet leaks handlers and a resize observer if the map outlives its node.
       map?.remove();
     };
-  }, [points]);
+  }, [points, interactive]);
 
   if (points.length === 0 || failed) return null;
 
   return (
     <div
-      className="route-map"
+      className={interactive ? "route-map" : "route-map route-map--static"}
       ref={container}
       style={{ height }}
       // The route is decoration beside the numbers, which carry the same facts.
