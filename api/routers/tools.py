@@ -1,7 +1,7 @@
 """The Tools tab (design/tagg/access.md § Outils): designed pages, not panel stacks.
 
-* **Level assessment** — open to everyone; saved when an account exists, and the
-  latest estimate becomes the account's VMA (design/specs/level.md).
+* **Level assessment** — open to everyone; saving is an explicit act that needs
+  Strava, and the saved estimate becomes the athlete's VMA (design/specs/level.md).
 * **Slope profile** and **Durability** — Strava required. Their charts are the
   existing ``gap_curve`` and ``durability_curve`` plots, rendered by the client
   through ``/render/panel`` like Home's; this router only adds the headline
@@ -10,13 +10,14 @@
 
 import logging
 from datetime import date, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from api.deps import (
+    STRAVA_NOT_CONNECTED,
     current_account,
     current_athlete,
     data_source_for,
@@ -24,7 +25,6 @@ from api.deps import (
     get_athlete_repository,
     get_level_repository,
     language,
-    optional_account,
 )
 from api.routers.race_plan import _durability_model, _personal_curves
 from src.domain.durability.config import DEFAULT_CONFIG as DURABILITY_CONFIG
@@ -62,35 +62,46 @@ def zone_definitions() -> dict:
 
 
 @router.post("/level/estimate")
-def estimate_level(
+def estimate_level(payload: EstimateRequest = Body(...), lang: str = Depends(language)) -> dict:
+    """Estimate a VMA. Open to everyone and never saved: saving is its own act."""
+    result, hr_max = _estimate(payload, lang)
+    return {**_estimate_payload(result, hr_max, lang), "saved_at": None}
+
+
+@router.post("/level/save")
+def save_level(
     request: Request,
     payload: EstimateRequest = Body(...),
     lang: str = Depends(language),
+    account: Account = Depends(current_account),
 ) -> dict:
-    """Estimate a VMA. Open to visitors; saved, and applied, when signed in."""
+    """Save an estimate as the account's level — its Home zones from then on.
+
+    Recomputed from the inputs rather than taken from the client, so what is
+    stored is what the tool computes. Needs Strava: the estimate becomes the
+    athlete's VMA, and an account without Strava has no athlete to set it on.
+    """
+    if request.state.account_athlete_id is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=STRAVA_NOT_CONNECTED)
+    result, hr_max = _estimate(payload, lang)
+    body = _estimate_payload(result, hr_max, lang)
+    saved = get_level_repository(account.id).save(
+        result.method,
+        {**payload.inputs, "hr_max": hr_max},
+        {k: v for k, v in body.items() if k != "notes"},
+    )
+    _apply_to_athlete(account, result, hr_max)
+    return {**body, "saved_at": saved["created_at"]}
+
+
+def _estimate(payload: EstimateRequest, lang: str) -> Tuple[LevelEstimate, Optional[int]]:
     try:
-        result = estimate(payload.method, payload.inputs)
-        hr_max = hr_max_or_none(payload.hr_max)
+        return estimate(payload.method, payload.inputs), hr_max_or_none(payload.hr_max)
     except LevelInputError as error:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=translate(f"ui.{error.key}", lang).format(**error.params),
         )
-    body = _estimate_payload(result, hr_max, lang)
-
-    try:
-        account = optional_account(request)
-    except HTTPException:
-        account = None  # no database: nobody can be signed in, the tool still works
-    saved = None
-    if account is not None:
-        saved = get_level_repository(account.id).save(
-            result.method,
-            {**payload.inputs, "hr_max": hr_max},
-            {k: v for k, v in body.items() if k != "notes"},
-        )
-        _apply_to_athlete(account, result, hr_max)
-    return {**body, "saved_at": saved["created_at"] if saved else None}
 
 
 @router.get("/level/latest")

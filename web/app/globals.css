@@ -2420,6 +2420,12 @@ a.tm-segment__item {
 }
 
 .level-form,
+.level-save {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-4);
+}
+
 .level-result {
   display: flex;
   flex-direction: column;

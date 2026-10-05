@@ -1111,9 +1111,11 @@ TRANSLATIONS = {
         "fr": "Créez un compte pour garder vos plans.",
     },
     "ui.tools.keep_zones": {
-        "en": "Create an account to keep your zones.",
-        "fr": "Créez un compte pour garder vos zones.",
+        "en": "Create an account and connect Strava to keep your zones.",
+        "fr": "Créez un compte et connectez Strava pour garder vos zones.",
     },
+    "ui.level.save": {"en": "Save updated estimate", "fr": "Enregistrer la nouvelle estimation"},
+    "ui.level.saving": {"en": "Saving…", "fr": "Enregistrement…"},
     "ui.tools.saved_zones": {
         "en": "Saved: your Home zones now use this VMA.",
         "fr": "Enregistré : les zones de votre Accueil utilisent maintenant cette VMA.",

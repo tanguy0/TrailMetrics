@@ -1,4 +1,4 @@
-/** Tools → Level Assessment. Open to everyone; an account keeps the result. */
+/** Tools → Level Assessment. Open to everyone; an account with Strava can save it. */
 
 import type { Metadata } from "next";
 
@@ -10,5 +10,11 @@ export const metadata: Metadata = { title: "Évaluation du niveau — TAGG" };
 
 export default async function LevelPage() {
   const viewer = await getViewer();
-  return <LevelScreen strings={await loadStrings()} signedIn={Boolean(viewer)} />;
+  return (
+    <LevelScreen
+      strings={await loadStrings()}
+      signedIn={Boolean(viewer)}
+      hasStrava={viewer?.tier === "strava"}
+    />
+  );
 }

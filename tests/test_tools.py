@@ -44,26 +44,34 @@ class ToolsApiTest(ApiTestCase):
         self.assertEqual(response.status_code, 422)
         self.assertIn("cohérentes", response.json()["detail"])
 
-    def test_an_account_saves_and_home_reads_it_without_strava(self):
+    def test_estimating_never_saves(self):
         token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + 19)
         body = self.client.post(
-            "/tools/level/estimate", json={**RECORDS, "hr_max": 188}, headers=self.bearer(token)
+            "/tools/level/estimate", json=RECORDS, headers=self.bearer(token)
+        ).json()
+        self.assertIsNone(body["saved_at"])
+        latest = self.client.get("/tools/level/latest", headers=self.bearer(token)).json()
+        self.assertIsNone(latest["estimate"])
+
+    def test_saving_needs_strava(self):
+        token = self.token_for("ana")
+        response = self.client.post("/tools/level/save", json=RECORDS, headers=self.bearer(token))
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(self.client.post("/tools/level/save", json=RECORDS).status_code, 401)
+
+    def test_the_saved_estimate_becomes_the_athletes_vma(self):
+        token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + 20)
+        body = self.client.post(
+            "/tools/level/save", json={**RECORDS, "hr_max": 188}, headers=self.bearer(token)
         ).json()
         self.assertIsNotNone(body["saved_at"])
         me = self.me(token).json()
         self.assertEqual(me["vma_pace_s_per_km"], body["vma_pace_s_per_km"])
         self.assertEqual(me["hr_max"], 188)
-        self.assertEqual(me["level_estimate"]["method"], "records")
         latest = self.client.get("/tools/level/latest", headers=self.bearer(token)).json()
         self.assertEqual(latest["estimate"]["result"]["vdot"], body["vdot"])
-
-    def test_the_estimate_becomes_the_athletes_vma(self):
-        token = self.token_for("ana")
-        self.exchange(token, ATHLETE_BASE + 20)
-        body = self.client.post(
-            "/tools/level/estimate", json=RECORDS, headers=self.bearer(token)
-        ).json()
-        self.assertEqual(self.me(token).json()["vma_pace_s_per_km"], body["vma_pace_s_per_km"])
 
     def test_zone_definitions_are_served(self):
         body = self.client.get("/tools/zones").json()

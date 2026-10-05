@@ -161,12 +161,16 @@ export const decideCoachingRequest = (id: string, decision: "accept" | "decline"
 
 // --- Tools -----------------------------------------------------------------
 
-/** Estimate a VMA. Works for a visitor; saved and applied for an account. */
+/** Estimate a VMA. Works for everyone; never saved (see `saveLevel`). */
 export const estimateLevel = (body: {
   method: LevelMethod;
   inputs: Record<string, unknown>;
   hr_max?: number | null;
 }) => request<LevelResult>("/tools/level/estimate", { method: "POST", body: JSON.stringify(body) });
+
+/** Save an estimate as the account's level (its Home zones). Needs Strava. */
+export const saveLevel = (body: Parameters<typeof estimateLevel>[0]) =>
+  request<LevelResult>("/tools/level/save", { method: "POST", body: JSON.stringify(body) });
 
 export const getLatestLevel = () =>
   request<{ estimate: { result: Omit<LevelResult, "notes" | "saved_at">; created_at: string } | null }>(

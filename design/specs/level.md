@@ -29,7 +29,7 @@ Validation : `D'` entre 50 et 500 m et `CS` entre 1,5 et 7 m/s, sinon message «
 
 ## Sortie
 
-Une structure unique `LevelEstimate { method, vma_kmh, vma_pace_s_per_km, vdot, confidence, notes[], zones[] }` ; sauvegardée dans `level_estimates(account_id, method, inputs jsonb, result jsonb, created_at)` quand un compte existe ; la dernière estimation devient `vma_pace_s_per_km` de la carte *Zones* de l'Accueil (qui gagne un libellé « estimée le 2 oct. · méthode : records »). Sans compte : résultat affiché, un `tm-callout` forest « Créez un compte pour garder vos zones ».
+Une structure unique `LevelEstimate { method, vma_kmh, vma_pace_s_per_km, vdot, confidence, notes[], zones[] }` ; jamais sauvegardée à l'estimation : un bouton « Enregistrer la nouvelle estimation » en bas de page (`POST /tools/level/save`, visible seulement avec Strava connecté) l'enregistre dans `level_estimates(account_id, method, inputs jsonb, result jsonb, created_at)` ; la dernière estimation enregistrée devient `vma_pace_s_per_km` de la carte *Zones* de l'Accueil (qui gagne un libellé « estimée le 2 oct. · méthode : records »). Sans compte : résultat affiché, un `tm-callout` forest « Créez un compte et connectez Strava pour garder vos zones ».
 
 ## Page `/tools/level`
 
