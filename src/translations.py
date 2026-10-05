@@ -1104,6 +1104,18 @@ TRANSLATIONS = {
     "ui.tools.race_planning": {"en": "Race Planning", "fr": "Planification de course"},
     "ui.tools.level": {"en": "Level Assessment", "fr": "Évaluation du niveau"},
     "ui.tools.more_details": {"en": "More details", "fr": "Plus de détails"},
+    # Profiles and plans are kept as last computed; Recompute refits on the latest runs.
+    "ui.recompute.button": {"en": "Recompute", "fr": "Recalculer"},
+    "ui.recompute.busy": {
+        "en": "Recomputing on your latest runs — this can take a minute…",
+        "fr": "Recalcul sur vos dernières sorties — cela peut prendre une minute…",
+    },
+    "ui.recompute.computed": {"en": "Last computed: {when}", "fr": "Dernier calcul : {when}"},
+    "ui.recompute.new_runs.one": {"en": "{count} new run since", "fr": "{count} nouvelle sortie depuis"},
+    "ui.recompute.new_runs.many": {
+        "en": "{count} new runs since",
+        "fr": "{count} nouvelles sorties depuis",
+    },
     "ui.tools.gap_profile": {"en": "GAP Profile", "fr": "Profil GAP"},
     "ui.tools.durability": {"en": "Durability Profile", "fr": "Profil de durabilité"},
     "ui.tools.keep_plans": {

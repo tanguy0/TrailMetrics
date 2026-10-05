@@ -2486,8 +2486,23 @@ a.tm-segment__item {
 /* A profile's way on to Analysis, closing its card. */
 .tool-more {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
   margin-top: var(--space-4);
+}
+
+/* A result's age and its Recompute button (profiles, saved race plans). */
+.recompute {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.recompute .pending {
+  padding: 0;
 }
 
 /* A profile tile (GAP, durability): the terrain, its range in mono, its level chip. */

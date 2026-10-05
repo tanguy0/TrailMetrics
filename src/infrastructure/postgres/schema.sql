@@ -456,6 +456,31 @@ alter table race_plans add column if not exists event_date date;
 alter table race_plans add column if not exists importance text;
 alter table race_plans add column if not exists goal_item_id text;
 
+-- The plan as last computed, so a saved plan opens without recomputing. Written
+-- on save and on an explicit recompute; `result_lang` because the result carries
+-- translated labels (another language recomputes it once).
+alter table race_plans add column if not exists result jsonb;
+alter table race_plans add column if not exists result_lang text;
+alter table race_plans add column if not exists computed_at timestamptz;
+
+-- --- Fitted athlete models --------------------------------------------------
+
+-- The personal models the Tools read — a GAP curve per model, the durability
+-- model — as last fitted. Kept until the athlete asks for a recompute rather
+-- than refitted on every new run: a fit reads the whole history. `activity_ids`
+-- are the runs it was fitted on, so the UI can say how many are newer. A row
+-- whose `version` is not the code's is ignored (and refitted once).
+create table if not exists athlete_models (
+    athlete_id    bigint not null references athletes(id) on delete cascade,
+    kind          text not null,
+    version       text not null,
+    payload       jsonb not null,
+    activity_ids  bigint[] not null default '{}',
+    computed_at   timestamptz not null default now(),
+
+    primary key (athlete_id, kind)
+);
+
 -- Level assessments (design/specs/level.md). Inputs and result as JSON: the
 -- three tests take different inputs, and the result is the LevelEstimate the
 -- tool showed — kept as shown, not recomputed, so "estimated on …" stays true.
@@ -520,6 +545,7 @@ alter table assets enable row level security;
 alter table activity_comments enable row level security;
 alter table blog_posts enable row level security;
 alter table race_plans enable row level security;
+alter table athlete_models enable row level security;
 alter table accounts enable row level security;
 alter table sessions enable row level security;
 alter table password_resets enable row level security;

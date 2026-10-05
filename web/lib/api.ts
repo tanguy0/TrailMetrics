@@ -186,8 +186,12 @@ export function getZoneDefinitions(): Promise<ZoneDefinitions> {
   return zonesCache;
 }
 
+/** The profiles as last fitted; `recompute*` refits on the latest runs first. */
 export const getGapSummary = () => request<GapSummary>("/tools/gap/summary");
+export const recomputeGap = () => request<GapSummary>("/tools/gap/recompute", { method: "POST" });
 export const getDurabilitySummary = () => request<DurabilitySummary>("/tools/durability/summary");
+export const recomputeDurability = () =>
+  request<DurabilitySummary>("/tools/durability/recompute", { method: "POST" });
 
 export const listPageTemplates = () => request<{ templates: PageTemplate[] }>("/pages/templates");
 export const createPageFromTemplate = (key: string) =>
@@ -289,13 +293,18 @@ export const getRacePlanOptions = () => request<RacePlanOptions>("/race-plan/opt
 
 /**
  * A plan for one course: a freshly chosen GPX, or a saved plan's stored one.
- * Nothing is stored by this call.
+ * Nothing is stored by this call; `refit` refits the athlete's models first.
  */
-export const planRace = (source: { gpx: File } | { planId: string }, params: RacePlanParams) => {
+export const planRace = (
+  source: { gpx: File } | { planId: string },
+  params: RacePlanParams,
+  refit = false,
+) => {
   const form = new FormData();
   if ("gpx" in source) form.append("gpx", source.gpx);
   else form.append("plan_id", source.planId);
   form.append("params", JSON.stringify(params));
+  if (refit) form.append("refit", "true");
   return request<RacePlanResult>("/race-plan", { method: "POST", body: form });
 };
 
@@ -304,17 +313,22 @@ export const listRacePlans = () =>
 
 export const getRacePlan = (id: string) => request<SavedRacePlan>(`/race-plans/${id}`);
 
-/** Create (no `id`) or replace a saved plan; `gpx` only when a new file was chosen. */
+/**
+ * Create (no `id`) or replace a saved plan; `gpx` only when a new file was chosen.
+ * The plan is computed and stored with it — on refitted models when `refit`.
+ */
 export const saveRacePlan = (
   id: string | null,
   title: string,
   params: RacePlanParams,
   gpx: File | null,
   race: Pick<SavedRacePlan, "event_date" | "importance">,
+  refit = false,
 ) => {
   const form = new FormData();
   form.append("meta", JSON.stringify({ title, params, ...race }));
   if (gpx) form.append("gpx", gpx);
+  if (refit) form.append("refit", "true");
   return request<SavedRacePlan>(id ? `/race-plans/${id}` : "/race-plans", {
     method: id ? "PATCH" : "POST",
     body: form,

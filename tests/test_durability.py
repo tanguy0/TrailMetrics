@@ -5,6 +5,7 @@
 Plain ``unittest`` so no test dependency is added to the project.
 """
 
+import json
 import unittest
 from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
@@ -46,10 +47,13 @@ from src.domain.durability.personalization import (
     PERSONALIZED,
     POPULATION_ONLY,
     REASON_NO_HISTORY,
+    AthleteDurabilityModel,
     fit_athlete,
 )
 from src.domain.durability.segments import extract_segments
 from src.domain.durability.solver import RouteDurability, solve_route
+from src.domain.plots.durability_curve import projected_extra_cost
+from src.infrastructure.postgres.athlete_model_repository import plain
 from src.domain.gap.reference_curves import balanced_runner
 from src.domain.models.activity import ActivityStream
 from src.domain.race_plan.gpx import CoursePoints
@@ -277,6 +281,23 @@ class PersonalizationTests(unittest.TestCase):
         self.assertGreater(model.personal_weight[DURATION], 0.6)
         # Thermal has no historical signal and is never personalized.
         self.assertEqual(model.coefficients.thermal, POPULATION.thermal)
+
+    def test_a_stored_model_comes_back_whole(self):
+        # What the Tools keep in ``athlete_models``: JSON with NaNs as nulls.
+        streams = [_run(i, self.today - timedelta(days=3 * i), 2.5, 0.06, self.rng)
+                   for i in range(1, 9)]
+        model = fit_athlete(_segments(streams), ReferenceSpeed(CS, BEST_EFFORTS), DEFAULT_CONFIG)
+        model.segments[0] = replace(model.segments[0], heartrate_bpm=float("nan"))
+        stored = json.loads(json.dumps(plain(model.to_store()), allow_nan=False))
+        back = AthleteDurabilityModel.from_store(stored)
+        self.assertEqual(back.to_dict(), model.to_dict())
+        self.assertEqual(len(back.segments), len(model.segments))
+        self.assertEqual(back.segments[3], model.segments[3])
+        self.assertTrue(np.isnan(back.segments[0].heartrate_bpm))
+        self.assertEqual(
+            projected_extra_cost(back, DEFAULT_CONFIG, np.array([1.0, 4.0])).tolist(),
+            projected_extra_cost(model, DEFAULT_CONFIG, np.array([1.0, 4.0])).tolist(),
+        )
 
     def test_old_runs_ignored(self):
         old = [_run(i, self.today - timedelta(days=400 + i), 2.5, 0.06, self.rng)

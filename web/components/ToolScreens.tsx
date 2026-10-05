@@ -7,7 +7,8 @@
  * stands against an average runner — one level per terrain (GAP) or quality
  * (durability), on the shared five-level scale — then the chart those levels
  * were read on. Levels and chart both come from the tools router's `summary`
- * routes, computed on the same fitted models the race plan uses.
+ * routes, read on the same stored models the race plan uses — kept as last fitted
+ * until the athlete presses Recompute.
  */
 
 import Link from "next/link";
@@ -15,7 +16,13 @@ import { useEffect, useState } from "react";
 
 import { Callout } from "@/components/Callout";
 import { ChartView } from "@/components/ChartView";
-import { getDurabilitySummary, getGapSummary } from "@/lib/api";
+import { Recompute } from "@/components/Recompute";
+import {
+  getDurabilitySummary,
+  getGapSummary,
+  recomputeDurability,
+  recomputeGap,
+} from "@/lib/api";
 import { chipClass, type ChipTone } from "@/lib/tone";
 import { translator, type Strings, type Translate } from "@/lib/strings";
 import type { AssessmentLevel, DurabilitySummary, GapSummary } from "@/lib/types";
@@ -34,10 +41,20 @@ function ToolHero({ kicker, title }: { kicker: string; title: string }) {
 export function GapScreen({ strings }: { strings: Strings }) {
   const t = translator(strings);
   const [summary, setSummary] = useState<GapSummary | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    getGapSummary().then(setSummary).catch(() => setSummary({ available: false, terrains: [] }));
-  }, []);
+  // Opening reads the stored fit; only a recompute says it is refitting.
+  const load = (fetch: () => Promise<GapSummary>, refitting = false) => {
+    setBusy(refitting);
+    fetch()
+      .then(setSummary)
+      .catch(() =>
+        setSummary((current) => current ?? { available: false, terrains: [], computed_at: null, new_runs: 0 }),
+      )
+      .finally(() => setBusy(false));
+  };
+
+  useEffect(() => load(getGapSummary), []);
 
   return (
     <main className="container tool">
@@ -66,7 +83,7 @@ export function GapScreen({ strings }: { strings: Strings }) {
             </div>
           </>
         )}
-        <MoreDetails t={t} />
+        <ToolFooter summary={summary} busy={busy} onRecompute={() => load(recomputeGap, true)} t={t} />
       </section>
     </main>
   );
@@ -111,10 +128,18 @@ function AssessmentTile({
 export function DurabilityScreen({ strings }: { strings: Strings }) {
   const t = translator(strings);
   const [summary, setSummary] = useState<DurabilitySummary | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    getDurabilitySummary().then(setSummary).catch(() => undefined);
-  }, []);
+  // Opening reads the stored fit; only a recompute says it is refitting.
+  const load = (fetch: () => Promise<DurabilitySummary>, refitting = false) => {
+    setBusy(refitting);
+    fetch()
+      .then(setSummary)
+      .catch(() => undefined)
+      .finally(() => setBusy(false));
+  };
+
+  useEffect(() => load(getDurabilitySummary), []);
 
   return (
     <main className="container tool">
@@ -142,16 +167,41 @@ export function DurabilityScreen({ strings }: { strings: Strings }) {
             </div>
           </>
         )}
-        <MoreDetails t={t} />
+        <ToolFooter
+          summary={summary}
+          busy={busy}
+          onRecompute={() => load(recomputeDurability, true)}
+          t={t}
+        />
       </section>
     </main>
   );
 }
 
-/** The way from a profile to the full analysis panels, at the end of the card. */
-function MoreDetails({ t }: { t: Translate }) {
+/**
+ * The end of a profile's card: how old the fit is with its Recompute button, and
+ * the way to the full analysis panels.
+ */
+function ToolFooter({
+  summary,
+  busy,
+  onRecompute,
+  t,
+}: {
+  summary: { computed_at: string | null; new_runs: number } | null;
+  busy: boolean;
+  onRecompute: () => void;
+  t: Translate;
+}) {
   return (
     <div className="tool-more">
+      <Recompute
+        computedAt={summary?.computed_at}
+        newRuns={summary?.new_runs}
+        busy={busy}
+        onRecompute={onRecompute}
+        t={t}
+      />
       <Link className="tm-btn tm-btn--secondary tm-btn--sm" href="/pages">
         {t("tools.more_details")}
       </Link>

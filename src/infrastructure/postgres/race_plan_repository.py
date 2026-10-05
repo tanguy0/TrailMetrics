@@ -1,8 +1,9 @@
 """Postgres store for saved race plans ("Plan de course").
 
 Plain dicts in and out, like the planned items: a saved plan is a title, a GPX and
-a small JSON of parameters. The GPX is compressed here and nowhere else, so callers
-only ever see the original bytes.
+a small JSON of parameters — plus the result last computed on them, read apart
+(:meth:`result`) since a list never needs it. The GPX is compressed here and
+nowhere else, so callers only ever see the original bytes.
 """
 
 import gzip
@@ -15,7 +16,8 @@ from src.infrastructure.postgres.pool import Database
 
 _SUMMARY = (
     "select id, title, gpx_name, params, distance_m, elevation_gain_m, "
-    "preview, event_date, importance, goal_item_id, created_at, updated_at from race_plans"
+    "preview, event_date, importance, goal_item_id, computed_at, created_at, updated_at "
+    "from race_plans"
 )
 
 
@@ -90,6 +92,30 @@ class PostgresRacePlanRepository:
             (json.dumps(preview), self.account_id, plan_id),
         )
 
+    def result(self, plan_id: str) -> Optional[Dict[str, Any]]:
+        """``{result, lang}`` as last computed, or ``None`` when there is none."""
+        row = self.db.fetch_one(
+            "select result, result_lang from race_plans "
+            "where account_id = %s and id = %s and result is not null",
+            (self.account_id, plan_id),
+        )
+        return {"result": _json(row["result"]), "lang": row["result_lang"]} if row else None
+
+    def set_result(self, plan_id: str, result: Optional[Dict[str, Any]],
+                   lang: Optional[str]) -> Optional[str]:
+        """Store the plan's result (``None`` clears it); returns ``computed_at``.
+
+        ``updated_at`` stays: recomputing is not editing.
+        """
+        stamp = "now()" if result is not None else "null"
+        row = self.db.fetch_one(
+            f"update race_plans set result = %s, result_lang = %s, computed_at = {stamp} "
+            "where account_id = %s and id = %s returning computed_at",
+            (json.dumps(result) if result is not None else None, lang,
+             self.account_id, plan_id),
+        )
+        return _iso(row["computed_at"]) if row else None
+
     def set_goal_item(self, plan_id: str, item_id: Optional[str]) -> None:
         """Link the plan to the diary goal it created (``None`` unlinks)."""
         self.db.execute(
@@ -122,6 +148,7 @@ def _payload(row: Dict[str, Any]) -> Dict[str, Any]:
         "event_date": _iso(row["event_date"]),
         "importance": row["importance"],
         "goal_item_id": row["goal_item_id"],
+        "computed_at": _iso(row["computed_at"]),
         "distance_m": row["distance_m"],
         "elevation_gain_m": row["elevation_gain_m"],
         "created_at": _iso(row["created_at"]),
