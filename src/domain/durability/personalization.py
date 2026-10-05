@@ -29,12 +29,13 @@ separated — an athlete whose *cardiac* drift differs from the population's —
 exactly what the strong prior is for.
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from dataclasses import asdict, dataclass, field
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from src.domain.durability.capability import ReferenceSpeed
+from src.domain.durability.capability import NONE, ReferenceSpeed
 from src.domain.durability.config import (
     DurabilityCoefficients,
     DurabilityConfig,
@@ -99,6 +100,62 @@ class AthleteDurabilityModel:
             "hours": self.hours,
             "excluded": dict(self.excluded),
         }
+
+    def to_store(self) -> Dict[str, Any]:
+        """Everything :meth:`from_store` needs — segments included, the charts read them."""
+        return {
+            **self.to_dict(),
+            "reference_detail": dict(self.reference.detail),
+            "pre_race_exposure": self.pre_race_exposure,
+            "segments": [asdict(s) for s in self.segments],
+        }
+
+    @staticmethod
+    def from_store(raw: Dict[str, Any]) -> "AthleteDurabilityModel":
+        """The model :meth:`to_store` saved (stored NaNs come back as ``None``)."""
+        speed = raw.get("reference_speed_m_per_s")
+        return AthleteDurabilityModel(
+            coefficients=DurabilityCoefficients.from_dict(raw["coefficients"]),
+            population=DurabilityCoefficients.from_dict(raw["population"]),
+            confidence=raw["confidence"],
+            reasons=list(raw.get("reasons") or []),
+            reference=ReferenceSpeed(
+                float(speed) if speed is not None else None,
+                raw.get("reference_source") or NONE,
+                dict(raw.get("reference_detail") or {}),
+            ),
+            personal_weight=_floats(raw.get("personal_weight")),
+            posterior_sd=_floats(raw.get("posterior_sd")),
+            n_activities=int(raw.get("n_activities") or 0),
+            n_segments=int(raw.get("n_segments") or 0),
+            hours=float(raw.get("hours") or 0.0),
+            excluded={k: int(v) for k, v in (raw.get("excluded") or {}).items()},
+            pre_race_exposure=raw.get("pre_race_exposure"),
+            segments=[_segment(s) for s in raw.get("segments") or []],
+        )
+
+
+def _floats(raw: Optional[Dict[str, Any]]) -> Dict[str, float]:
+    return {k: float(v) if v is not None else float("nan") for k, v in (raw or {}).items()}
+
+
+def _segment(raw: Dict[str, Any]) -> DurabilitySegment:
+    def number(name: str) -> float:
+        value = raw.get(name)
+        return float(value) if value is not None else float("nan")
+
+    start = raw.get("start_date")
+    return DurabilitySegment(
+        activity_id=int(raw["activity_id"]),
+        start_date=datetime.fromisoformat(start) if start else None,
+        elapsed_s=number("elapsed_s"),
+        gap_speed_m_per_s=number("gap_speed_m_per_s"),
+        heartrate_bpm=number("heartrate_bpm"),
+        intensity=number("intensity"),
+        exposures=_floats(raw.get("exposures")),
+        observed_log_cost=number("observed_log_cost"),
+        athlete_key=raw.get("athlete_key") or "",
+    )
 
 
 def population_model(population: DurabilityCoefficients, reasons: List[str],

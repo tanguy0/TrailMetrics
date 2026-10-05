@@ -4,7 +4,13 @@
 """
 
 import json
+from unittest import mock
 
+from src.domain.durability.capability import ReferenceSpeed
+from src.domain.durability.config import DEFAULT_CONFIG as DURABILITY_CONFIG
+from src.domain.durability.personalization import PERSONALIZED, AthleteDurabilityModel
+from src.domain.durability.segments import IDENTIFIABLE, DurabilitySegment
+from src.domain.gap.reference_curves import balanced_runner
 from tests.api_harness import ATHLETE_BASE, DOMAIN, ApiTestCase, requires_database
 
 def _gpx(points=60) -> bytes:
@@ -24,6 +30,30 @@ PLAN_PARAMS = '{"target_time_s": 3600}'
 RECORDS = {"method": "records", "inputs": {"records": [
     {"distance_m": 5000, "seconds": 1200}, {"distance_m": 10000, "seconds": 2460},
 ]}}
+
+
+def _durability_model() -> AthleteDurabilityModel:
+    """A personalized model, as a fit on a few long runs would give."""
+    population = DURABILITY_CONFIG.population
+    segments = [
+        DurabilitySegment(
+            activity_id=1, start_date=None, elapsed_s=600.0 * k, gap_speed_m_per_s=3.2,
+            heartrate_bpm=150.0 + k, intensity=0.8, exposures={"duration": 0.15 * k},
+            observed_log_cost=0.003 * k,
+        )
+        for k in range(1, 13)
+    ]
+    return AthleteDurabilityModel(
+        coefficients=population.with_values({"duration": 0.03}),
+        population=population,
+        confidence=PERSONALIZED,
+        reference=ReferenceSpeed(4.0, "best_efforts"),
+        personal_weight={name: 0.7 for name in IDENTIFIABLE},
+        posterior_sd={name: 0.005 for name in IDENTIFIABLE},
+        n_activities=1,
+        n_segments=len(segments),
+        segments=segments,
+    )
 
 
 @requires_database
@@ -245,3 +275,118 @@ class ToolsApiTest(ApiTestCase):
         self.assertIsNone(created.get("builtin_key"))
         deleted = self.client.delete(f"/pages/{created['id']}", headers=self.bearer(token))
         self.assertEqual(deleted.status_code, 204)
+
+
+@requires_database
+class StoredResultsTest(ApiTestCase):
+    """Profiles and saved plans are kept as last computed; Recompute refits."""
+
+    def _athlete(self, offset):
+        token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + offset)
+        return self.bearer(token)
+
+    def test_the_gap_profile_is_kept_until_recomputed(self):
+        headers = self._athlete(30)
+        fit = mock.Mock(return_value=(balanced_runner(), None))
+        with mock.patch("api.athlete_models.fit_personal_curve", fit), \
+                mock.patch("api.athlete_models.running_activity_ids", return_value=(1, 2)) as ids:
+            first = self.client.get("/tools/gap/summary", headers=headers).json()
+            self.assertTrue(first["available"])
+            self.assertIsNotNone(first["computed_at"])
+            # A new run does not refit: it is counted, and the profile stays.
+            ids.return_value = (1, 2, 3)
+            again = self.client.get("/tools/gap/summary", headers=headers).json()
+            self.assertEqual(fit.call_count, 1)
+            self.assertEqual(again["new_runs"], 1)
+            self.assertEqual(again["terrains"], first["terrains"])
+            self.assertEqual(again["chart"], first["chart"])
+            fresh = self.client.post("/tools/gap/recompute", headers=headers).json()
+            self.assertEqual(fit.call_count, 2)
+            self.assertEqual(fresh["new_runs"], 0)
+
+    def test_a_fit_with_nothing_personal_is_retried_once_runs_come_in(self):
+        headers = self._athlete(31)
+        fit = mock.Mock(return_value=(None, "race_plan.reason.not_enough_data"))
+        with mock.patch("api.athlete_models.fit_personal_curve", fit), \
+                mock.patch("api.athlete_models.running_activity_ids", return_value=(1,)) as ids:
+            self.assertFalse(self.client.get("/tools/gap/summary", headers=headers).json()["available"])
+            self.client.get("/tools/gap/summary", headers=headers)
+            self.assertEqual(fit.call_count, 1)
+            ids.return_value = (1, 2)
+            self.client.get("/tools/gap/summary", headers=headers)
+            self.assertEqual(fit.call_count, 2)
+
+    def test_the_durability_profile_is_kept_until_recomputed(self):
+        headers = self._athlete(32)
+        fit = mock.Mock(return_value=_durability_model())
+        with mock.patch("api.athlete_models.fit_athlete_durability", fit):
+            first = self.client.get("/tools/durability/summary", headers=headers).json()
+            self.assertTrue(first["available"])
+            self.assertIsNotNone(first["chart"])
+            # Read back from storage: the same levels and the same chart.
+            again = self.client.get("/tools/durability/summary", headers=headers).json()
+            self.assertEqual(fit.call_count, 1)
+            self.assertEqual(again["qualities"], first["qualities"])
+            self.assertEqual(again["chart"], first["chart"])
+            self.client.post("/tools/durability/recompute", headers=headers)
+            self.assertEqual(fit.call_count, 2)
+
+    def _create(self, headers):
+        return self.client.post(
+            "/race-plans",
+            data={"meta": f'{{"title": "Galibier", "params": {PLAN_PARAMS}}}'},
+            files={"gpx": ("course.gpx", _gpx(), "application/gpx+xml")},
+            headers=headers,
+        ).json()
+
+    def test_a_saved_plan_opens_on_its_stored_result(self):
+        headers = self._athlete(33)
+        saved = self._create(headers)
+        self.assertIsNotNone(saved["computed_at"])
+        self.assertTrue(saved["result"]["signed_in"])
+        with mock.patch("api.routers.race_plan.PlanRace.execute") as execute:
+            opened = self.client.get(f"/race-plans/{saved['id']}", headers=headers).json()
+            execute.assert_not_called()
+        self.assertEqual(opened["result"]["summary"], saved["result"]["summary"])
+        self.assertEqual(opened["computed_at"], saved["computed_at"])
+        # The list stays light: no results in it.
+        [listed] = self.client.get("/race-plans", headers=headers).json()["plans"]
+        self.assertNotIn("result", listed)
+        # Another language plans it once more, in that language, and keeps that.
+        french = self.client.get(f"/race-plans/{saved['id']}?lang=fr", headers=headers).json()
+        self.assertNotEqual(french["result"]["outputs"], saved["result"]["outputs"])
+        with mock.patch("api.routers.race_plan.PlanRace.execute") as execute:
+            self.client.get(f"/race-plans/{saved['id']}?lang=fr", headers=headers)
+            execute.assert_not_called()
+
+    def test_a_plan_saved_before_results_were_kept_is_planned_once(self):
+        headers = self._athlete(34)
+        saved = self._create(headers)
+        self.db.execute("update race_plans set result = null, computed_at = null "
+                        "where id = %s", (saved["id"],))
+        opened = self.client.get(f"/race-plans/{saved['id']}", headers=headers).json()
+        self.assertIsNotNone(opened["result"])
+        row = self.db.fetch_one("select result from race_plans where id = %s", (saved["id"],))
+        self.assertIsNotNone(row["result"])
+
+    def test_saving_reuses_the_models_and_recompute_refits_them(self):
+        headers = self._athlete(35)
+        fit = mock.Mock(return_value=(balanced_runner(), None))
+        meta = {"meta": f'{{"title": "Galibier", "params": {PLAN_PARAMS}}}'}
+        with mock.patch("api.athlete_models.fit_personal_curve", fit):
+            saved = self._create(headers)
+            self.assertTrue(saved["result"]["personalized"])
+            self.client.patch(f"/race-plans/{saved['id']}", data=meta, headers=headers)
+            self.assertEqual(fit.call_count, 1)
+            refit = self.client.patch(
+                f"/race-plans/{saved['id']}", data={**meta, "refit": "true"}, headers=headers
+            ).json()
+            self.assertEqual(fit.call_count, 2)
+            self.assertIsNotNone(refit["result"])
+            # A plan not yet saved recomputes the same way, and stores nothing.
+            self.client.post(
+                "/race-plan", data={"params": PLAN_PARAMS, "refit": "true"},
+                files={"gpx": ("course.gpx", _gpx(), "application/gpx+xml")}, headers=headers,
+            )
+            self.assertEqual(fit.call_count, 3)

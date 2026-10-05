@@ -516,6 +516,9 @@ export interface GapSummary {
   terrains: Assessment[];
   /** The curve the levels were read on, against the balanced runner. */
   chart?: ChartData;
+  /** When the curve was fitted, and how many runs are newer than that fit. */
+  computed_at: string | null;
+  new_runs: number;
 }
 
 export interface DurabilitySummary {
@@ -525,6 +528,9 @@ export interface DurabilitySummary {
   qualities: Assessment[];
   /** Projected extra cost over a long run, against the average runner. */
   chart: ChartData | null;
+  /** When the model was fitted, and how many long runs are newer than that fit. */
+  computed_at: string | null;
+  new_runs: number;
 }
 
 export interface CoachingRequest {
@@ -809,6 +815,10 @@ export interface SavedRacePlan {
   /** The race's date (`YYYY-MM-DD`) and weight as an objective; `null` = not said. */
   event_date: string | null;
   importance: RacePlanImportance | null;
+  /** When the stored result was computed; `null` when there is none. */
+  computed_at: string | null;
+  /** The plan as last computed — on save and on recompute. Only on a single plan. */
+  result?: RacePlanResult | null;
   created_at: string | null;
   updated_at: string | null;
 }

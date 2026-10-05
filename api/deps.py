@@ -47,6 +47,7 @@ from src.infrastructure.postgres.page_repository import PostgresPageRepository
 from src.infrastructure.postgres.planned_item_repository import (
     PostgresPlannedItemRepository,
 )
+from src.infrastructure.postgres.athlete_model_repository import PostgresAthleteModelRepository
 from src.infrastructure.postgres.plot_output_repository import (
     PostgresPlotOutputRepository,
     signature_key,
@@ -186,6 +187,10 @@ def get_precompute_repository(athlete_id: int) -> PostgresPrecomputeRepository:
 
 def get_race_plan_repository(account_id: str) -> PostgresRacePlanRepository:
     return PostgresRacePlanRepository(get_database(), account_id)
+
+
+def get_athlete_model_repository(athlete_id: int) -> PostgresAthleteModelRepository:
+    return PostgresAthleteModelRepository(get_database(), athlete_id)
 
 
 def get_level_repository(account_id: str) -> PostgresLevelRepository:

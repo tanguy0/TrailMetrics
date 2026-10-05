@@ -4,8 +4,9 @@
   Strava, and the saved estimate becomes the athlete's VMA (design/specs/level.md).
 * **GAP profile** and **Durability profile** — Strava required. Each rates the
   runner against an average runner on the shared five-level scale
-  (src/domain/assessment) and returns the chart it was read on, both computed
-  from the same fitted models the race plan uses (and caches).
+  (src/domain/assessment) and returns the chart it was read on, both read on
+  the same stored models the race plan uses (api/athlete_models.py). Opening a
+  profile never refits; its ``recompute`` route does, on the latest runs.
 """
 
 import logging
@@ -23,7 +24,7 @@ from api.deps import (
     get_level_repository,
     language,
 )
-from api.routers.race_plan import _durability_model, _personal_curves
+from api.athlete_models import DURABILITY, AthleteModels, gap_kind
 from src.domain.charts.ir import PlotOutput
 from src.domain.durability.config import DEFAULT_CONFIG as DURABILITY_CONFIG
 from src.domain.durability.personalization import POPULATION_ONLY
@@ -109,23 +110,16 @@ def latest_level(account: Account = Depends(current_account), lang: str = Depend
 def gap_summary(athlete: Athlete = Depends(current_athlete), lang: str = Depends(language)) -> dict:
     """The GAP profile: a level per terrain against the balanced runner.
 
-    Read on the same personal curve the race plan uses (and caches), so the two
-    tools always describe the same runner.
+    Read on the same stored personal curve the race plan uses, so the two tools
+    always describe the same runner.
     """
-    curve, reason = _personal_curves(athlete)(PERSONAL_EFFICIENCY)
-    terrains = [t.to_dict() for t in assess_gap(curve, balanced_runner())]
-    if curve is None:
-        return {
-            "available": False,
-            "reason": translate(reason or "race_plan.reason.no_runs", lang),
-            "terrains": terrains,
-        }
-    return {
-        "available": True,
-        "terrains": terrains,
-        # The very curve the levels were read on, against the same reference.
-        "chart": PlotOutput(charts=[profile_chart(curve, balanced_runner(), lang)]).to_dict()["charts"][0],
-    }
+    return _gap_summary(AthleteModels(athlete), lang)
+
+
+@router.post("/gap/recompute")
+def recompute_gap(athlete: Athlete = Depends(current_athlete), lang: str = Depends(language)) -> dict:
+    """Refit the personal GAP curve on the latest runs, then the profile on it."""
+    return _gap_summary(AthleteModels(athlete, refit=True), lang)
 
 
 @router.get("/durability/summary")
@@ -134,14 +128,47 @@ def durability_summary(
 ) -> dict:
     """The durability profile: a level per quality against the average runner.
 
-    Read on the same fitted model the race plan uses (and caches).
+    Read on the same stored model the race plan uses.
     """
-    model = _durability_model(athlete)()
+    return _durability_summary(AthleteModels(athlete), lang)
+
+
+@router.post("/durability/recompute")
+def recompute_durability(
+    athlete: Athlete = Depends(current_athlete), lang: str = Depends(language)
+) -> dict:
+    """Refit the durability model on the latest long runs, then the profile on it."""
+    return _durability_summary(AthleteModels(athlete, refit=True), lang)
+
+
+def _gap_summary(models: AthleteModels, lang: str) -> dict:
+    curve, reason = models.gap_curve(PERSONAL_EFFICIENCY)
+    terrains = [t.to_dict() for t in assess_gap(curve, balanced_runner())]
+    freshness = models.status(gap_kind(PERSONAL_EFFICIENCY))
+    if curve is None:
+        return {
+            "available": False,
+            "reason": translate(reason or "race_plan.reason.no_runs", lang),
+            "terrains": terrains,
+            **freshness,
+        }
+    return {
+        "available": True,
+        "terrains": terrains,
+        # The very curve the levels were read on, against the same reference.
+        "chart": PlotOutput(charts=[profile_chart(curve, balanced_runner(), lang)]).to_dict()["charts"][0],
+        **freshness,
+    }
+
+
+def _durability_summary(models: AthleteModels, lang: str) -> dict:
+    model = models.durability()
     chart = profile_durability_chart(model, DURABILITY_CONFIG, lang)
     return {
         "available": model.confidence != POPULATION_ONLY,
         "qualities": [q.to_dict() for q in assess_durability(model)],
         "chart": PlotOutput(charts=[chart]).to_dict()["charts"][0] if chart else None,
+        **models.status(DURABILITY),
     }
 
 

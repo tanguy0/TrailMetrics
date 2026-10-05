@@ -11,10 +11,10 @@ course then never has to live anywhere on our side. A signed-in athlete can also
 *save* a plan (``/race-plans``, the page-like list): title, GPX and parameters are
 stored, and planning a saved one names it by ``plan_id`` instead of re-uploading.
 
-Personal curves are the only slow part — a first plan downloads and preprocesses
-the athlete's recent runs — so each fitted curve is memoized in the athlete's
-warm caches and persisted in ``plot_outputs``, keyed by the activity ids it was
-fitted on: a new run makes a new key, exactly like a cached plot.
+Personal models are the slow part — a fit downloads and preprocesses the
+athlete's recent runs — so they are stored and only refitted on request
+(:mod:`api.athlete_models`, the ``refit`` field). A saved plan also keeps its
+result, written on save and on recompute, so it opens without being planned again.
 """
 
 import json
@@ -22,45 +22,28 @@ import logging
 from datetime import date
 from typing import List, Literal, Optional, Tuple
 
-import numpy as np
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel, Field, ValidationError
 
+from api.athlete_models import AthleteModels
 from api.deps import (
     current_account,
     current_athlete_id,
-    data_source_for,
     get_athlete_repository,
-    get_caches,
     get_coaching_repository,
     get_planned_item_repository,
-    get_plot_output_repository,
     get_race_plan_repository,
     language,
     optional_account,
 )
-from src.domain.charts.ir import ChartData, PlotOutput, Trace
-from src.domain.models.gap import GapCurve
-from src.domain.durability.config import DEFAULT_CONFIG as DURABILITY_CONFIG
 from src.domain.durability.model import RaceWeather
-from src.domain.durability.personalization import AthleteDurabilityModel
 from src.domain.ports.accounts import Account
 from src.domain.ports.storage import Athlete
 from src.domain.race_plan.gpx import GpxError, parse_gpx
 from src.domain.race_plan.planner import PlanError, build_course
 from src.domain.race_plan.preview import course_preview
 from src.translations import translate
-from src.domain.durability.history import (
-    durability_activity_ids,
-    fit_athlete_durability,
-)
-from src.usecases.plan_race import (
-    PlanRace,
-    PlanRaceInput,
-    curve_options,
-    fit_personal_curve,
-    running_activity_ids,
-)
+from src.usecases.plan_race import PlanRace, PlanRaceInput, curve_options
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +54,6 @@ saved_router = APIRouter(prefix="/race-plans", tags=["race-plan"])
 # A 170 km track at one point per second of a slow recording is well under this.
 MAX_GPX_BYTES = 15 * 1024 * 1024
 MAX_AID_STATIONS = 100
-# Bump when the fitting recipe changes, so stored curves miss once.
-CURVE_VERSION = 1
 
 
 class AidStation(BaseModel):
@@ -122,9 +103,14 @@ def plan(
     params: str = Form(...),
     gpx: Optional[UploadFile] = File(None),
     plan_id: Optional[str] = Form(None),
+    refit: bool = Form(False),
     lang: str = Depends(language),
 ) -> dict:
-    """Plan a course: an uploaded ``gpx``, or the stored GPX of saved ``plan_id``."""
+    """Plan a course: an uploaded ``gpx``, or the stored GPX of saved ``plan_id``.
+
+    Never stored: saving is its own act. ``refit`` refits the athlete's models on
+    their latest runs first (the Recompute button of a plan not yet saved).
+    """
     parsed = _parse(params, PlanParams)
     account, athlete = _optional_identity(request)
 
@@ -140,32 +126,7 @@ def plan(
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             detail=translate("race_plan.error.no_gpx", lang))
 
-    usecase = PlanRace(
-        personal_curve=_personal_curves(athlete) if athlete else None,
-        durability_model=_durability_model(athlete) if athlete else None,
-    )
-    try:
-        result = usecase.execute(PlanRaceInput(
-            gpx=payload,
-            target_time_s=parsed.target_time_s,
-            aid_stations_km=[s.km for s in parsed.aid_stations],
-            aid_station_names=[s.name for s in parsed.aid_stations],
-            start_clock_s=parsed.start_time_s,
-            curve=parsed.curve,
-            lang=lang,
-            durability=parsed.durability,
-            weather=parsed.weather(),
-        ))
-    except (GpxError, PlanError) as error:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, detail=translate(error.reason_key, lang)
-        )
-
-    return {
-        **result.to_dict(),
-        "signed_in": athlete is not None,
-        "curves": curve_options(athlete is not None, lang),
-    }
+    return _with_options(_compute(parsed, payload, athlete, lang, refit), athlete, lang)
 
 
 # --- Saved plans -------------------------------------------------------------
@@ -186,9 +147,11 @@ def create_saved(
     request: Request,
     meta: str = Form(...),
     gpx: UploadFile = File(...),
+    refit: bool = Form(False),
     lang: str = Depends(language),
     account: Account = Depends(current_account),
 ) -> dict:
+    """Save a new plan — its inputs, and its result as computed now."""
     parsed = _parse(meta, SavedPlanMeta)
     payload = _read_gpx(gpx, lang)
     distance, gain, preview = _course_stats(payload, lang)
@@ -198,15 +161,30 @@ def create_saved(
         parsed.params.model_dump(), distance, gain, preview,
         event_date=parsed.event_date, importance=parsed.importance,
     )
-    return _sync_goal(request, account, repository, created, lang)
+    saved = _sync_goal(request, account, repository, created, lang)
+    return _store_result(request, repository, saved, parsed.params, payload, lang, refit)
 
 
 @saved_router.get("/{plan_id}")
-def get_saved(plan_id: str, account: Account = Depends(current_account)) -> dict:
-    saved = get_race_plan_repository(account.id).get(plan_id)
+def get_saved(
+    request: Request,
+    plan_id: str,
+    lang: str = Depends(language),
+    account: Account = Depends(current_account),
+) -> dict:
+    """A saved plan with its stored result — planned once here only when it has
+    none yet (saved before results were kept) or it is in another language."""
+    repository = get_race_plan_repository(account.id)
+    saved = repository.get(plan_id)
     if saved is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="race plan not found")
-    return saved
+    stored = repository.result(plan_id)
+    if stored is not None and stored["lang"] == lang:
+        athlete = _optional_identity(request)[1]
+        return {**saved, "result": _with_options(stored["result"], athlete, lang)}
+    payload = repository.gpx(plan_id)
+    params = PlanParams.model_validate(saved["params"])
+    return _store_result(request, repository, saved, params, payload, lang, refit=False)
 
 
 @saved_router.patch("/{plan_id}")
@@ -215,10 +193,12 @@ def update_saved(
     plan_id: str,
     meta: str = Form(...),
     gpx: Optional[UploadFile] = File(None),
+    refit: bool = Form(False),
     lang: str = Depends(language),
     account: Account = Depends(current_account),
 ) -> dict:
-    """Replace a saved plan's inputs; a new GPX only when one is uploaded."""
+    """Replace a saved plan's inputs (a new GPX only when one is uploaded) and its
+    result, computed on them now — on refitted models when ``refit`` (Recompute)."""
     parsed = _parse(meta, SavedPlanMeta)
     repository = get_race_plan_repository(account.id)
     if gpx is not None:
@@ -242,7 +222,8 @@ def update_saved(
     )
     if updated is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="race plan not found")
-    return _sync_goal(request, account, repository, updated, lang)
+    saved = _sync_goal(request, account, repository, updated, lang)
+    return _store_result(request, repository, saved, parsed.params, payload, lang, refit)
 
 
 @saved_router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -259,6 +240,63 @@ def delete_saved(
 
 
 # --- Helpers -----------------------------------------------------------------
+
+def _compute(parsed: PlanParams, payload: bytes, athlete: Optional[Athlete], lang: str,
+             refit: bool = False) -> dict:
+    """The plan of ``payload`` for ``parsed``, on the athlete's stored models if any."""
+    models = AthleteModels(athlete, refit=refit) if athlete else None
+    usecase = PlanRace(
+        personal_curve=models.gap_curve if models else None,
+        durability_model=models.durability if models else None,
+    )
+    try:
+        result = usecase.execute(PlanRaceInput(
+            gpx=payload,
+            target_time_s=parsed.target_time_s,
+            aid_stations_km=[s.km for s in parsed.aid_stations],
+            aid_station_names=[s.name for s in parsed.aid_stations],
+            start_clock_s=parsed.start_time_s,
+            curve=parsed.curve,
+            lang=lang,
+            durability=parsed.durability,
+            weather=parsed.weather(),
+        ))
+    except (GpxError, PlanError) as error:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=translate(error.reason_key, lang)
+        )
+    return result.to_dict()
+
+
+def _with_options(result: dict, athlete: Optional[Athlete], lang: str) -> dict:
+    """A plan as the screen takes it: plus who is asking and the curves they have."""
+    return {
+        **result,
+        "signed_in": athlete is not None,
+        "curves": curve_options(athlete is not None, lang),
+    }
+
+
+def _store_result(request: Request, repository, saved: dict, params: PlanParams,
+                  payload: bytes, lang: str, refit: bool) -> dict:
+    """Compute a saved plan, store the result with it, and return both.
+
+    A plan that cannot be computed (a target the course rules out) is still saved —
+    it just has no result until its inputs change.
+    """
+    athlete = _optional_identity(request)[1]
+    try:
+        result = _compute(params, payload, athlete, lang, refit)
+    except HTTPException as error:
+        logger.info("saved plan %s has no result: %s", saved["id"], error.detail)
+        result = None
+    computed_at = repository.set_result(saved["id"], result, lang if result else None)
+    return {
+        **saved,
+        "computed_at": computed_at,
+        "result": _with_options(result, athlete, lang) if result else None,
+    }
+
 
 def _sync_goal(request: Request, account: Account, repository, saved: dict, lang: str) -> dict:
     """Keep a coached athlete's diary goal in step with this plan; return the plan.
@@ -352,79 +390,3 @@ def _optional_identity(request: Request) -> Tuple[Optional[Account], Optional[At
         return account, get_athlete_repository().get(current_athlete_id(request, account))
     except HTTPException:
         return account, None
-
-
-def _personal_curves(athlete: Athlete):
-    """``model → (curve, reason)`` for this athlete, memoized and persisted."""
-    data = data_source_for(athlete)
-    memo = get_caches(athlete.id).memo
-
-    def provide(model: str) -> Tuple[Optional[GapCurve], Optional[str]]:
-        ids = running_activity_ids(data)
-        key = ("race_plan_curve", CURVE_VERSION, model, ids)
-        if key in memo:
-            return memo[key]
-
-        signature = f"race_plan_curve|v{CURVE_VERSION}|{model}|{','.join(map(str, ids))}"
-        repository = get_plot_output_repository(athlete.id)
-        try:
-            stored = repository.get(signature)
-        except Exception as error:
-            logger.warning("could not read stored race-plan curve: %s", error)
-            stored = None
-        if stored is not None and stored.charts and stored.charts[0].traces:
-            trace = stored.charts[0].traces[0]
-            result = (_curve_from_trace(trace), None)
-            memo[key] = result
-            return result
-
-        result = fit_personal_curve(data, ids, model, memo)
-        memo[key] = result
-        if result[0] is not None:
-            try:
-                repository.put(signature, "race_plan_curve", _curve_as_output(result[0]))
-            except Exception as error:
-                logger.warning("could not store race-plan curve: %s", error)
-        return result
-
-    return provide
-
-
-def _durability_model(athlete: Athlete):
-    """A provider of this athlete's durability model, memoized in their warm caches.
-
-    Keyed by today's date and the past-year long runs it reads, so a new run — or a
-    run ageing out of the one-year window — makes a new key.
-    """
-    data = data_source_for(athlete)
-    memo = get_caches(athlete.id).memo
-
-    def provide() -> AthleteDurabilityModel:
-        today = date.today()
-        ids = durability_activity_ids(data.summaries(), today, DURABILITY_CONFIG)
-        key = ("race_plan_durability", DURABILITY_CONFIG.population.version, today, ids)
-        if key not in memo:
-            memo[key] = fit_athlete_durability(data, today, DURABILITY_CONFIG, memo=memo)
-        return memo[key]
-
-    return provide
-
-
-# A curve rides in ``plot_outputs`` as a one-trace chart: the table's payload is the
-# chart IR, and a curve is exactly an x/y series.
-def _curve_as_output(curve: GapCurve) -> PlotOutput:
-    return PlotOutput(charts=[ChartData(traces=[Trace(
-        name="gap_curve",
-        x=[float(v) for v in curve.bin_centers],
-        y=[float(v) for v in curve.means],
-    )])])
-
-
-def _curve_from_trace(trace: Trace) -> GapCurve:
-    n = len(trace.x)
-    return GapCurve(
-        bin_centers=np.asarray(trace.x, dtype=float),
-        means=np.asarray(trace.y, dtype=float),
-        stds=np.zeros(n),
-        counts=np.ones(n, dtype=int),
-    )

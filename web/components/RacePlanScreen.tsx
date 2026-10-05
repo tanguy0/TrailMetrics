@@ -9,9 +9,11 @@
  *    save, and is told — once, with the result — that an account keeps it;
  *  - a new plan (`planId` null): computes from the chosen file, and the first save
  *    creates it and moves the URL to `/tools/race-planning/{id}` without a reload;
- *  - a saved plan: loads its inputs and computes straight away from the stored
- *    GPX, so a plan opens already drawn. Choosing a new file replaces the stored
- *    one on the next save.
+ *  - a saved plan: loads its inputs and the result stored with them, so a plan
+ *    opens already drawn without being computed again. Saving stores the result
+ *    computed on the saved inputs; Recompute refits the athlete's models on their
+ *    latest runs and saves the plan on them. Choosing a new file replaces the
+ *    stored one on the next save.
  *
  * All the numbers — pacing, sections, legs — are computed server-side and arrive
  * as chart IR, drawn by the same `ChartView`/`TableView` as every analysis panel.
@@ -23,6 +25,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Callout } from "@/components/Callout";
 import { ChartView } from "@/components/ChartView";
 import { PageHeader } from "@/components/PageHeader";
+import { Recompute } from "@/components/Recompute";
 import { TableView } from "@/components/TableView";
 import {
   deleteRacePlan,
@@ -40,6 +43,7 @@ import type {
   RacePlanImportance,
   RacePlanParams,
   RacePlanResult,
+  SavedRacePlan,
 } from "@/lib/types";
 
 interface AidRow {
@@ -114,7 +118,10 @@ export function RacePlanScreen({
   const [importance, setImportance] = useState<RacePlanImportance | "">("");
 
   const [result, setResult] = useState<RacePlanResult | null>(null);
+  // When the saved plan's stored result was computed (a preview is not stored).
+  const [computedAt, setComputedAt] = useState<string | null>(null);
   const [computing, setComputing] = useState(false);
+  const [recomputing, setRecomputing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -165,11 +172,11 @@ export function RacePlanScreen({
   ]);
 
   const compute = useCallback(
-    async (params: RacePlanParams, source: { gpx: File } | { planId: string }) => {
+    async (params: RacePlanParams, source: { gpx: File } | { planId: string }, refit = false) => {
       setComputing(true);
       setError(null);
       try {
-        const planned = await planRace(source, params);
+        const planned = await planRace(source, params, refit);
         setResult(planned);
         setCurves(planned.curves);
       } catch (e) {
@@ -181,13 +188,22 @@ export function RacePlanScreen({
     [],
   );
 
+  // What the server stored is what is shown: its result, and when it was computed.
+  const showSaved = (saved: SavedRacePlan) => {
+    setComputedAt(saved.computed_at);
+    if (saved.result) {
+      setResult(saved.result);
+      setCurves(saved.result.curves);
+    }
+  };
+
   useEffect(() => {
     getRacePlanOptions()
       .then((options) => setCurves(options.curves))
       .catch(() => {});
   }, []);
 
-  // A saved plan opens with its inputs filled in and its result already computing.
+  // A saved plan opens with its inputs filled in and its stored result drawn.
   useEffect(() => {
     if (!initialPlanId) return;
     getRacePlan(initialPlanId)
@@ -205,14 +221,18 @@ export function RacePlanScreen({
         setHumidity(numberText(p.relative_humidity_pct));
         setEventDate(saved.event_date ?? "");
         setImportance(saved.importance ?? "");
+        setComputedAt(saved.computed_at);
+        if (saved.result) {
+          setResult(saved.result);
+          setCurves(saved.result.curves);
+        }
         setLoading(false);
-        return compute(p, { planId: initialPlanId });
       })
       .catch((e: Error) => {
         setError(e.message);
         setLoading(false);
       });
-  }, [initialPlanId, compute]);
+  }, [initialPlanId]);
 
   const source = (): { gpx: File } | { planId: string } | null =>
     file ? { gpx: file } : planId ? { planId } : null;
@@ -226,17 +246,16 @@ export function RacePlanScreen({
     void compute(params, from);
   };
 
-  const save = async () => {
+  const save = async (refit = false) => {
     const params = buildParams();
     if (typeof params === "string") return setError(params);
     if (!file && !planId) return setError(t("race_plan.error.no_gpx"));
-    setSaving(true);
+    (refit ? setRecomputing : setSaving)(true);
     setError(null);
     try {
-      const saved = await saveRacePlan(planId, title.trim(), params, file, {
-        event_date: eventDate || null,
-        importance: importance || null,
-      });
+      const race = { event_date: eventDate || null, importance: importance || null };
+      const saved = await saveRacePlan(planId, title.trim(), params, file, race, refit);
+      showSaved(saved);
       if (!planId) {
         // Now a saved plan: give it its own URL without remounting the screen.
         window.history.replaceState(null, "", `/tools/race-planning/${saved.id}`);
@@ -248,8 +267,24 @@ export function RacePlanScreen({
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setSaving(false);
+      (refit ? setRecomputing : setSaving)(false);
     }
+  };
+
+  /**
+   * Refit the athlete's models on their latest runs and plan on them: a saved plan
+   * is saved with the form as it stands (its stored result is what Recompute
+   * renews); a plan not yet saved is only computed.
+   */
+  const recompute = async () => {
+    if (planId) return save(true);
+    const params = buildParams();
+    if (typeof params === "string") return setError(params);
+    const from = source();
+    if (!from) return setError(t("race_plan.error.no_gpx"));
+    setRecomputing(true);
+    await compute(params, from, true);
+    setRecomputing(false);
   };
 
   const remove = async () => {
@@ -285,6 +320,8 @@ export function RacePlanScreen({
 
   const selectedCurve = curve ?? curves.find((c) => c.available)?.key ?? "";
   const personalSelected = curves.find((c) => c.key === selectedCurve)?.personal ?? false;
+  // Only an athlete with Strava has models to refit.
+  const canRecompute = curves.some((c) => c.personal && c.available);
 
   return (
     <main className="container race-plan">
@@ -313,8 +350,8 @@ export function RacePlanScreen({
               <button
                 type="button"
                 className="tm-btn tm-btn--secondary tm-btn--sm"
-                onClick={save}
-                disabled={saving}
+                onClick={() => save()}
+                disabled={saving || recomputing}
               >
                 {saving ? t("race_plan.saving") : t("race_plan.save")}
               </button>
@@ -509,10 +546,18 @@ export function RacePlanScreen({
         </fieldset>
 
         <div className="race-plan__actions">
-          <button type="submit" className="tm-btn" disabled={computing}>
-            {computing ? t("race_plan.computing") : t("race_plan.submit")}
+          <button type="submit" className="tm-btn" disabled={computing || recomputing}>
+            {computing && !recomputing ? t("race_plan.computing") : t("race_plan.submit")}
           </button>
-          {computing && (
+          {canRecompute && (
+            <Recompute
+              computedAt={computedAt}
+              busy={recomputing}
+              onRecompute={recompute}
+              t={t}
+            />
+          )}
+          {computing && !recomputing && (
             <span className="pending">
               <span className="spinner" aria-hidden="true" />
               {personalSelected && (
