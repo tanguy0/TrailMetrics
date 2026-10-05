@@ -3,6 +3,9 @@
 /**
  * The signed-in Race plan tab: every saved plan, newest first, then the button
  * to start another — the same shape as the Analysis tab's list of pages.
+ *
+ * A plan marked as an objective takes the diary's goal colours (design/tagg
+ * SessionCard `goal`): main in terra, secondary in sun.
  */
 
 import Link from "next/link";
@@ -38,9 +41,23 @@ export function RacePlanList({ strings }: { strings: Strings }) {
       ) : (
         <div className="race-plan-list">
           {(plans ?? []).map((plan) => (
-            <a className="card race-plan-card" key={plan.id} href={`/tools/race-planning/${plan.id}`}>
+            <a
+              className={`card race-plan-card${plan.importance ? ` race-plan-card--${plan.importance}` : ""}`}
+              key={plan.id}
+              href={`/tools/race-planning/${plan.id}`}
+            >
               <span className="race-plan-card__summary">
               <span className="card__title">{plan.title || t("race_plan.untitled")}</span>
+              {(plan.event_date || plan.importance) && (
+                <span className="race-plan-card__event">
+                  {[
+                    plan.event_date && formatDate(plan.event_date, "long", t("locale")),
+                    plan.importance && t(`race_plan.importance.${plan.importance}`),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              )}
               <span className="card__meta">
                 {[
                   plan.distance_m != null && `${formatNumber(plan.distance_m / 1000, 1)} km`,

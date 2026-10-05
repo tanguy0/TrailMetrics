@@ -7,6 +7,7 @@ only ever see the original bytes.
 
 import gzip
 import json
+from datetime import date
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
@@ -14,7 +15,7 @@ from src.infrastructure.postgres.pool import Database
 
 _SUMMARY = (
     "select id, title, gpx_name, params, distance_m, elevation_gain_m, "
-    "preview, created_at, updated_at from race_plans"
+    "preview, event_date, importance, goal_item_id, created_at, updated_at from race_plans"
 )
 
 
@@ -48,27 +49,31 @@ class PostgresRacePlanRepository:
     def create(
         self, title: str, gpx_name: str, gpx: bytes, params: Dict[str, Any],
         distance_m: float, elevation_gain_m: float, preview: Dict[str, Any],
+        event_date: Optional[date] = None, importance: Optional[str] = None,
     ) -> Dict[str, Any]:
         plan_id = f"race_{uuid4().hex[:10]}"
         self.db.execute(
             "insert into race_plans (id, account_id, title, gpx_name, gpx_gz, params, "
-            "distance_m, elevation_gain_m, preview) "
-            "values (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            "distance_m, elevation_gain_m, preview, event_date, importance) "
+            "values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (plan_id, self.account_id, title, gpx_name, gzip.compress(gpx),
-             json.dumps(params), distance_m, elevation_gain_m, json.dumps(preview)),
+             json.dumps(params), distance_m, elevation_gain_m, json.dumps(preview),
+             event_date, importance),
         )
         return self.get(plan_id)
 
     def update(
         self, plan_id: str, *, title: str, params: Dict[str, Any],
         distance_m: float, elevation_gain_m: float, preview: Dict[str, Any],
+        event_date: Optional[date] = None, importance: Optional[str] = None,
         gpx: Optional[bytes] = None, gpx_name: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Replace the inputs; the GPX only when a new one is given."""
         fields = ["title = %s", "params = %s", "distance_m = %s",
-                  "elevation_gain_m = %s", "preview = %s", "updated_at = now()"]
+                  "elevation_gain_m = %s", "preview = %s", "event_date = %s",
+                  "importance = %s", "updated_at = now()"]
         values: List[Any] = [title, json.dumps(params), distance_m, elevation_gain_m,
-                             json.dumps(preview)]
+                             json.dumps(preview), event_date, importance]
         if gpx is not None:
             fields += ["gpx_gz = %s", "gpx_name = %s"]
             values += [gzip.compress(gpx), gpx_name or ""]
@@ -83,6 +88,13 @@ class PostgresRacePlanRepository:
         self.db.execute(
             "update race_plans set preview = %s where account_id = %s and id = %s",
             (json.dumps(preview), self.account_id, plan_id),
+        )
+
+    def set_goal_item(self, plan_id: str, item_id: Optional[str]) -> None:
+        """Link the plan to the diary goal it created (``None`` unlinks)."""
+        self.db.execute(
+            "update race_plans set goal_item_id = %s where account_id = %s and id = %s",
+            (item_id, self.account_id, plan_id),
         )
 
     def delete(self, plan_id: str) -> None:
@@ -107,6 +119,9 @@ def _payload(row: Dict[str, Any]) -> Dict[str, Any]:
         "gpx_name": row["gpx_name"],
         "params": _json(row["params"]),
         "preview": _json(row["preview"]),
+        "event_date": _iso(row["event_date"]),
+        "importance": row["importance"],
+        "goal_item_id": row["goal_item_id"],
         "distance_m": row["distance_m"],
         "elevation_gain_m": row["elevation_gain_m"],
         "created_at": _iso(row["created_at"]),

@@ -3,7 +3,9 @@
     TEST_DATABASE_URL=… /path/to/venv/bin/python -m unittest discover -s tests -t . -v
 """
 
-from tests.api_harness import ATHLETE_BASE, ApiTestCase, requires_database
+import json
+
+from tests.api_harness import ATHLETE_BASE, DOMAIN, ApiTestCase, requires_database
 
 def _gpx(points=60) -> bytes:
     """A 6 km out-and-up line: enough for the planner, small enough to inline."""
@@ -131,6 +133,64 @@ class ToolsApiTest(ApiTestCase):
         )
         self.assertEqual(planned.status_code, 200, planned.text)
         self.assertTrue(planned.json()["signed_in"])
+
+    def _coached(self, local, athlete_id):
+        token = self.token_for(local)
+        self.exchange(token, athlete_id)
+        request_id = self.client.put(
+            "/coaching/request", json={"message": "Trail en juin"}, headers=self.bearer(token)
+        ).json()["request"]["id"]
+        coach = self.token_for("coach")
+        self.db.execute("update accounts set role = 'coach' where email = %s", (f"coach@{DOMAIN}",))
+        self.client.post(f"/coaching/requests/{request_id}/accept", headers=self.bearer(coach))
+        return token
+
+    def _save(self, token, plan_id=None, **meta):
+        body = {"title": "UTMB", "params": json.loads(PLAN_PARAMS), **meta}
+        if plan_id:
+            return self.client.patch(
+                f"/race-plans/{plan_id}", data={"meta": json.dumps(body)}, headers=self.bearer(token)
+            ).json()
+        return self.client.post(
+            "/race-plans", data={"meta": json.dumps(body)},
+            files={"gpx": ("course.gpx", _gpx(), "application/gpx+xml")},
+            headers=self.bearer(token),
+        ).json()
+
+    def _goals(self, athlete_id):
+        return self.db.fetch_all(
+            "select id, date, title, importance from planned_items "
+            "where athlete_id = %s and kind = 'goal'", (athlete_id,),
+        )
+
+    def test_a_dated_objective_goes_on_a_coached_athletes_diary(self):
+        athlete = ATHLETE_BASE + 23
+        token = self._coached("ana", athlete)
+        saved = self._save(token, event_date="2027-08-27", importance="primary")
+        self.assertEqual(saved["event_date"], "2027-08-27")
+        [goal] = self._goals(athlete)
+        self.assertEqual((str(goal["date"]), goal["title"], goal["importance"]),
+                         ("2027-08-27", "UTMB", "primary"))
+        # Edits follow the plan; clearing the date leaves the goal alone.
+        self._save(token, saved["id"], title="UTMB 2027", event_date="2027-08-28",
+                   importance="secondary")
+        [goal] = self._goals(athlete)
+        self.assertEqual((str(goal["date"]), goal["title"], goal["importance"]),
+                         ("2027-08-28", "UTMB 2027", "secondary"))
+        self._save(token, saved["id"], importance="secondary")
+        self.assertEqual(len(self._goals(athlete)), 1)
+        self.client.delete(f"/race-plans/{saved['id']}", headers=self.bearer(token))
+        self.assertEqual(self._goals(athlete), [])
+
+    def test_no_goal_without_coaching_or_without_both_fields(self):
+        token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + 24)
+        saved = self._save(token, event_date="2027-08-27", importance="primary")
+        self.assertEqual(saved["importance"], "primary")
+        self.assertEqual(self._goals(ATHLETE_BASE + 24), [])
+        coached = self._coached("bob", ATHLETE_BASE + 25)
+        self._save(coached, event_date="2027-08-27")
+        self.assertEqual(self._goals(ATHLETE_BASE + 25), [])
 
     def test_slope_and_durability_need_strava(self):
         token = self.token_for("ana")

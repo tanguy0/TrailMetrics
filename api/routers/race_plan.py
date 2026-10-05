@@ -20,7 +20,7 @@ fitted on: a new run makes a new key, exactly like a cached plot.
 import json
 import logging
 from datetime import date
-from typing import List, Optional, Tuple
+from typing import List, Literal, Optional, Tuple
 
 import numpy as np
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
@@ -32,6 +32,8 @@ from api.deps import (
     data_source_for,
     get_athlete_repository,
     get_caches,
+    get_coaching_repository,
+    get_planned_item_repository,
     get_plot_output_repository,
     get_race_plan_repository,
     language,
@@ -102,6 +104,9 @@ class PlanParams(BaseModel):
 class SavedPlanMeta(BaseModel):
     title: str = Field(default="", max_length=200)
     params: PlanParams
+    # The race's date and weight as an objective; both optional ("not said").
+    event_date: Optional[date] = None
+    importance: Optional[Literal["primary", "secondary"]] = None
 
 
 @router.get("/options")
@@ -178,6 +183,7 @@ def list_saved(account: Account = Depends(current_account)) -> dict:
 
 @saved_router.post("", status_code=status.HTTP_201_CREATED)
 def create_saved(
+    request: Request,
     meta: str = Form(...),
     gpx: UploadFile = File(...),
     lang: str = Depends(language),
@@ -186,10 +192,13 @@ def create_saved(
     parsed = _parse(meta, SavedPlanMeta)
     payload = _read_gpx(gpx, lang)
     distance, gain, preview = _course_stats(payload, lang)
-    return get_race_plan_repository(account.id).create(
+    repository = get_race_plan_repository(account.id)
+    created = repository.create(
         parsed.title.strip(), (gpx.filename or "")[:200], payload,
         parsed.params.model_dump(), distance, gain, preview,
+        event_date=parsed.event_date, importance=parsed.importance,
     )
+    return _sync_goal(request, account, repository, created, lang)
 
 
 @saved_router.get("/{plan_id}")
@@ -202,6 +211,7 @@ def get_saved(plan_id: str, account: Account = Depends(current_account)) -> dict
 
 @saved_router.patch("/{plan_id}")
 def update_saved(
+    request: Request,
     plan_id: str,
     meta: str = Form(...),
     gpx: Optional[UploadFile] = File(None),
@@ -225,20 +235,62 @@ def update_saved(
         distance_m=distance,
         elevation_gain_m=gain,
         preview=preview,
+        event_date=parsed.event_date,
+        importance=parsed.importance,
         gpx=payload if gpx is not None else None,
         gpx_name=(gpx.filename or "")[:200] if gpx is not None else None,
     )
     if updated is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="race plan not found")
-    return updated
+    return _sync_goal(request, account, repository, updated, lang)
 
 
 @saved_router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_saved(plan_id: str, account: Account = Depends(current_account)) -> None:
-    get_race_plan_repository(account.id).delete(plan_id)
+def delete_saved(
+    request: Request, plan_id: str, account: Account = Depends(current_account)
+) -> None:
+    repository = get_race_plan_repository(account.id)
+    saved = repository.get(plan_id)
+    athlete_id = request.state.account_athlete_id
+    # The goal this plan put on the diary goes with it.
+    if saved is not None and saved["goal_item_id"] and athlete_id is not None:
+        get_planned_item_repository(athlete_id).delete(saved["goal_item_id"])
+    repository.delete(plan_id)
 
 
 # --- Helpers -----------------------------------------------------------------
+
+def _sync_goal(request: Request, account: Account, repository, saved: dict, lang: str) -> dict:
+    """Keep a coached athlete's diary goal in step with this plan; return the plan.
+
+    Only with a date *and* an importance, only for an account that is coached, and
+    only on the account's own diary (never a coachee's a coach is viewing as) —
+    which needs Strava, since the diary is keyed by the Strava athlete. Clearing
+    the date or importance leaves an existing goal where it is.
+    """
+    athlete_id = request.state.account_athlete_id
+    if (
+        not saved["event_date"]
+        or not saved["importance"]
+        or athlete_id is None
+        or not get_coaching_repository().is_coached(account.id)
+    ):
+        return saved
+    items = get_planned_item_repository(athlete_id)
+    title = saved["title"] or translate("ui.race_plan.untitled", lang)
+    when = date.fromisoformat(saved["event_date"])
+    goal = None
+    if saved["goal_item_id"]:
+        goal = items.update(
+            saved["goal_item_id"], date=when, end_date=when, title=title,
+            importance=saved["importance"],
+        )
+    if goal is None:
+        goal = items.create("goal", when, title, "", importance=saved["importance"])
+        repository.set_goal_item(saved["id"], goal["id"])
+        saved = {**saved, "goal_item_id": goal["id"]}
+    return saved
+
 
 def _parse(raw: str, model):
     try:

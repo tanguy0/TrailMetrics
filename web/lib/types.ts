@@ -794,9 +794,15 @@ export interface SavedRacePlan {
   elevation_gain_m: number | null;
   /** Thumbnail data; `null` when the stored GPX cannot be read. */
   preview: RacePlanPreview | null;
+  /** The race's date (`YYYY-MM-DD`) and weight as an objective; `null` = not said. */
+  event_date: string | null;
+  importance: RacePlanImportance | null;
   created_at: string | null;
   updated_at: string | null;
 }
+
+/** The same two levels as a diary goal's `importance`. */
+export type RacePlanImportance = "primary" | "secondary";
 
 export interface RacePlanPreview {
   /** `[latitude, longitude]`, downsampled. */

@@ -305,9 +305,10 @@ export const saveRacePlan = (
   title: string,
   params: RacePlanParams,
   gpx: File | null,
+  race: Pick<SavedRacePlan, "event_date" | "importance">,
 ) => {
   const form = new FormData();
-  form.append("meta", JSON.stringify({ title, params }));
+  form.append("meta", JSON.stringify({ title, params, ...race }));
   if (gpx) form.append("gpx", gpx);
   return request<SavedRacePlan>(id ? `/race-plans/${id}` : "/race-plans", {
     method: id ? "PATCH" : "POST",

@@ -37,6 +37,7 @@ import { plural, translator, type Strings, type Translate } from "@/lib/strings"
 import type {
   PlotOutput,
   RacePlanCurveOption,
+  RacePlanImportance,
   RacePlanParams,
   RacePlanResult,
 } from "@/lib/types";
@@ -108,6 +109,9 @@ export function RacePlanScreen({
   const [temperatureStart, setTemperatureStart] = useState("");
   const [temperatureEnd, setTemperatureEnd] = useState("");
   const [humidity, setHumidity] = useState("");
+  // The race itself, saved with the plan (not a planning input).
+  const [eventDate, setEventDate] = useState("");
+  const [importance, setImportance] = useState<RacePlanImportance | "">("");
 
   const [result, setResult] = useState<RacePlanResult | null>(null);
   const [computing, setComputing] = useState(false);
@@ -199,6 +203,8 @@ export function RacePlanScreen({
         setTemperatureStart(numberText(p.temperature_start_c));
         setTemperatureEnd(numberText(p.temperature_end_c));
         setHumidity(numberText(p.relative_humidity_pct));
+        setEventDate(saved.event_date ?? "");
+        setImportance(saved.importance ?? "");
         setLoading(false);
         return compute(p, { planId: initialPlanId });
       })
@@ -227,7 +233,10 @@ export function RacePlanScreen({
     setSaving(true);
     setError(null);
     try {
-      const saved = await saveRacePlan(planId, title.trim(), params, file);
+      const saved = await saveRacePlan(planId, title.trim(), params, file, {
+        event_date: eventDate || null,
+        importance: importance || null,
+      });
       if (!planId) {
         // Now a saved plan: give it its own URL without remounting the screen.
         window.history.replaceState(null, "", `/tools/race-planning/${saved.id}`);
@@ -365,6 +374,34 @@ export function RacePlanScreen({
             />
             <span className="muted race-plan__help">{t("race_plan.start_time_help")}</span>
           </label>
+
+          {signedIn && (
+            <label className="race-plan__field">
+              <span>{t("race_plan.event_date")}</span>
+              <input
+                className="tm-input"
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+              />
+            </label>
+          )}
+
+          {signedIn && (
+            <label className="race-plan__field">
+              <span>{t("race_plan.importance")}</span>
+              <select
+                className="tm-select"
+                value={importance}
+                onChange={(e) => setImportance(e.target.value as RacePlanImportance | "")}
+              >
+                <option value="">{t("race_plan.importance.none")}</option>
+                <option value="primary">{t("race_plan.importance.primary")}</option>
+                <option value="secondary">{t("race_plan.importance.secondary")}</option>
+              </select>
+              <span className="muted race-plan__help">{t("race_plan.importance_help")}</span>
+            </label>
+          )}
 
           <label className="race-plan__field">
             <span>{t("race_plan.curve")}</span>

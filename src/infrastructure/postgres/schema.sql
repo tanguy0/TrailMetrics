@@ -444,6 +444,14 @@ create index if not exists race_plans_account_updated_idx
 -- save. Null for plans saved before it existed: the list fills those in once.
 alter table race_plans add column if not exists preview jsonb;
 
+-- The race itself: when it is and how much it matters (null = not said). With
+-- both set, a coached athlete's plan puts a goal on their diary and keeps it in
+-- step; `goal_item_id` is that goal (a `planned_items` id, not foreign-keyed:
+-- the athlete may delete the goal from the diary, and the next save recreates it).
+alter table race_plans add column if not exists event_date date;
+alter table race_plans add column if not exists importance text;
+alter table race_plans add column if not exists goal_item_id text;
+
 -- Level assessments (design/specs/level.md). Inputs and result as JSON: the
 -- three tests take different inputs, and the result is the LevelEstimate the
 -- tool showed — kept as shown, not recomputed, so "estimated on …" stays true.

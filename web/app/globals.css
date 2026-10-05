@@ -1293,6 +1293,34 @@ input[type="radio"] {
   min-height: 160px;
 }
 
+/* An objective, in the diary goal's colours (SessionCard `goal`): main terra,
+   secondary sun — tint background, `*-ink` text. */
+.race-plan-card--primary {
+  background: var(--terra-tint);
+  border-color: transparent;
+}
+
+.race-plan-card--secondary {
+  background: var(--sun-tint);
+  border-color: transparent;
+}
+
+.race-plan-card--primary .card__title,
+.race-plan-card--primary .race-plan-card__event {
+  color: var(--terra-ink);
+}
+
+.race-plan-card--secondary .card__title,
+.race-plan-card--secondary .race-plan-card__event {
+  color: var(--sun-ink);
+}
+
+.race-plan-card__event {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
 .race-plan-card__summary {
   display: flex;
   flex-direction: column;
