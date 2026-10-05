@@ -96,6 +96,25 @@ class ToolsApiTest(ApiTestCase):
         )
         self.assertEqual(visitor.status_code, 400)
 
+    def test_saved_plans_list_a_thumbnail_and_backfill_old_ones(self):
+        token = self.token_for("ana")
+        saved = self.client.post(
+            "/race-plans",
+            data={"meta": f'{{"title": "Galibier", "params": {PLAN_PARAMS}}}'},
+            files={"gpx": ("course.gpx", _gpx(), "application/gpx+xml")},
+            headers=self.bearer(token),
+        ).json()
+        preview = saved["preview"]
+        self.assertEqual(len(preview["route"]), 60)
+        self.assertLessEqual(len(preview["profile"]), 120)
+        self.assertGreater(preview["profile"][-1][1], preview["profile"][0][1])
+        # A plan saved before thumbnails existed gets one from the list.
+        self.db.execute("update race_plans set preview = null where id = %s", (saved["id"],))
+        listed = self.client.get("/race-plans", headers=self.bearer(token)).json()["plans"]
+        self.assertEqual(listed[0]["preview"], preview)
+        row = self.db.fetch_one("select preview from race_plans where id = %s", (saved["id"],))
+        self.assertIsNotNone(row["preview"])
+
     def test_a_saved_plan_is_planned_with_strava_attached(self):
         token = self.token_for("ana")
         self.exchange(token, ATHLETE_BASE + 22)

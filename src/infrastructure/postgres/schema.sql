@@ -440,6 +440,10 @@ alter table race_plans alter column athlete_id drop not null;
 create index if not exists race_plans_account_updated_idx
     on race_plans (account_id, updated_at desc);
 
+-- The list's thumbnail (route + elevation profile, downsampled), computed on
+-- save. Null for plans saved before it existed: the list fills those in once.
+alter table race_plans add column if not exists preview jsonb;
+
 -- Level assessments (design/specs/level.md). Inputs and result as JSON: the
 -- three tests take different inputs, and the result is the LevelEstimate the
 -- tool showed — kept as shown, not recomputed, so "estimated on …" stays true.

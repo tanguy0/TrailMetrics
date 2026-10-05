@@ -792,6 +792,15 @@ export interface SavedRacePlan {
   params: RacePlanParams;
   distance_m: number | null;
   elevation_gain_m: number | null;
+  /** Thumbnail data; `null` when the stored GPX cannot be read. */
+  preview: RacePlanPreview | null;
   created_at: string | null;
   updated_at: string | null;
+}
+
+export interface RacePlanPreview {
+  /** `[latitude, longitude]`, downsampled. */
+  route: [number, number][];
+  /** `[km, elevation m]`, downsampled. */
+  profile: [number, number][];
 }

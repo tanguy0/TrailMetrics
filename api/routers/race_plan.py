@@ -46,6 +46,7 @@ from src.domain.ports.accounts import Account
 from src.domain.ports.storage import Athlete
 from src.domain.race_plan.gpx import GpxError, parse_gpx
 from src.domain.race_plan.planner import PlanError, build_course
+from src.domain.race_plan.preview import course_preview
 from src.translations import translate
 from src.domain.durability.history import (
     durability_activity_ids,
@@ -166,7 +167,13 @@ def plan(
 
 @saved_router.get("")
 def list_saved(account: Account = Depends(current_account)) -> dict:
-    return {"plans": get_race_plan_repository(account.id).list()}
+    repository = get_race_plan_repository(account.id)
+    plans = repository.list()
+    # Plans saved before thumbnails existed get theirs once, here.
+    for plan in plans:
+        if plan["preview"] is None:
+            plan["preview"] = _backfill_preview(repository, plan["id"])
+    return {"plans": plans}
 
 
 @saved_router.post("", status_code=status.HTTP_201_CREATED)
@@ -178,10 +185,10 @@ def create_saved(
 ) -> dict:
     parsed = _parse(meta, SavedPlanMeta)
     payload = _read_gpx(gpx, lang)
-    distance, gain = _course_stats(payload, lang)
+    distance, gain, preview = _course_stats(payload, lang)
     return get_race_plan_repository(account.id).create(
         parsed.title.strip(), (gpx.filename or "")[:200], payload,
-        parsed.params.model_dump(), distance, gain,
+        parsed.params.model_dump(), distance, gain, preview,
     )
 
 
@@ -210,13 +217,14 @@ def update_saved(
         payload = repository.gpx(plan_id)
         if payload is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="race plan not found")
-    distance, gain = _course_stats(payload, lang)
+    distance, gain, preview = _course_stats(payload, lang)
     updated = repository.update(
         plan_id,
         title=parsed.title.strip(),
         params=parsed.params.model_dump(),
         distance_m=distance,
         elevation_gain_m=gain,
+        preview=preview,
         gpx=payload if gpx is not None else None,
         gpx_name=(gpx.filename or "")[:200] if gpx is not None else None,
     )
@@ -249,15 +257,30 @@ def _read_gpx(upload: UploadFile, lang: str) -> bytes:
     return payload
 
 
-def _course_stats(payload: bytes, lang: str) -> Tuple[float, float]:
-    """``(distance, D+)`` of a GPX — and the check that it is plannable at all."""
+def _course_stats(payload: bytes, lang: str) -> Tuple[float, float, dict]:
+    """``(distance, D+, preview)`` of a GPX — and the check that it is plannable at all."""
     try:
-        course = build_course(parse_gpx(payload))
+        points = parse_gpx(payload)
+        course = build_course(points)
     except GpxError as error:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=translate(error.reason_key, lang)
         )
-    return course.total_m, course.elevation_gain()[0]
+    return course.total_m, course.elevation_gain()[0], course_preview(points, course)
+
+
+def _backfill_preview(repository, plan_id: str) -> Optional[dict]:
+    """Compute and store a saved plan's missing thumbnail; ``None`` if it cannot be."""
+    payload = repository.gpx(plan_id)
+    if payload is None:
+        return None
+    try:
+        points = parse_gpx(payload)
+        preview = course_preview(points, build_course(points))
+    except GpxError:
+        return None
+    repository.set_preview(plan_id, preview)
+    return preview
 
 
 def _optional_identity(request: Request) -> Tuple[Optional[Account], Optional[Athlete]]:

@@ -9,7 +9,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Callout } from "@/components/Callout";
+import { ElevationThumb } from "@/components/ElevationThumb";
 import { PageHeader } from "@/components/PageHeader";
+import { RouteMap } from "@/components/RouteMap";
 import { listRacePlans } from "@/lib/api";
 import { formatDate, formatHms, formatNumber } from "@/lib/format";
 import { translator, type Strings } from "@/lib/strings";
@@ -34,9 +36,10 @@ export function RacePlanList({ strings }: { strings: Strings }) {
       ) : plans && plans.length === 0 ? (
         <p className="muted">{t("race_plan.empty")}</p>
       ) : (
-        <div className="card-grid">
+        <div className="race-plan-list">
           {(plans ?? []).map((plan) => (
-            <a className="card" key={plan.id} href={`/tools/race-planning/${plan.id}`}>
+            <a className="card race-plan-card" key={plan.id} href={`/tools/race-planning/${plan.id}`}>
+              <span className="race-plan-card__summary">
               <span className="card__title">{plan.title || t("race_plan.untitled")}</span>
               <span className="card__meta">
                 {[
@@ -52,6 +55,17 @@ export function RacePlanList({ strings }: { strings: Strings }) {
                 <span className="card__description">
                   {t("race_plan.updated", { date: formatDate(plan.updated_at, "relative", t("locale")) })}
                 </span>
+              )}
+              </span>
+              {plan.preview && (
+                <>
+                  <span className="race-plan-card__map">
+                    <RouteMap points={plan.preview.route} height={128} interactive={false} />
+                  </span>
+                  <span className="race-plan-card__profile">
+                    <ElevationThumb profile={plan.preview.profile} />
+                  </span>
+                </>
               )}
             </a>
           ))}
