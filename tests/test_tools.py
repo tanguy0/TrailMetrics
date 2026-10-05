@@ -217,7 +217,18 @@ class ToolsApiTest(ApiTestCase):
         self._save(coached, event_date="2027-08-27")
         self.assertEqual(self._goals(ATHLETE_BASE + 25), [])
 
-    def test_slope_and_durability_need_strava(self):
+    def test_the_gap_profile_without_runs_says_insufficient_data(self):
+        token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + 27)
+        body = self.client.get("/tools/gap/summary", headers=self.bearer(token)).json()
+        self.assertFalse(body["available"])
+        self.assertEqual(
+            [(t["key"], t["level"]) for t in body["terrains"]],
+            [("steep_downhill", "insufficient"), ("downhill", "insufficient"),
+             ("uphill", "insufficient"), ("steep_uphill", "insufficient")],
+        )
+
+    def test_gap_and_durability_profiles_need_strava(self):
         token = self.token_for("ana")
         for path in ("/tools/gap/summary", "/tools/durability/summary"):
             self.assertEqual(self.client.get(path, headers=self.bearer(token)).status_code, 409)

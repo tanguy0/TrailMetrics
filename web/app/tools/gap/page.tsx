@@ -1,4 +1,4 @@
-/** Tools → Profil de pente. Reads Strava data: without it, the tool's teaser. */
+/** Tools → Profil GAP. Reads Strava data: without it, the tool's teaser. */
 
 import type { Metadata } from "next";
 
@@ -8,7 +8,7 @@ import { getViewer } from "@/lib/session";
 import { translator } from "@/lib/strings";
 import { loadStrings } from "@/lib/strings.server";
 
-export const metadata: Metadata = { title: "Profil de pente — TAGG" };
+export const metadata: Metadata = { title: "Profil GAP — TAGG" };
 
 export default async function Page() {
   const strings = await loadStrings();

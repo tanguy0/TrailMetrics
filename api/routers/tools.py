@@ -2,15 +2,14 @@
 
 * **Level assessment** — open to everyone; saving is an explicit act that needs
   Strava, and the saved estimate becomes the athlete's VMA (design/specs/level.md).
-* **Slope profile** and **Durability** — Strava required. Their charts are the
+* **GAP profile** and **Durability** — Strava required. Their charts are the
   existing ``gap_curve`` and ``durability_curve`` plots, rendered by the client
   through ``/render/panel`` like Home's; this router only adds the headline
   tiles, computed from the same fitted models the race plan uses (and caches).
 """
 
 import logging
-from datetime import date, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
@@ -20,7 +19,6 @@ from api.deps import (
     STRAVA_NOT_CONNECTED,
     current_account,
     current_athlete,
-    data_source_for,
     get_account_repository,
     get_athlete_repository,
     get_level_repository,
@@ -29,6 +27,7 @@ from api.deps import (
 from api.routers.race_plan import _durability_model, _personal_curves
 from src.domain.durability.config import DEFAULT_CONFIG as DURABILITY_CONFIG
 from src.domain.durability.personalization import POPULATION_ONLY
+from src.domain.gap.assessment import assess as assess_gap
 from src.domain.gap.reference_curves import balanced_runner
 from src.domain.level import zones
 from src.domain.level.estimate import LevelEstimate, LevelInputError, estimate, hr_max_or_none
@@ -37,16 +36,11 @@ from src.domain.ports.accounts import Account
 from src.domain.ports.storage import Athlete
 from src.translations import translate
 from src.usecases.plan_race import PERSONAL_EFFICIENCY
-from src.domain.dataset.sport import RUNNING_SPORT_TYPES
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 
-# Gradient the slope tiles are read at: ±10 % (the curve's x is m of climb per km).
-SLOPE_M_PER_KM = 100.0
-# The flat-equivalent pace is read over this recent window of runs.
-FLAT_PACE_DAYS = 84
 DURABILITY_TILES_H = (2.0, 4.0)
 
 
@@ -113,28 +107,20 @@ def latest_level(account: Account = Depends(current_account), lang: str = Depend
 
 @router.get("/gap/summary")
 def gap_summary(athlete: Athlete = Depends(current_athlete), lang: str = Depends(language)) -> dict:
-    """Headline numbers of the slope profile: what ±10 % costs, against the reference."""
+    """The GAP profile: a level per terrain against the balanced runner.
+
+    Read on the same personal curve the race plan uses (and caches), so the two
+    tools always describe the same runner.
+    """
     curve, reason = _personal_curves(athlete)(PERSONAL_EFFICIENCY)
+    terrains = [t.to_dict() for t in assess_gap(curve, balanced_runner())]
     if curve is None:
-        return {"available": False, "reason": translate(reason or "race_plan.reason.no_runs", lang)}
-    reference = balanced_runner()
-
-    def read(c, x: float) -> float:
-        order = np.argsort(c.bin_centers)
-        return float(np.interp(x, np.asarray(c.bin_centers)[order], np.asarray(c.means)[order]))
-
-    up, down = read(curve, SLOPE_M_PER_KM), read(curve, -SLOPE_M_PER_KM)
-    ref_up, ref_down = read(reference, SLOPE_M_PER_KM), read(reference, -SLOPE_M_PER_KM)
-    return {
-        "available": True,
-        # Speed adjusters: GAP/speed. Above 1 a slope costs speed, below 1 it gives.
-        "uphill_factor": round(up, 3),
-        "downhill_factor": round(down, 3),
-        "uphill_vs_reference_pct": round((up - ref_up) / ref_up * 100, 1),
-        "downhill_vs_reference_pct": round((down - ref_down) / ref_down * 100, 1),
-        "flat_pace_s_per_km": _flat_pace(athlete),
-        "slope_pct": SLOPE_M_PER_KM / 10,
-    }
+        return {
+            "available": False,
+            "reason": translate(reason or "race_plan.reason.no_runs", lang),
+            "terrains": terrains,
+        }
+    return {"available": True, "terrains": terrains}
 
 
 @router.get("/durability/summary")
@@ -195,21 +181,3 @@ def _apply_to_athlete(account: Account, result: LevelEstimate, hr_max: Optional[
         vma_pace_s_per_km=result.vma_pace_s_per_km,
     )
     athletes.set_pace_overrides(athlete.id, None)
-
-
-def _flat_pace(athlete: Athlete) -> Optional[float]:
-    """Gradient-adjusted pace over the recent runs: the pace on the flat equivalent."""
-    data = data_source_for(athlete)
-    since = date.today() - timedelta(days=FLAT_PACE_DAYS)
-    ids: List[int] = [
-        s.activity_id for s in data.summaries()
-        if s.sport_type in RUNNING_SPORT_TYPES and s.start_date.date() >= since
-    ]
-    if not ids:
-        return None
-    frame = data.features(ids)
-    if frame.empty or "gap_distance_m" not in frame:
-        return None
-    distance = float(frame["gap_distance_m"].fillna(0).sum())
-    moving = float(frame.loc[frame["gap_distance_m"].notna(), "moving_s"].sum())
-    return round(moving / distance * 1000, 1) if distance > 0 else None

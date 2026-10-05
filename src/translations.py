@@ -1103,7 +1103,7 @@ TRANSLATIONS = {
     "ui.nav.group_coached": {"en": "Coached by TAGG", "fr": "Coaché par TAGG"},
     "ui.tools.race_planning": {"en": "Race Planning", "fr": "Planification de course"},
     "ui.tools.level": {"en": "Level Assessment", "fr": "Évaluation du niveau"},
-    "ui.tools.gap_profile": {"en": "Slope Profile", "fr": "Profil de pente"},
+    "ui.tools.gap_profile": {"en": "GAP Profile", "fr": "Profil GAP"},
     "ui.tools.durability": {"en": "Durability", "fr": "Durabilité"},
     "ui.tools.keep_plans": {
         "en": "Create an account to keep your plans.",
@@ -1124,8 +1124,8 @@ TRANSLATIONS = {
         "fr": "Votre VMA et vos zones d’entraînement, à partir d’un test ou de vos records.",
     },
     "ui.visitor.tools": {
-        "en": "Slope profile and durability, read from your own runs.",
-        "fr": "Profil de pente et durabilité, lus dans vos propres sorties.",
+        "en": "GAP profile and durability, read from your own runs.",
+        "fr": "Profil GAP et durabilité, lus dans vos propres sorties.",
     },
     "ui.visitor.coaching": {
         "en": "A weekly plan built on your data, with a coach.",
@@ -1206,22 +1206,28 @@ TRANSLATIONS = {
     "ui.home.zones.set_by_hand": {"en": "Set by hand", "fr": "Saisie à la main"},
     "ui.home.zones.from_vma": {"en": "Computed from VMA", "fr": "Calculée depuis la VMA"},
 
-    # Slope profile tool page
-    "ui.gap_tool.kicker": {"en": "Slope Profile", "fr": "Profil de pente"},
-    "ui.gap_tool.title": {"en": "What climbing costs you", "fr": "Votre coût du dénivelé"},
-    "ui.gap_tool.uphill": {"en": "Cost at +{slope} %", "fr": "Coût à +{slope} %"},
-    "ui.gap_tool.downhill": {"en": "Cost at −{slope} %", "fr": "Coût à −{slope} %"},
-    "ui.gap_tool.flat": {"en": "Flat-equivalent pace", "fr": "Allure plat équivalente"},
-    "ui.gap_tool.flat_note": {"en": "last 12 weeks", "fr": "12 dernières semaines"},
-    "ui.gap_tool.vs_ref": {"en": "{value} vs reference", "fr": "{value} vs référence"},
-    "ui.gap_tool.less_up": {
-        "en": "Uphill, you lose {value} less than the reference runner.",
-        "fr": "En montée, vous perdez {value} de moins que le coureur de référence.",
+    # GAP profile tool page
+    "ui.gap_tool.kicker": {"en": "GAP Profile", "fr": "Profil GAP"},
+    "ui.gap_tool.title": {"en": "What slopes cost you", "fr": "Ce que les pentes vous coûtent"},
+    "ui.gap_tool.lede": {
+        "en": "Where you stand against an average runner, at the same effort, on each kind of slope.",
+        "fr": "Où vous vous situez face à un coureur moyen, à effort égal, sur chaque type de pente.",
     },
-    "ui.gap_tool.more_up": {
-        "en": "Uphill, you lose {value} more than the reference runner.",
-        "fr": "En montée, vous perdez {value} de plus que le coureur de référence.",
-    },
+    "ui.gap_tool.terrain.steep_downhill": {"en": "Steep downhill", "fr": "Descente raide"},
+    "ui.gap_tool.terrain.downhill": {"en": "Downhill", "fr": "Descente"},
+    "ui.gap_tool.terrain.uphill": {"en": "Uphill", "fr": "Montée"},
+    "ui.gap_tool.terrain.steep_uphill": {"en": "Steep uphill", "fr": "Montée raide"},
+    "ui.gap_tool.range.steep_downhill": {"en": "below −12 %", "fr": "sous −12 %"},
+    "ui.gap_tool.range.downhill": {"en": "−12 % to −3 %", "fr": "de −12 % à −3 %"},
+    "ui.gap_tool.range.uphill": {"en": "+3 % to +12 %", "fr": "de +3 % à +12 %"},
+    "ui.gap_tool.range.steep_uphill": {"en": "above +12 %", "fr": "au-delà de +12 %"},
+    # The five-level scale shared by the GAP and durability profiles.
+    "ui.assessment.level.poor": {"en": "Poor", "fr": "Faible"},
+    "ui.assessment.level.limited": {"en": "Limited", "fr": "Limité"},
+    "ui.assessment.level.average": {"en": "Average", "fr": "Moyen"},
+    "ui.assessment.level.good": {"en": "Good", "fr": "Bon"},
+    "ui.assessment.level.excellent": {"en": "Excellent", "fr": "Excellent"},
+    "ui.assessment.level.insufficient": {"en": "Insufficient data", "fr": "Données insuffisantes"},
     "ui.gap_tool.chart": {"en": "Your GAP curve", "fr": "Votre courbe GAP"},
     "ui.gap_tool.more": {
         "en": "To tune the model or compare periods, the GAP curves panel is in Analysis.",

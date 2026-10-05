@@ -499,15 +499,21 @@ export interface ZoneDefinitions {
   hr_pace: { key: string; low_pct: number; high_pct: number }[];
 }
 
+/** The five-level scale of the GAP and durability profiles (src/domain/assessment). */
+export type AssessmentLevel = "excellent" | "good" | "average" | "limited" | "poor" | "insufficient";
+
+export interface Assessment {
+  key: string;
+  /** Extra cost against the reference runner, %; `null` without data. Not shown. */
+  extra_cost_pct: number | null;
+  level: AssessmentLevel;
+}
+
 export interface GapSummary {
   available: boolean;
   reason?: string;
-  uphill_factor?: number;
-  downhill_factor?: number;
-  uphill_vs_reference_pct?: number;
-  downhill_vs_reference_pct?: number;
-  flat_pace_s_per_km?: number | null;
-  slope_pct?: number;
+  /** Steep downhill, downhill, uphill, steep uphill — in that order. */
+  terrains: Assessment[];
 }
 
 export interface DurabilitySummary {

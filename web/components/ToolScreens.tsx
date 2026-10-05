@@ -18,10 +18,17 @@ import { Callout } from "@/components/Callout";
 import { ChartView } from "@/components/ChartView";
 import { Kpi } from "@/components/Kpi";
 import { getDurabilitySummary, getGapSummary, renderPanel } from "@/lib/api";
-import { formatNumber, formatPaceInput } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { RUNNING_SPORT_TYPES } from "@/lib/sport";
+import { chipClass, type ChipTone } from "@/lib/tone";
 import { translator, type Strings, type Translate } from "@/lib/strings";
-import type { ChartData, DurabilitySummary, GapSummary, PanelSpec } from "@/lib/types";
+import type {
+  AssessmentLevel,
+  ChartData,
+  DurabilitySummary,
+  GapSummary,
+  PanelSpec,
+} from "@/lib/types";
 
 const YEAR_DAYS = 365;
 
@@ -147,58 +154,33 @@ function signedPct(value: number): string {
   return `${value > 0 ? "+" : value < 0 ? "−" : ""}${rounded} %`;
 }
 
-/** A speed adjuster (GAP/speed) as the extra cost it means: 1.42 → +42 %. */
-function costPct(factor: number): string {
-  return signedPct((factor - 1) * 100);
-}
-
 export function GapScreen({ strings }: { strings: Strings }) {
   const t = translator(strings);
   const [summary, setSummary] = useState<GapSummary | null>(null);
   const { charts, notes } = usePanel(() => gapPanel(t));
 
   useEffect(() => {
-    getGapSummary().then(setSummary).catch(() => setSummary({ available: false }));
+    getGapSummary().then(setSummary).catch(() => setSummary({ available: false, terrains: [] }));
   }, []);
-
-  const slope = summary?.slope_pct ?? 10;
-  const vsRef = summary?.uphill_vs_reference_pct;
 
   return (
     <main className="container tool">
       <ToolHero kicker={t("gap_tool.kicker")} title={t("gap_tool.title")} />
 
       <section className="card-block">
+        <p className="data-block__lede">{t("gap_tool.lede")}</p>
         {summary && !summary.available && summary.reason && <Callout>{summary.reason}</Callout>}
-        <div className="kpi-grid kpi-grid--headline">
-          <Kpi
-            label={t("gap_tool.uphill", { slope })}
-            value={summary?.uphill_factor != null ? costPct(summary.uphill_factor) : "—"}
-            note={vsRef != null ? t("gap_tool.vs_ref", { value: signedPct(vsRef) }) : null}
-            tone="terra"
-          />
-          <Kpi
-            label={t("gap_tool.downhill", { slope })}
-            value={summary?.downhill_factor != null ? costPct(summary.downhill_factor) : "—"}
-            note={
-              summary?.downhill_vs_reference_pct != null
-                ? t("gap_tool.vs_ref", { value: signedPct(summary.downhill_vs_reference_pct) })
-                : null
-            }
-          />
-          <Kpi
-            label={t("gap_tool.flat")}
-            value={summary?.flat_pace_s_per_km ? formatPaceInput(summary.flat_pace_s_per_km) : "—"}
-            unit="/km"
-            note={t("gap_tool.flat_note")}
-          />
+        <div className="kpi-grid">
+          {(summary?.terrains ?? []).map((terrain) => (
+            <AssessmentTile
+              key={terrain.key}
+              label={t(`gap_tool.terrain.${terrain.key}`)}
+              sub={t(`gap_tool.range.${terrain.key}`)}
+              level={terrain.level}
+              t={t}
+            />
+          ))}
         </div>
-        {vsRef != null && (
-          <Highlighted
-            text={t(vsRef <= 0 ? "gap_tool.less_up" : "gap_tool.more_up", { value: "{value}" })}
-            value={`${formatNumber(Math.abs(vsRef), 1)} %`}
-          />
-        )}
         <Charts charts={charts} t={t} />
         {notes.slice(0, 1).map((note) => <p className="body-sm muted" key={note}>{note}</p>)}
         <p className="body-sm muted">
@@ -206,6 +188,39 @@ export function GapScreen({ strings }: { strings: Strings }) {
         </p>
       </section>
     </main>
+  );
+}
+
+/** Each level's chip tone (Chip.md): the alert red for poor, moss for the good side. */
+const LEVEL_TONE: Record<AssessmentLevel, ChipTone> = {
+  excellent: "moss",
+  good: "moss",
+  average: "forest",
+  limited: "sun",
+  poor: "danger",
+  insufficient: "neutral",
+};
+
+/** One terrain (or effort) of a profile: its name, what it covers, its level. */
+function AssessmentTile({
+  label,
+  sub,
+  level,
+  t,
+}: {
+  label: string;
+  sub: string;
+  level: AssessmentLevel;
+  t: Translate;
+}) {
+  return (
+    <div className="tm-kpi tm-kpi--flat assessment-tile">
+      <span className="tm-kpi__label">{label}</span>
+      <span className="assessment-tile__range">{sub}</span>
+      <span className={chipClass(LEVEL_TONE[level], level === "excellent" ? "tm-chip--dot" : "")}>
+        {t(`assessment.level.${level}`)}
+      </span>
+    </div>
   );
 }
 
