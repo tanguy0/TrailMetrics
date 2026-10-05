@@ -2,7 +2,7 @@
 
 /**
  * The Tools tab's sub-tabs (design/tagg/access.md § Navigation): Race Planning ·
- * Level Assessment · Slope Profile · Durability. A `tm-segment` of links, one URL
+ * Level Assessment · GAP Profile · Durability Profile. A `tm-segment` of links, one URL
  * per tool. The two that read Strava carry the lock when the viewer has no
  * Strava yet — still clickable, to the tool's teaser (rule v1.1).
  */

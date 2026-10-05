@@ -1104,7 +1104,7 @@ TRANSLATIONS = {
     "ui.tools.race_planning": {"en": "Race Planning", "fr": "Planification de course"},
     "ui.tools.level": {"en": "Level Assessment", "fr": "Évaluation du niveau"},
     "ui.tools.gap_profile": {"en": "GAP Profile", "fr": "Profil GAP"},
-    "ui.tools.durability": {"en": "Durability", "fr": "Durabilité"},
+    "ui.tools.durability": {"en": "Durability Profile", "fr": "Profil de durabilité"},
     "ui.tools.keep_plans": {
         "en": "Create an account to keep your plans.",
         "fr": "Créez un compte pour garder vos plans.",
@@ -1242,24 +1242,38 @@ TRANSLATIONS = {
     },
 
     # Durability tool page
-    "ui.durability_tool.kicker": {"en": "Durability", "fr": "Durabilité"},
+    "ui.durability_tool.kicker": {"en": "Durability Profile", "fr": "Profil de durabilité"},
     "ui.durability_tool.title": {
         "en": "Your drift on long efforts",
         "fr": "Votre dérive sur l’effort long",
     },
-    "ui.durability_tool.at": {"en": "Extra cost after {hours} h", "fr": "Surcoût après {hours} h"},
-    "ui.durability_tool.confidence": {"en": "Confidence", "fr": "Confiance"},
-    "ui.durability_tool.confidence.personalized": {"en": "personal", "fr": "personnelle"},
-    "ui.durability_tool.confidence.partially_personalized": {"en": "partial", "fr": "partielle"},
-    "ui.durability_tool.confidence.population_only": {"en": "population", "fr": "population"},
-    "ui.durability_tool.runs": {"en": "{count} long runs", "fr": "{count} sorties longues"},
-    "ui.durability_tool.sentence": {
-        "en": "After 4 hours, running costs you {value} more than at the start.",
-        "fr": "Après 4 heures, courir vous coûte {value} de plus qu’au départ.",
+    "ui.durability_tool.lede": {
+        "en": "How well you hold your pace as an effort gets long, against an average runner.",
+        "fr": "Comment vous tenez votre allure quand l’effort s’allonge, face à un coureur moyen.",
     },
-    "ui.durability_tool.vs_population": {
-        "en": "Typical runner: {value}.", "fr": "Coureur type : {value}.",
+    "ui.durability_tool.quality.long_efforts": {"en": "Long efforts", "fr": "Efforts longs"},
+    "ui.durability_tool.quality.hard_efforts": {"en": "Hard efforts", "fr": "Efforts intenses"},
+    "ui.durability_tool.quality.descents": {"en": "Descents", "fr": "Descentes"},
+    "ui.durability_tool.scope.long_efforts": {
+        "en": "time on your feet", "fr": "le temps passé à courir",
     },
+    "ui.durability_tool.scope.hard_efforts": {
+        "en": "time above threshold", "fr": "le temps au-dessus du seuil",
+    },
+    "ui.durability_tool.scope.descents": {
+        "en": "metres of descent", "fr": "les mètres de descente",
+    },
+    "ui.durability_tool.no_data": {
+        "en": "Run a few times for 45 minutes or more and your durability profile appears here.",
+        "fr": "Quelques sorties de 45 minutes ou plus, et votre profil de durabilité apparaît ici.",
+    },
+    "ui.durability_tool.chart": {
+        "en": "Your projected durability against an average runner",
+        "fr": "Votre durabilité projetée face à un coureur moyen",
+    },
+    "ui.durability_tool.chart.x": {"en": "Time running", "fr": "Temps de course"},
+    "ui.durability_tool.chart.y": {"en": "Extra cost", "fr": "Surcoût"},
+    "ui.durability_tool.chart.average": {"en": "Average runner", "fr": "Coureur moyen"},
 
     # Analyses: templates
     "ui.pages.new.blank": {"en": "Blank analysis", "fr": "Analyse vide"},
@@ -2005,12 +2019,6 @@ TRANSLATIONS = {
         "fr": "Votre modèle de durabilité n'a pas pu être ajusté : le modèle population est "
               "utilisé.",
     },
-    "durability.note.placeholder": {
-        "en": "Population coefficients are conservative product defaults ({version}), not "
-              "validated individual physiology.",
-        "fr": "Les coefficients population sont des valeurs produit prudentes ({version}), "
-              "pas une physiologie individuelle validée.",
-    },
     "durability.note.target_reference": {
         "en": "Intensity is inferred from the target time itself (treated as a full race "
               "effort), not from your best efforts.",
@@ -2183,12 +2191,6 @@ TRANSLATIONS = {
         "en": "Extra cost at finish", "fr": "Surcoût à l'arrivée",
     },
     "ui.race_plan.summary.gap_finish": {"en": "GAP pace at finish", "fr": "Allure GAP à l'arrivée"},
-    "ui.race_plan.summary.durability_model": {"en": "Durability model", "fr": "Modèle de durabilité"},
-    "ui.race_plan.confidence.population_only": {"en": "Population", "fr": "Population"},
-    "ui.race_plan.confidence.partially_personalized": {
-        "en": "Partly personal", "fr": "Partiellement personnel",
-    },
-    "ui.race_plan.confidence.personalized": {"en": "Personal", "fr": "Personnel"},
     "ui.race_plan.section.durability": {"en": "Durability", "fr": "Durabilité"},
     "ui.race_plan.title": {"en": "Race plan", "fr": "Plan de course"},
     "ui.race_plan.intro": {
@@ -2280,8 +2282,8 @@ TRANSLATIONS = {
     "ui.race_plan.hero.aid_stations.one": {"en": "{count} aid station", "fr": "{count} ravito"},
     "ui.race_plan.hero.aid_stations.many": {"en": "{count} aid stations", "fr": "{count} ravitos"},
     "ui.race_plan.hero.drift": {
-        "en": "drift ×{factor} at the finish ({confidence})",
-        "fr": "dérive ×{factor} à l'arrivée ({confidence})",
+        "en": "drift ×{factor} at the finish",
+        "fr": "dérive ×{factor} à l'arrivée",
     },
     "ui.race_plan.hero.gain_loss": {"en": "Gain / loss", "fr": "D+ / D−"},
     "ui.race_plan.hero.gap_pace": {"en": "GAP pace", "fr": "Allure GAP"},

@@ -11,12 +11,11 @@ range — has no level: ``insufficient`` rather than a guess extrapolated from t
 neighbouring terrain.
 """
 
-from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import numpy as np
 
-from src.domain.assessment import rate
+from src.domain.assessment import Assessment
 from src.domain.charts.ir import Axis, AxisKind, ChartData, Marker, Trace, TraceKind
 from src.domain.gap import theme
 from src.domain.models.gap import GapCurve
@@ -35,26 +34,11 @@ TERRAINS: Tuple[Tuple[str, float, float], ...] = (
 )
 
 
-@dataclass(frozen=True)
-class TerrainAssessment:
-    key: str
-    # ``None`` when the runner's curve has no point on this terrain.
-    extra_cost_pct: Optional[float]
-    level: str
-
-    def to_dict(self) -> dict:
-        return {
-            "key": self.key,
-            "extra_cost_pct": None if self.extra_cost_pct is None else round(self.extra_cost_pct, 1),
-            "level": self.level,
-        }
-
-
-def assess(curve: Optional[GapCurve], reference: GapCurve) -> List[TerrainAssessment]:
+def assess(curve: Optional[GapCurve], reference: GapCurve) -> List[Assessment]:
     """One assessment per terrain, in :data:`TERRAINS` order."""
     return [
-        TerrainAssessment(key, extra, rate(extra))
-        for key, extra in ((key, _extra_cost(curve, reference, low, high)) for key, low, high in TERRAINS)
+        Assessment.of(key, _extra_cost(curve, reference, low, high))
+        for key, low, high in TERRAINS
     ]
 
 

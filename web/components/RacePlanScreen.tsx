@@ -556,10 +556,7 @@ function RacePlanHero({ result, name, t }: { result: RacePlanResult; name: strin
     s.section_count ? plural(t, "race_plan.hero.sections", s.section_count) : null,
     s.aid_station_count ? plural(t, "race_plan.hero.aid_stations", s.aid_station_count) : null,
     s.durability_enabled && s.durability_multiplier_finish != null
-      ? t("race_plan.hero.drift", {
-          factor: formatNumber(s.durability_multiplier_finish, 2),
-          confidence: t(`race_plan.confidence.${s.durability_confidence ?? "population_only"}`),
-        })
+      ? t("race_plan.hero.drift", { factor: formatNumber(s.durability_multiplier_finish, 2) })
       : null,
   ].filter(Boolean).join(" · ");
   const stats = [
@@ -618,10 +615,6 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
         "%",
       ],
       [t("race_plan.summary.gap_finish"), formatPaceInput(s.gap_pace_finish_s_per_km ?? NaN), perKm],
-      [
-        t("race_plan.summary.durability_model"),
-        t(`race_plan.confidence.${s.durability_confidence ?? "population_only"}`),
-      ],
     );
   }
 

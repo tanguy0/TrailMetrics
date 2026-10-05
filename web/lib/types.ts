@@ -519,11 +519,12 @@ export interface GapSummary {
 }
 
 export interface DurabilitySummary {
-  confidence: "personalized" | "partially_personalized" | "population_only";
-  personal: boolean;
-  extra_cost_pct: Record<string, number>;
-  population_extra_cost_pct: Record<string, number>;
-  n_activities: number;
+  /** Whether the athlete's own long runs inform the profile at all. */
+  available: boolean;
+  /** Long efforts, hard efforts, descents — in that order. */
+  qualities: Assessment[];
+  /** Projected extra cost over a long run, against the average runner. */
+  chart: ChartData | null;
 }
 
 export interface CoachingRequest {

@@ -2,16 +2,15 @@
 
 * **Level assessment** — open to everyone; saving is an explicit act that needs
   Strava, and the saved estimate becomes the athlete's VMA (design/specs/level.md).
-* **GAP profile** and **Durability** — Strava required. Their charts are the
-  existing ``gap_curve`` and ``durability_curve`` plots, rendered by the client
-  through ``/render/panel`` like Home's; this router only adds the headline
-  tiles, computed from the same fitted models the race plan uses (and caches).
+* **GAP profile** and **Durability profile** — Strava required. Each rates the
+  runner against an average runner on the shared five-level scale
+  (src/domain/assessment) and returns the chart it was read on, both computed
+  from the same fitted models the race plan uses (and caches).
 """
 
 import logging
 from typing import Any, Dict, Optional, Tuple
 
-import numpy as np
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
@@ -28,11 +27,12 @@ from api.routers.race_plan import _durability_model, _personal_curves
 from src.domain.charts.ir import PlotOutput
 from src.domain.durability.config import DEFAULT_CONFIG as DURABILITY_CONFIG
 from src.domain.durability.personalization import POPULATION_ONLY
+from src.domain.durability.assessment import assess as assess_durability
+from src.domain.durability.assessment import profile_chart as profile_durability_chart
 from src.domain.gap.assessment import assess as assess_gap, profile_chart
 from src.domain.gap.reference_curves import balanced_runner
 from src.domain.level import zones
 from src.domain.level.estimate import LevelEstimate, LevelInputError, estimate, hr_max_or_none
-from src.domain.plots.durability_curve import projected_extra_cost
 from src.domain.ports.accounts import Account
 from src.domain.ports.storage import Athlete
 from src.translations import translate
@@ -42,7 +42,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 
-DURABILITY_TILES_H = (2.0, 4.0)
 
 
 class EstimateRequest(BaseModel):
@@ -130,20 +129,19 @@ def gap_summary(athlete: Athlete = Depends(current_athlete), lang: str = Depends
 
 
 @router.get("/durability/summary")
-def durability_summary(athlete: Athlete = Depends(current_athlete)) -> dict:
-    """Headline numbers of durability: extra cost after 2 h and 4 h, and confidence."""
+def durability_summary(
+    athlete: Athlete = Depends(current_athlete), lang: str = Depends(language)
+) -> dict:
+    """The durability profile: a level per quality against the average runner.
+
+    Read on the same fitted model the race plan uses (and caches).
+    """
     model = _durability_model(athlete)()
-    hours = np.array([0.0, *DURABILITY_TILES_H])
-    extra = projected_extra_cost(model, DURABILITY_CONFIG, hours)
-    population = projected_extra_cost(model, DURABILITY_CONFIG, hours, model.population)
+    chart = profile_durability_chart(model, DURABILITY_CONFIG, lang)
     return {
-        "confidence": model.confidence,
-        "personal": model.confidence != POPULATION_ONLY,
-        "extra_cost_pct": {f"{h:g}h": round(float(v), 1) for h, v in zip(DURABILITY_TILES_H, extra[1:])},
-        "population_extra_cost_pct": {
-            f"{h:g}h": round(float(v), 1) for h, v in zip(DURABILITY_TILES_H, population[1:])
-        },
-        "n_activities": model.n_activities,
+        "available": model.confidence != POPULATION_ONLY,
+        "qualities": [q.to_dict() for q in assess_durability(model)],
+        "chart": PlotOutput(charts=[chart]).to_dict()["charts"][0] if chart else None,
     }
 
 

@@ -1,4 +1,4 @@
-/** Tools → Durabilité. Reads Strava data: without it, the tool's teaser. */
+/** Tools → Profil de durabilité. Reads Strava data: without it, the tool's teaser. */
 
 import type { Metadata } from "next";
 
@@ -8,7 +8,7 @@ import { getViewer } from "@/lib/session";
 import { translator } from "@/lib/strings";
 import { loadStrings } from "@/lib/strings.server";
 
-export const metadata: Metadata = { title: "Durabilité — TAGG" };
+export const metadata: Metadata = { title: "Profil de durabilité — TAGG" };
 
 export default async function Page() {
   const strings = await loadStrings();

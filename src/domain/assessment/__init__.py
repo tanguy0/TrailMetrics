@@ -12,6 +12,7 @@ which is worse; the same scale serves both profiles.
     < −15 %          excellent
 """
 
+from dataclasses import dataclass
 from typing import Optional
 
 POOR = "poor"
@@ -38,3 +39,24 @@ def rate(extra_cost_pct: Optional[float]) -> str:
     if extra_cost_pct > 0:
         return LIMITED if size <= CLEAR_BEYOND_PCT else POOR
     return GOOD if size <= CLEAR_BEYOND_PCT else EXCELLENT
+
+
+@dataclass(frozen=True)
+class Assessment:
+    """One terrain or effort of a profile, rated."""
+
+    key: str
+    # ``None`` when there is nothing to compare against.
+    extra_cost_pct: Optional[float]
+    level: str
+
+    @staticmethod
+    def of(key: str, extra_cost_pct: Optional[float]) -> "Assessment":
+        return Assessment(key, extra_cost_pct, rate(extra_cost_pct))
+
+    def to_dict(self) -> dict:
+        return {
+            "key": self.key,
+            "extra_cost_pct": None if self.extra_cost_pct is None else round(self.extra_cost_pct, 1),
+            "level": self.level,
+        }

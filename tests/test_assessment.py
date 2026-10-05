@@ -5,6 +5,13 @@ import unittest
 import numpy as np
 
 from src.domain.assessment import rate
+from src.domain.durability import assessment as durability
+from src.domain.durability.config import DEFAULT_CONFIG, DOWNHILL, DURATION, SEVERE_INTENSITY
+from src.domain.durability.personalization import (
+    PARTIALLY_PERSONALIZED,
+    AthleteDurabilityModel,
+    population_model,
+)
 from src.domain.gap.assessment import assess, profile_chart
 from src.domain.gap.reference_curves import balanced_runner
 from src.domain.models.gap import GapCurve
@@ -49,6 +56,43 @@ class GapAssessmentTest(unittest.TestCase):
         self.assertEqual(by_key["steep_downhill"].level, "insufficient")
         self.assertIsNone(by_key["steep_uphill"].extra_cost_pct)
         self.assertEqual([a.level for a in assess(None, ref)], ["insufficient"] * 4)
+
+
+class DurabilityAssessmentTest(unittest.TestCase):
+    def _model(self, ratios, weights):
+        population = DEFAULT_CONFIG.population
+        return AthleteDurabilityModel(
+            coefficients=population.with_values(
+                {name: population.get(name) * ratio for name, ratio in ratios.items()}
+            ),
+            population=population,
+            confidence=PARTIALLY_PERSONALIZED,
+            personal_weight=weights,
+        )
+
+    def test_each_quality_is_its_coefficient_against_the_population(self):
+        model = self._model(
+            {DURATION: 1.3, SEVERE_INTENSITY: 1.0, DOWNHILL: 0.8},
+            {DURATION: 0.9, SEVERE_INTENSITY: 0.1, DOWNHILL: 0.5},
+        )
+        by_key = {a.key: a for a in durability.assess(model)}
+        self.assertEqual(by_key["long_efforts"].level, "poor")
+        self.assertAlmostEqual(by_key["long_efforts"].extra_cost_pct, 30.0)
+        # Barely informed by the athlete's runs: no level rather than the prior's.
+        self.assertEqual(by_key["hard_efforts"].level, "insufficient")
+        self.assertEqual(by_key["descents"].level, "excellent")
+
+    def test_no_personal_fit_means_no_levels_and_no_chart(self):
+        model = population_model(DEFAULT_CONFIG.population, [])
+        self.assertEqual([a.level for a in durability.assess(model)], ["insufficient"] * 3)
+        self.assertIsNone(durability.profile_chart(model, DEFAULT_CONFIG, "fr"))
+
+    def test_the_chart_is_the_runner_against_the_average(self):
+        model = self._model({DURATION: 1.3}, {DURATION: 0.9})
+        chart = durability.profile_chart(model, DEFAULT_CONFIG, "fr")
+        average, you = chart.traces
+        self.assertEqual((average.name, you.name), ("Coureur moyen", "Vous"))
+        self.assertGreater(you.y[-1], average.y[-1])
 
 
 class GapProfileChartTest(unittest.TestCase):
