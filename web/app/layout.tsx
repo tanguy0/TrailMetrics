@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Sidebar } from "@/components/Sidebar";
+import { StringsProvider } from "@/components/StringsProvider";
 import { getViewer, lang } from "@/lib/session";
 import { loadStrings } from "@/lib/strings.server";
 
@@ -24,9 +25,10 @@ export default async function RootLayout({
   // session yet. `Sidebar` decides from the viewer's tier which links are open.
   const viewer = await getViewer();
   const strings = await loadStrings();
+  const language = await lang();
 
   return (
-    <html lang={await lang()}>
+    <html lang={language}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -38,15 +40,17 @@ export default async function RootLayout({
         />
       </head>
       <body>
-        <div className="shell">
-          <Sidebar strings={strings} viewer={viewer} />
-          <div className="shell__content">
-            <div className="shell__topbar">
-              <LanguageSwitcher />
+        <StringsProvider strings={strings}>
+          <div className="shell">
+            <Sidebar strings={strings} viewer={viewer} />
+            <div className="shell__content">
+              <div className="shell__topbar">
+                <LanguageSwitcher current={language} />
+              </div>
+              {children}
             </div>
-            {children}
           </div>
-        </div>
+        </StringsProvider>
       </body>
     </html>
   );

@@ -1356,6 +1356,12 @@ TRANSLATIONS = {
         "fr": "Nouvelle demande de coaching.\n\nDe : {email}\nContact : {contact}\n\n{message}\n\n"
               "Répondez-y depuis la page Coaching.",
     },
+    "ui.coach.switcher.title": {"en": "Switch athlete", "fr": "Changer d'athlète"},
+    "ui.coach.switcher.viewing": {"en": "Viewing", "fr": "Vous consultez"},
+    "ui.coach.switcher.back": {"en": "← Back to my account", "fr": "← Revenir à mon compte"},
+    "ui.coach.switcher.empty": {"en": "No other athletes yet.", "fr": "Aucun autre athlète pour l’instant."},
+    "ui.chart.download_csv": {"en": "Download data (CSV)", "fr": "Télécharger les données (CSV)"},
+    "ui.chart.error": {"en": "Could not draw the chart: {error}", "fr": "Impossible de dessiner le graphique : {error}"},
     "ui.coaching.requests.nav": {"en": "Requests", "fr": "Demandes"},
     "ui.coaching.requests.title": {"en": "Coaching requests", "fr": "Demandes de coaching"},
     "ui.coaching.board.accept": {"en": "Accept", "fr": "Accepter"},
@@ -2262,7 +2268,10 @@ TRANSLATIONS = {
         "en": "Choose another file to replace it.",
         "fr": "Choisissez un autre fichier pour le remplacer.",
     },
-    "ui.race_plan.updated": {"en": "Updated {date}", "fr": "Modifié le {date}"},
+    # `{date}` is relative ("5 min ago", "yesterday"), which takes no "le"; past
+    # a week it is a calendar date, which does (`updated_on`).
+    "ui.race_plan.updated": {"en": "Updated {date}", "fr": "Modifié {date}"},
+    "ui.race_plan.updated_on": {"en": "Updated {date}", "fr": "Modifié le {date}"},
     # The plan's hero (design/tagg/components/Hero.md § Plan de course).
     "ui.race_plan.hero.kicker": {"en": "Race plan · {curve}", "fr": "Plan de course · {curve}"},
     "ui.race_plan.hero.personalized": {"en": "personalised", "fr": "personnalisée"},

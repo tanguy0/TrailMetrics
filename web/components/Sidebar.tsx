@@ -87,7 +87,7 @@ export function Sidebar({ strings, viewer }: { strings: Strings; viewer: Viewer 
 
       {viewer?.isCoach && (
         <div className="shell__coach">
-          <CoachSwitcher />
+          <CoachSwitcher t={t} />
           <CoachRequests t={t} />
         </div>
       )}

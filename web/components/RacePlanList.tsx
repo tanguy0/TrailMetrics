@@ -17,8 +17,15 @@ import { PageHeader } from "@/components/PageHeader";
 import { RouteMap } from "@/components/RouteMap";
 import { listRacePlans } from "@/lib/api";
 import { formatDate, formatHms, formatNumber } from "@/lib/format";
-import { translator, type Strings } from "@/lib/strings";
+import { translator, type Strings, type Translate } from "@/lib/strings";
 import type { SavedRacePlan } from "@/lib/types";
+
+/** "Modifié il y a 5 min" / "Modifié hier", but "Modifié le 3 oct." past a week. */
+function updatedLabel(at: string, t: Translate): string {
+  const relative = formatDate(at, "relative", t("locale"));
+  const calendar = formatDate(at, "short", t("locale"));
+  return t(relative === calendar ? "race_plan.updated_on" : "race_plan.updated", { date: relative });
+}
 
 export function RacePlanList({ strings }: { strings: Strings }) {
   const t = translator(strings);
@@ -70,7 +77,7 @@ export function RacePlanList({ strings }: { strings: Strings }) {
               </span>
               {plan.updated_at && (
                 <span className="card__description">
-                  {t("race_plan.updated", { date: formatDate(plan.updated_at, "relative", t("locale")) })}
+                  {updatedLabel(plan.updated_at, t)}
                 </span>
               )}
               </span>
