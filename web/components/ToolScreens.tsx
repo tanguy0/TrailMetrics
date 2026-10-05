@@ -51,22 +51,6 @@ function pastYear(name: string): PanelSpec["source"] {
   };
 }
 
-function gapPanel(t: Translate): PanelSpec {
-  return {
-    id: "panel_tool_gap",
-    title: t("gap_tool.chart"),
-    description: "",
-    columns: 1,
-    source: pastYear(t("gap_tool.chart")),
-    plots: [{
-      id: "plot_tool_gap",
-      plot_type: "gap_curve",
-      title: null,
-      params: { models: ["efficiency"], references: ["balanced_runner"], show_std: false, hr_bands: [] },
-    }],
-  };
-}
-
 function durabilityPanel(t: Translate): PanelSpec {
   return {
     id: "panel_tool_durability",
@@ -157,7 +141,6 @@ function signedPct(value: number): string {
 export function GapScreen({ strings }: { strings: Strings }) {
   const t = translator(strings);
   const [summary, setSummary] = useState<GapSummary | null>(null);
-  const { charts, notes } = usePanel(() => gapPanel(t));
 
   useEffect(() => {
     getGapSummary().then(setSummary).catch(() => setSummary({ available: false, terrains: [] }));
@@ -181,8 +164,14 @@ export function GapScreen({ strings }: { strings: Strings }) {
             />
           ))}
         </div>
-        <Charts charts={charts} t={t} />
-        {notes.slice(0, 1).map((note) => <p className="body-sm muted" key={note}>{note}</p>)}
+        {summary?.chart && (
+          <>
+            <h3 className="card-block__subtitle">{t("gap_tool.chart")}</h3>
+            <div className="chart-frame">
+              <ChartView chart={summary.chart} />
+            </div>
+          </>
+        )}
         <p className="body-sm muted">
           {t("gap_tool.more")} <Link href="/pages">{t("nav.analysis")} →</Link>
         </p>

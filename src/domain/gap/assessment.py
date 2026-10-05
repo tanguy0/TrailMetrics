@@ -17,7 +17,10 @@ from typing import List, Optional, Tuple
 import numpy as np
 
 from src.domain.assessment import rate
+from src.domain.charts.ir import Axis, AxisKind, ChartData, Marker, Trace, TraceKind
+from src.domain.gap import theme
 from src.domain.models.gap import GapCurve
+from src.translations import translate
 
 # Gradients in m/km (the curves' x unit): 120 m/km = 12 %.
 STEEP = 120.0
@@ -70,3 +73,47 @@ def _extra_cost(curve: Optional[GapCurve], reference: GapCurve, low: float, high
         np.asarray(reference.means, dtype=float)[order],
     )
     return float(np.mean(y[inside] / ref) - 1.0) * 100.0
+
+
+# The chart's x window, in m/km: wide enough for every terrain, and widened to
+# wherever the runner's own curve reaches.
+_CHART_X = (-250.0, 250.0)
+
+
+def profile_chart(curve: GapCurve, reference: GapCurve, lang: str) -> ChartData:
+    """The runner's curve against the reference — the one the levels were read on.
+
+    x in % of gradient (the curves' m/km ÷ 10); a boundary rule at each terrain
+    limit, so the four tiles above map onto the figure. No title: it lives in the
+    card (charts.md).
+    """
+    x = np.asarray(curve.bin_centers, dtype=float)
+    low, high = min(_CHART_X[0], float(x.min())), max(_CHART_X[1], float(x.max()))
+    rx = np.asarray(reference.bin_centers, dtype=float)
+    keep = (rx >= low) & (rx <= high)
+
+    def trace(cx, cy, name, color, dash, width):
+        return Trace(
+            name=name,
+            x=(np.asarray(cx) / 10).round(1).tolist(),
+            y=np.asarray(cy, dtype=float).round(3).tolist(),
+            kind=TraceKind.LINE,
+            color=color,
+            dash=dash,
+            width=width,
+            hover_template="%{x:+.0f} %<br>×%{y:.2f}<extra>%{fullData.name}</extra>",
+        )
+
+    return ChartData(
+        x_axis=Axis(title=translate("ui.gap_tool.chart.x", lang), kind=AxisKind.LINEAR,
+                    tick_format="+.0f", suffix=" %"),
+        y_axis=Axis(title=translate("ui.gap_tool.chart.y", lang), kind=AxisKind.LINEAR,
+                    tick_format=".1f"),
+        traces=[
+            trace(rx[keep], np.asarray(reference.means)[keep],
+                  translate("gap.refs.balanced", lang), theme.BALANCED_RUNNER, "--", 1.5),
+            trace(x, curve.means, translate("ui.gap_tool.chart.you", lang),
+                  theme.EFFICIENCY, "-", 2.4),
+        ],
+        markers=[Marker(kind="boundary", x=v / 10) for v in (-STEEP, -GENTLE, GENTLE, STEEP)],
+    )

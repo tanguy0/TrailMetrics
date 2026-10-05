@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 
 from src.domain.assessment import rate
-from src.domain.gap.assessment import assess
+from src.domain.gap.assessment import assess, profile_chart
 from src.domain.gap.reference_curves import balanced_runner
 from src.domain.models.gap import GapCurve
 
@@ -49,6 +49,20 @@ class GapAssessmentTest(unittest.TestCase):
         self.assertEqual(by_key["steep_downhill"].level, "insufficient")
         self.assertIsNone(by_key["steep_uphill"].extra_cost_pct)
         self.assertEqual([a.level for a in assess(None, ref)], ["insufficient"] * 4)
+
+
+class GapProfileChartTest(unittest.TestCase):
+    def test_draws_the_assessed_curve_against_the_reference_in_percent(self):
+        ref = balanced_runner()
+        x = np.array([-300, -100, 0, 100, 300], float)
+        mine = _curve(x, np.interp(x, ref.bin_centers, ref.means) * 0.9)
+        chart = profile_chart(mine, ref, "fr")
+        reference, you = chart.traces
+        self.assertEqual(you.name, "Vous")
+        self.assertEqual(you.x, [-30.0, -10.0, 0.0, 10.0, 30.0])
+        # The reference is cut to the window, which widens to the runner's reach.
+        self.assertEqual((min(reference.x), max(reference.x)), (-30.0, 30.0))
+        self.assertEqual([m.x for m in chart.markers], [-12.0, -3.0, 3.0, 12.0])
 
 
 if __name__ == "__main__":

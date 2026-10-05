@@ -514,6 +514,8 @@ export interface GapSummary {
   reason?: string;
   /** Steep downhill, downhill, uphill, steep uphill — in that order. */
   terrains: Assessment[];
+  /** The curve the levels were read on, against the balanced runner. */
+  chart?: ChartData;
 }
 
 export interface DurabilitySummary {

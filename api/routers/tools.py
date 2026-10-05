@@ -25,9 +25,10 @@ from api.deps import (
     language,
 )
 from api.routers.race_plan import _durability_model, _personal_curves
+from src.domain.charts.ir import PlotOutput
 from src.domain.durability.config import DEFAULT_CONFIG as DURABILITY_CONFIG
 from src.domain.durability.personalization import POPULATION_ONLY
-from src.domain.gap.assessment import assess as assess_gap
+from src.domain.gap.assessment import assess as assess_gap, profile_chart
 from src.domain.gap.reference_curves import balanced_runner
 from src.domain.level import zones
 from src.domain.level.estimate import LevelEstimate, LevelInputError, estimate, hr_max_or_none
@@ -120,7 +121,12 @@ def gap_summary(athlete: Athlete = Depends(current_athlete), lang: str = Depends
             "reason": translate(reason or "race_plan.reason.no_runs", lang),
             "terrains": terrains,
         }
-    return {"available": True, "terrains": terrains}
+    return {
+        "available": True,
+        "terrains": terrains,
+        # The very curve the levels were read on, against the same reference.
+        "chart": PlotOutput(charts=[profile_chart(curve, balanced_runner(), lang)]).to_dict()["charts"][0],
+    }
 
 
 @router.get("/durability/summary")

@@ -1228,7 +1228,13 @@ TRANSLATIONS = {
     "ui.assessment.level.good": {"en": "Good", "fr": "Bon"},
     "ui.assessment.level.excellent": {"en": "Excellent", "fr": "Excellent"},
     "ui.assessment.level.insufficient": {"en": "Insufficient data", "fr": "Données insuffisantes"},
-    "ui.gap_tool.chart": {"en": "Your GAP curve", "fr": "Votre courbe GAP"},
+    "ui.gap_tool.chart": {
+        "en": "Your GAP curve against an average runner",
+        "fr": "Votre courbe GAP face à un coureur moyen",
+    },
+    "ui.gap_tool.chart.you": {"en": "You", "fr": "Vous"},
+    "ui.gap_tool.chart.x": {"en": "Gradient", "fr": "Pente"},
+    "ui.gap_tool.chart.y": {"en": "Cost vs flat (×)", "fr": "Coût par rapport au plat (×)"},
     "ui.gap_tool.more": {
         "en": "To tune the model or compare periods, the GAP curves panel is in Analysis.",
         "fr": "Pour régler le modèle ou comparer des périodes, le panneau Courbes GAP est "
