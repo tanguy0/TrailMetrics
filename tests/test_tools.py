@@ -5,6 +5,20 @@
 
 from tests.api_harness import ATHLETE_BASE, ApiTestCase, requires_database
 
+def _gpx(points=60) -> bytes:
+    """A 6 km out-and-up line: enough for the planner, small enough to inline."""
+    rows = "".join(
+        f'<trkpt lat="45.{i:04d}" lon="6.0000"><ele>{1000 + 5 * i}</ele></trkpt>'
+        for i in range(points)
+    )
+    return (
+        '<?xml version="1.0"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">'
+        f"<trk><trkseg>{rows}</trkseg></trk></gpx>"
+    ).encode()
+
+
+PLAN_PARAMS = '{"target_time_s": 3600}'
+
 RECORDS = {"method": "records", "inputs": {"records": [
     {"distance_m": 5000, "seconds": 1200}, {"distance_m": 10000, "seconds": 2460},
 ]}}
@@ -59,6 +73,45 @@ class ToolsApiTest(ApiTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"plans": []})
         self.assertEqual(self.client.get("/race-plans").status_code, 401)
+
+    def test_a_saved_plan_is_planned_from_its_stored_gpx(self):
+        # Regression: planning by ``plan_id`` used to 500 (``account`` undefined).
+        token = self.token_for("ana")
+        saved = self.client.post(
+            "/race-plans",
+            data={"meta": f'{{"title": "Galibier", "params": {PLAN_PARAMS}}}'},
+            files={"gpx": ("course.gpx", _gpx(), "application/gpx+xml")},
+            headers=self.bearer(token),
+        )
+        self.assertEqual(saved.status_code, 201, saved.text)
+        planned = self.client.post(
+            "/race-plan",
+            data={"params": PLAN_PARAMS, "plan_id": saved.json()["id"]},
+            headers=self.bearer(token),
+        )
+        self.assertEqual(planned.status_code, 200, planned.text)
+        self.assertFalse(planned.json()["signed_in"])
+        visitor = self.client.post(
+            "/race-plan", data={"params": PLAN_PARAMS, "plan_id": saved.json()["id"]}
+        )
+        self.assertEqual(visitor.status_code, 400)
+
+    def test_a_saved_plan_is_planned_with_strava_attached(self):
+        token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + 22)
+        saved = self.client.post(
+            "/race-plans",
+            data={"meta": f'{{"title": "Galibier", "params": {PLAN_PARAMS}}}'},
+            files={"gpx": ("course.gpx", _gpx(), "application/gpx+xml")},
+            headers=self.bearer(token),
+        ).json()
+        planned = self.client.post(
+            "/race-plan",
+            data={"params": PLAN_PARAMS, "plan_id": saved["id"]},
+            headers=self.bearer(token),
+        )
+        self.assertEqual(planned.status_code, 200, planned.text)
+        self.assertTrue(planned.json()["signed_in"])
 
     def test_slope_and_durability_need_strava(self):
         token = self.token_for("ana")

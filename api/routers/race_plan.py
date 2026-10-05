@@ -3,7 +3,7 @@
 Public, like the blog: a visitor can upload a GPX and get a plan built on the
 reference GAP curve, with no account and no database. A signed-in athlete gets the
 same endpoint with their own curves on top — which is why auth here is *optional*
-(:func:`_optional_athlete`) rather than a dependency that 401s.
+(:func:`_optional_identity`) rather than a dependency that 401s.
 
 A visitor's GPX is re-sent with every request rather than stored: it is a few
 hundred kilobytes, parsing it is milliseconds next to the plan itself, and their
@@ -106,7 +106,7 @@ class SavedPlanMeta(BaseModel):
 @router.get("/options")
 def options(request: Request, lang: str = Depends(language)) -> dict:
     """Whether the caller is signed in, and which curves they can plan on."""
-    signed_in = _optional_athlete(request) is not None
+    signed_in = _optional_identity(request)[1] is not None
     return {"signed_in": signed_in, "curves": curve_options(signed_in, lang)}
 
 
@@ -120,11 +120,13 @@ def plan(
 ) -> dict:
     """Plan a course: an uploaded ``gpx``, or the stored GPX of saved ``plan_id``."""
     parsed = _parse(params, PlanParams)
-    athlete = _optional_athlete(request)
+    account, athlete = _optional_identity(request)
 
     if gpx is not None:
         payload = _read_gpx(gpx, lang)
-    elif plan_id and athlete is not None:
+    elif plan_id and account is not None:
+        # Saved plans belong to the account, not to Strava: an account without
+        # Strava can reopen its plans too (on the reference curves).
         payload = get_race_plan_repository(account.id).gpx(plan_id)
         if payload is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="race plan not found")
@@ -258,17 +260,23 @@ def _course_stats(payload: bytes, lang: str) -> Tuple[float, float]:
     return course.total_m, course.elevation_gain()[0]
 
 
-def _optional_athlete(request: Request) -> Optional[Athlete]:
-    """The signed-in athlete (view-as included), or ``None`` for a visitor."""
+def _optional_identity(request: Request) -> Tuple[Optional[Account], Optional[Athlete]]:
+    """``(account, athlete)`` of the caller, view-as included; ``None`` for what is missing.
+
+    A visitor has neither; an account without Strava has no athlete.
+    """
     try:
         account = optional_account(request)
-        if account is None:
-            return None
-        return get_athlete_repository().get(current_athlete_id(request, account))
     except HTTPException:
-        # Not signed in — or no database configured, which for this public
-        # endpoint just means nobody can be.
-        return None
+        # No database configured, which for this public endpoint just means
+        # nobody can be signed in.
+        return None, None
+    if account is None:
+        return None, None
+    try:
+        return account, get_athlete_repository().get(current_athlete_id(request, account))
+    except HTTPException:
+        return account, None
 
 
 def _personal_curves(athlete: Athlete):
