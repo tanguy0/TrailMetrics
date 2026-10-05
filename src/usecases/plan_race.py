@@ -44,7 +44,10 @@ PERSONAL_AUTO = "personal_auto"
 BALANCED_RUNNER = "balanced_runner"
 KILIAN = "kilian"
 
-PERSONAL_CURVES = (PERSONAL_EFFICIENCY, PERSONAL_AUTO)
+# The personal curves the app offers: the efficiency model only. The auto-learning
+# one can still be fitted (``fit_personal_curve``) but is not offered, and a saved
+# plan that chose it is planned on the efficiency curve.
+PERSONAL_CURVES = (PERSONAL_EFFICIENCY,)
 CURVE_LABEL_KEYS = {
     PERSONAL_EFFICIENCY: "race_plan.curve.personal_efficiency",
     PERSONAL_AUTO: "race_plan.curve.personal_auto",
@@ -124,6 +127,8 @@ class PlanRace(UseCase):
         notes: List[str] = []
 
         key = params.curve or (PERSONAL_EFFICIENCY if self.personal_curve else BALANCED_RUNNER)
+        if key == PERSONAL_AUTO:
+            key = PERSONAL_EFFICIENCY
         curve, key = self._curve(key, lang, notes)
 
         course = build_course(parse_gpx(params.gpx))

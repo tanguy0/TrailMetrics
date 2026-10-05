@@ -36,6 +36,7 @@ from src.domain.plots.durability_curve import projected_extra_cost
 from src.domain.ports.accounts import Account
 from src.domain.ports.storage import Athlete
 from src.translations import translate
+from src.usecases.plan_race import PERSONAL_EFFICIENCY
 from src.domain.dataset.sport import RUNNING_SPORT_TYPES
 
 logger = logging.getLogger(__name__)
@@ -113,7 +114,7 @@ def latest_level(account: Account = Depends(current_account), lang: str = Depend
 @router.get("/gap/summary")
 def gap_summary(athlete: Athlete = Depends(current_athlete), lang: str = Depends(language)) -> dict:
     """Headline numbers of the slope profile: what ±10 % costs, against the reference."""
-    curve, reason = _personal_curves(athlete)("efficiency")
+    curve, reason = _personal_curves(athlete)(PERSONAL_EFFICIENCY)
     if curve is None:
         return {"available": False, "reason": translate(reason or "race_plan.reason.no_runs", lang)}
     reference = balanced_runner()

@@ -47,7 +47,7 @@ TRANSLATIONS = {
         "en": "Pick at least one model to plot.",
         "fr": "Choisissez au moins un modèle à afficher.",
     },
-    "gap.models.efficiency": {"en": "Efficiency model", "fr": "Modèle d'efficacité"},
+    "gap.models.efficiency": {"en": "GAP", "fr": "GAP"},
     "gap.models.auto": {"en": "Auto-Learning model", "fr": "Modèle auto-apprenant"},
     "gap.refs.caption": {
         "en": "Optional overlays — uncheck both to hide them.",
@@ -70,13 +70,12 @@ TRANSLATIONS = {
     },
     "gap.params.hr_tol": {"en": "HR tolerance (bpm)", "fr": "Tolérance FC (bpm)"},
     "gap.params.eff_min_samples": {
-        "en": "Efficiency model: min samples per bucket",
-        "fr": "Modèle d'efficacité : nb min. d'échantillons par classe",
+        "en": "GAP: min samples per bucket",
+        "fr": "GAP : nb min. d'échantillons par classe",
     },
     "gap.params.eff_subset_min_samples": {
-        "en": "Efficiency model (per-intensity slice): min samples per bucket",
-        "fr": "Modèle d'efficacité (tranche par intensité) : nb min. "
-        "d'échantillons par classe",
+        "en": "GAP (per-intensity slice): min samples per bucket",
+        "fr": "GAP (tranche par intensité) : nb min. d'échantillons par classe",
     },
     "gap.params.eff_subset_help": {
         "en": "Lower than the full-dataset value because each HR slice has fewer "
@@ -101,15 +100,15 @@ TRANSLATIONS = {
         "référence.",
     },
     "gap.caption.main": {
-        "en": "Colour = data-source group · line style = model and heart-rate band · "
+        "en": "Colour = data-source group · line style = heart-rate band · "
         "dashed = reference curves.",
-        "fr": "Couleur = groupe de la source · style de trait = modèle et zone de "
+        "fr": "Couleur = groupe de la source · style de trait = zone de "
         "fréquence cardiaque · tirets = courbes de référence.",
     },
     "gap.caption.per_year": {
-        "en": "One colour per calendar year, both models. A year whose curve sits "
+        "en": "One colour per calendar year. A year whose curve sits "
         "lower cost you less pace per metre of climb.",
-        "fr": "Une couleur par année civile, les deux modèles. Une année dont la "
+        "fr": "Une couleur par année civile. Une année dont la "
         "courbe est plus basse vous a coûté moins d'allure par mètre de dénivelé.",
     },
     "gap.caption.intensity": {
@@ -1850,7 +1849,7 @@ TRANSLATIONS = {
     "race_plan.aid_station_n": {"en": "Aid station {n}", "fr": "Ravito {n}"},
     "race_plan.next_day": {"en": "(+{n}d)", "fr": "(+{n}j)"},
     "race_plan.curve.personal_efficiency": {
-        "en": "My curve (efficiency model)", "fr": "Ma courbe (modèle d'efficacité)",
+        "en": "My GAP curve", "fr": "Ma courbe GAP",
     },
     "race_plan.curve.personal_auto": {
         "en": "My curve (auto-learning model)", "fr": "Ma courbe (modèle auto-apprenant)",
@@ -2260,7 +2259,7 @@ TRANSLATIONS = {
     },
     "ui.race_plan.updated": {"en": "Updated {date}", "fr": "Modifié le {date}"},
     # The plan's hero (design/tagg/components/Hero.md § Plan de course).
-    "ui.race_plan.hero.kicker": {"en": "Race plan · {curve} curve", "fr": "Plan de course · courbe {curve}"},
+    "ui.race_plan.hero.kicker": {"en": "Race plan · {curve}", "fr": "Plan de course · {curve}"},
     "ui.race_plan.hero.personalized": {"en": "personalised", "fr": "personnalisée"},
     "ui.race_plan.hero.gap": {"en": "GAP {pace} /km", "fr": "GAP {pace} /km"},
     "ui.race_plan.hero.real": {"en": "actual {pace} /km", "fr": "réel {pace} /km"},

@@ -30,7 +30,7 @@ function isoDate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-/** The past year of runs — what both models are fitted on. */
+/** The past year of runs — what the GAP and durability models are fitted on. */
 function pastYear(name: string): PanelSpec["source"] {
   const end = new Date();
   const start = new Date(end);
