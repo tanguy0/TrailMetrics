@@ -735,18 +735,9 @@ export interface BlogPost {
 
 // --- Race plan ---------------------------------------------------------------
 
-export interface RacePlanCurveOption {
-  key: string;
-  label: string;
-  /** Fitted on the athlete's own runs, rather than a published reference. */
-  personal: boolean;
-  /** False for a personal curve when nobody is signed in. */
-  available: boolean;
-}
-
 export interface RacePlanOptions {
+  /** An athlete with Strava: plans are paced on their own GAP curve. */
   signed_in: boolean;
-  curves: RacePlanCurveOption[];
 }
 
 export interface RacePlanAidStation {
@@ -759,7 +750,6 @@ export interface RacePlanParams {
   aid_stations: RacePlanAidStation[];
   /** Seconds after midnight; adds a time-of-day column when set. */
   start_time_s: number | null;
-  curve: string | null;
   /** Durability: cost drift over a long effort. Absent on plans saved before it. */
   durability?: boolean;
   temperature_start_c?: number | null;

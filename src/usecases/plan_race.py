@@ -1,10 +1,10 @@
 """Plan a race: GPX + target time + aid stations → a pace profile.
 
-Which GAP curve drives the plan is the one real choice here. A visitor gets the
-published reference curves; a signed-in athlete additionally gets curves fitted
-on their own running history — the same two models as the GAP simulator — and
-those are the default, because they are the whole point of planning on *your*
-data rather than on an average runner's.
+The plan is always paced on the athlete's own GAP curve — the whole point is
+planning on *your* data, not an average runner's — and nobody is asked which curve
+to use. The published references (balanced runner, Kilian) are comparisons, never
+a choice: the balanced runner only stands in when there is no personal curve (a
+visitor, or a fit that failed, said in a note).
 
 Fitting is the expensive part and is kept out of :class:`PlanRace` entirely: the
 caller passes a ``personal_curve`` function, so this use case stays storage-free
@@ -27,7 +27,7 @@ from src.domain.durability.personalization import (
 from src.domain.durability.solver import RouteDurability
 from src.domain.gap.efficiency_model import EfficiencyGapModel
 from src.domain.gap.preprocessing import DefaultStreamPreprocessor
-from src.domain.gap.reference_curves import balanced_runner, kilian_jornet
+from src.domain.gap.reference_curves import balanced_runner
 from src.domain.gap.smoothing import LoessCurveSmoother
 from src.domain.models.gap import GapCurve
 from src.domain.ports.activity_data import ActivityDataSource
@@ -40,21 +40,15 @@ from src.usecases.base import UseCase
 logger = logging.getLogger(__name__)
 
 PERSONAL_EFFICIENCY = "personal_efficiency"
-PERSONAL_AUTO = "personal_auto"
 BALANCED_RUNNER = "balanced_runner"
-KILIAN = "kilian"
 
-# The personal curves the app offers: the efficiency model only. The auto-learning
-# one can still be fitted (``fit_personal_curve``) but is not offered, and a saved
-# plan that chose it is planned on the efficiency curve.
+# The personal curve plans are paced on: the efficiency model only. The
+# auto-learning one can still be fitted (``fit_personal_curve``) but is never used.
 PERSONAL_CURVES = (PERSONAL_EFFICIENCY,)
 CURVE_LABEL_KEYS = {
     PERSONAL_EFFICIENCY: "race_plan.curve.personal_efficiency",
-    PERSONAL_AUTO: "race_plan.curve.personal_auto",
     BALANCED_RUNNER: "gap.refs.balanced",
-    KILIAN: "gap.refs.kilian",
 }
-_REFERENCES = {BALANCED_RUNNER: balanced_runner, KILIAN: kilian_jornet}
 
 # ``model key → (curve, reason_key)``; a ``None`` curve carries why.
 PersonalCurve = Callable[[str], Tuple[Optional[GapCurve], Optional[str]]]
@@ -69,8 +63,6 @@ class PlanRaceInput:
     aid_stations_km: Sequence[float] = ()
     aid_station_names: Sequence[str] = ()
     start_clock_s: Optional[float] = None
-    # ``None`` picks the default: personal when available, else the reference.
-    curve: Optional[str] = None
     lang: str = "en"
     # Durability: the cost drift of a long effort, on by default.
     durability: bool = True
@@ -97,20 +89,6 @@ class PlanRaceOutput:
         }
 
 
-def curve_options(signed_in: bool, lang: str) -> List[Dict[str, Any]]:
-    """The selector's entries; personal curves listed but disabled for visitors."""
-    keys = list(PERSONAL_CURVES) + [BALANCED_RUNNER, KILIAN]
-    return [
-        {
-            "key": key,
-            "label": translate(CURVE_LABEL_KEYS[key], lang),
-            "personal": key in PERSONAL_CURVES,
-            "available": signed_in or key not in PERSONAL_CURVES,
-        }
-        for key in keys
-    ]
-
-
 class PlanRace(UseCase):
     def __init__(
         self,
@@ -126,10 +104,7 @@ class PlanRace(UseCase):
         lang = params.lang
         notes: List[str] = []
 
-        key = params.curve or (PERSONAL_EFFICIENCY if self.personal_curve else BALANCED_RUNNER)
-        if key == PERSONAL_AUTO:
-            key = PERSONAL_EFFICIENCY
-        curve, key = self._curve(key, lang, notes)
+        curve, key = self._curve(lang, notes)
 
         course = build_course(parse_gpx(params.gpx))
         reference = balanced_runner() if key in PERSONAL_CURVES else None
@@ -172,14 +147,12 @@ class PlanRace(UseCase):
             logger.warning("durability fit failed, using the population model: %s", error)
             return population_model(population, [REASON_FIT_FAILED])
 
-    def _curve(self, key: str, lang: str, notes: List[str]) -> Tuple[GapCurve, str]:
-        """The requested curve, falling back to the balanced runner with a note."""
-        if key in _REFERENCES:
-            return _REFERENCES[key](), key
-        if key in PERSONAL_CURVES and self.personal_curve is not None:
-            curve, reason = self.personal_curve(key)
+    def _curve(self, lang: str, notes: List[str]) -> Tuple[GapCurve, str]:
+        """The athlete's curve; the balanced runner without one (a note says why)."""
+        if self.personal_curve is not None:
+            curve, reason = self.personal_curve(PERSONAL_EFFICIENCY)
             if usable_curve(curve):
-                return curve, key
+                return curve, PERSONAL_EFFICIENCY
             notes.append(translate("race_plan.note.personal_fallback", lang).format(
                 reason=translate(reason or "race_plan.reason.not_enough_data", lang),
             ))

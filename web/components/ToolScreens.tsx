@@ -12,7 +12,7 @@
  */
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Callout } from "@/components/Callout";
 import { ChartView } from "@/components/ChartView";
@@ -23,7 +23,6 @@ import {
   recomputeDurability,
   recomputeGap,
 } from "@/lib/api";
-import { chipClass, type ChipTone } from "@/lib/tone";
 import { translator, type Strings, type Translate } from "@/lib/strings";
 import type { AssessmentLevel, DurabilitySummary, GapSummary } from "@/lib/types";
 
@@ -63,13 +62,12 @@ export function GapScreen({ strings }: { strings: Strings }) {
       <section className="card-block">
         <p className="data-block__lede">{t("gap_tool.lede")}</p>
         {summary && !summary.available && summary.reason && <Callout>{summary.reason}</Callout>}
-        <div className="kpi-grid">
+        <div className="tm-level-grid">
           {(summary?.terrains ?? []).map((terrain) => (
             <AssessmentTile
               key={terrain.key}
+              icon={TERRAIN_ICON[terrain.key]}
               label={t(`gap_tool.terrain.${terrain.key}`)}
-              sub={t(`gap_tool.range.${terrain.key}`)}
-              numeric
               level={terrain.level}
               t={t}
             />
@@ -89,41 +87,86 @@ export function GapScreen({ strings }: { strings: Strings }) {
   );
 }
 
-/** Each level's chip tone (Chip.md): the alert red for poor, moss for the good side. */
-const LEVEL_TONE: Record<AssessmentLevel, ChipTone> = {
-  excellent: "moss",
-  good: "moss",
-  average: "forest",
-  limited: "sun",
-  poor: "danger",
-  insufficient: "neutral",
+/** Filled segments of a level's meter, poor → excellent (LevelTile.md). */
+const LEVEL_BARS: Record<AssessmentLevel, number> = {
+  poor: 1,
+  limited: 2,
+  average: 3,
+  good: 4,
+  excellent: 5,
+  insufficient: 0,
 };
 
-/** One terrain (or effort) of a profile: its name, what it covers, its level. */
+/**
+ * One terrain (or effort) of a profile, read in a glance: its pictogram, its
+ * name, its level as a word, a colour and a five-segment meter (LevelTile.md).
+ */
 function AssessmentTile({
+  icon,
   label,
-  sub,
-  numeric = false,
   level,
   t,
 }: {
+  icon: ReactNode;
   label: string;
-  sub: string;
-  /** `sub` is a range of numbers (a gradient), set in mono like every number. */
-  numeric?: boolean;
   level: AssessmentLevel;
   t: Translate;
 }) {
+  const word = t(`assessment.level.${level}`);
   return (
-    <div className="tm-kpi tm-kpi--flat assessment-tile">
-      <span className="tm-kpi__label">{label}</span>
-      <span className={`assessment-tile__sub${numeric ? " is-num" : ""}`}>{sub}</span>
-      <span className={chipClass(LEVEL_TONE[level], level === "excellent" ? "tm-chip--dot" : "")}>
-        {t(`assessment.level.${level}`)}
-      </span>
+    <div className={`tm-level tm-level--${level}`} aria-label={`${label} : ${word}`}>
+      <div className="tm-level__head">
+        {icon}
+        <span className="tm-level__label">{label}</span>
+      </div>
+      <div className="tm-level__word">{word}</div>
+      <div className="tm-level__meter" aria-hidden="true">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <i key={i} className={i <= LEVEL_BARS[level] ? "is-on" : undefined} />
+        ))}
+      </div>
     </div>
   );
 }
+
+/** Lucide-style pictogram: 24 grid, 1.75 stroke, `currentColor`. */
+function Icon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+/** A slope as its profile: the steeper the terrain, the steeper the triangle. */
+const TERRAIN_ICON: Record<string, ReactNode> = {
+  steep_downhill: <Icon><path d="M4 4v16h11z" /></Icon>,
+  downhill: <Icon><path d="M3 11v9h18z" /></Icon>,
+  uphill: <Icon><path d="M21 11v9H3z" /></Icon>,
+  steep_uphill: <Icon><path d="M20 4v16H9z" /></Icon>,
+};
+
+const QUALITY_ICON: Record<string, ReactNode> = {
+  // A stopwatch: time on feet.
+  long_efforts: (
+    <Icon>
+      <path d="M10 2h4" />
+      <path d="M12 14l3-3" />
+      <circle cx="12" cy="14" r="8" />
+    </Icon>
+  ),
+  // A bolt: time above threshold.
+  hard_efforts: <Icon><path d="M13 2 4 14h7l-1 8 9-12h-7z" /></Icon>,
+  descents: TERRAIN_ICON.downhill,
+};
 
 export function DurabilityScreen({ strings }: { strings: Strings }) {
   const t = translator(strings);
@@ -148,12 +191,12 @@ export function DurabilityScreen({ strings }: { strings: Strings }) {
       <section className="card-block">
         <p className="data-block__lede">{t("durability_tool.lede")}</p>
         {summary && !summary.available && <Callout>{t("durability_tool.no_data")}</Callout>}
-        <div className="kpi-grid">
+        <div className="tm-level-grid">
           {(summary?.qualities ?? []).map((quality) => (
             <AssessmentTile
               key={quality.key}
+              icon={QUALITY_ICON[quality.key]}
               label={t(`durability_tool.quality.${quality.key}`)}
-              sub={t(`durability_tool.scope.${quality.key}`)}
               level={quality.level}
               t={t}
             />

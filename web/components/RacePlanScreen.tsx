@@ -5,7 +5,7 @@
  *
  * The same screen serves three cases:
  *
- *  - a visitor (`signedIn` false): computes on the reference curves only, cannot
+ *  - a visitor (`signedIn` false): computes on the reference curve only, cannot
  *    save, and is told — once, with the result — that an account keeps it;
  *  - a new plan (`planId` null): computes from the chosen file, and the first save
  *    creates it and moves the URL to `/tools/race-planning/{id}` without a reload;
@@ -39,7 +39,6 @@ import { formatHms, formatNumber, formatPaceInput, kpiNumClass } from "@/lib/for
 import { plural, translator, type Strings, type Translate } from "@/lib/strings";
 import type {
   PlotOutput,
-  RacePlanCurveOption,
   RacePlanImportance,
   RacePlanParams,
   RacePlanResult,
@@ -107,8 +106,9 @@ export function RacePlanScreen({
   const [targetTime, setTargetTime] = useState("");
   const [startTime, setStartTime] = useState("");
   const [aidRows, setAidRows] = useState<AidRow[]>([]);
-  const [curve, setCurve] = useState<string | null>(null);
-  const [curves, setCurves] = useState<RacePlanCurveOption[]>([]);
+  // Whether the caller has a curve of their own (an athlete with Strava): the plan
+  // is always paced on it, never on a curve they pick.
+  const [personal, setPersonal] = useState(false);
   const [durability, setDurability] = useState(true);
   const [temperatureStart, setTemperatureStart] = useState("");
   const [temperatureEnd, setTemperatureEnd] = useState("");
@@ -153,7 +153,6 @@ export function RacePlanScreen({
       target_time_s: target,
       aid_stations,
       start_time_s: start,
-      curve,
       durability,
       temperature_start_c,
       temperature_end_c,
@@ -163,7 +162,6 @@ export function RacePlanScreen({
     targetTime,
     startTime,
     aidRows,
-    curve,
     durability,
     temperatureStart,
     temperatureEnd,
@@ -178,7 +176,7 @@ export function RacePlanScreen({
       try {
         const planned = await planRace(source, params, refit);
         setResult(planned);
-        setCurves(planned.curves);
+        setPersonal(planned.signed_in);
       } catch (e) {
         setError((e as Error).message);
       } finally {
@@ -193,13 +191,13 @@ export function RacePlanScreen({
     setComputedAt(saved.computed_at);
     if (saved.result) {
       setResult(saved.result);
-      setCurves(saved.result.curves);
+      setPersonal(saved.result.signed_in);
     }
   };
 
   useEffect(() => {
     getRacePlanOptions()
-      .then((options) => setCurves(options.curves))
+      .then((options) => setPersonal(options.signed_in))
       .catch(() => {});
   }, []);
 
@@ -214,7 +212,6 @@ export function RacePlanScreen({
         setTargetTime(formatHms(p.target_time_s, { exact: true }));
         setStartTime(p.start_time_s != null ? formatClock(p.start_time_s) : "");
         setAidRows(p.aid_stations.map((s) => ({ km: String(s.km), name: s.name })));
-        setCurve(p.curve);
         setDurability(p.durability ?? true);
         setTemperatureStart(numberText(p.temperature_start_c));
         setTemperatureEnd(numberText(p.temperature_end_c));
@@ -224,7 +221,7 @@ export function RacePlanScreen({
         setComputedAt(saved.computed_at);
         if (saved.result) {
           setResult(saved.result);
-          setCurves(saved.result.curves);
+          setPersonal(saved.result.signed_in);
         }
         setLoading(false);
       })
@@ -318,10 +315,6 @@ export function RacePlanScreen({
     );
   }
 
-  const selectedCurve = curve ?? curves.find((c) => c.available)?.key ?? "";
-  const personalSelected = curves.find((c) => c.key === selectedCurve)?.personal ?? false;
-  // Only an athlete with Strava has models to refit.
-  const canRecompute = curves.some((c) => c.personal && c.available);
 
   return (
     <main className="container race-plan">
@@ -439,18 +432,6 @@ export function RacePlanScreen({
               <span className="muted race-plan__help">{t("race_plan.importance_help")}</span>
             </label>
           )}
-
-          <label className="race-plan__field">
-            <span>{t("race_plan.curve")}</span>
-            <select className="tm-select" value={selectedCurve} onChange={(e) => setCurve(e.target.value)}>
-              {curves.map((option) => (
-                <option key={option.key} value={option.key} disabled={!option.available}>
-                  {option.label}
-                  {!option.available ? ` (${t("race_plan.curve_sign_in")})` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
 
         <fieldset className="race-plan__aid">
@@ -549,7 +530,8 @@ export function RacePlanScreen({
           <button type="submit" className="tm-btn" disabled={computing || recomputing}>
             {computing && !recomputing ? t("race_plan.computing") : t("race_plan.submit")}
           </button>
-          {canRecompute && (
+          {/* Only an athlete with Strava has models to refit. */}
+          {personal && (
             <Recompute
               computedAt={computedAt}
               busy={recomputing}
@@ -560,7 +542,7 @@ export function RacePlanScreen({
           {computing && !recomputing && (
             <span className="pending">
               <span className="spinner" aria-hidden="true" />
-              {personalSelected && (
+              {personal && (
                 <span className="muted">{t("race_plan.computing_personal")}</span>
               )}
             </span>
@@ -590,10 +572,7 @@ export function RacePlanScreen({
  */
 function RacePlanHero({ result, name, t }: { result: RacePlanResult; name: string; t: Translate }) {
   const s = result.summary;
-  const kicker = [
-    t("race_plan.hero.kicker", { curve: result.curve_label }),
-    result.personalized ? t("race_plan.hero.personalized") : null,
-  ].filter(Boolean).join(" · ");
+  const kicker = t("race_plan.hero.kicker", { curve: result.curve_label });
   // Each fragment is left out when the summary does not carry it.
   const meta = [
     Number.isFinite(s.gap_pace_s_per_km) ? t("race_plan.hero.gap", { pace: formatPaceInput(s.gap_pace_s_per_km) }) : null,
@@ -650,7 +629,6 @@ function RacePlanResultView({ result, t }: { result: RacePlanResult; t: Translat
     ],
     [t("race_plan.summary.gap_pace"), formatPaceInput(s.gap_pace_s_per_km), perKm],
     [t("race_plan.summary.avg_pace"), formatPaceInput(s.average_pace_s_per_km), perKm],
-    [t("race_plan.summary.curve"), result.curve_label],
   ];
   if (s.durability_multiplier_finish != null && s.durability_enabled) {
     tiles.push(

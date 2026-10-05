@@ -2482,7 +2482,6 @@ a.tm-segment__item {
   gap: 6px;
 }
 
-.level-form,
 /* A profile's way on to Analysis, closing its card. */
 .tool-more {
   display: flex;
@@ -2505,35 +2504,36 @@ a.tm-segment__item {
   padding: 0;
 }
 
-/* A profile tile (GAP, durability): the terrain, its range in mono, its level chip. */
-.assessment-tile {
-  gap: 6px;
-}
-
-.assessment-tile__sub {
-  font-size: 0.75rem;
-  color: var(--ink-muted);
-}
-
-.assessment-tile__sub.is-num {
-  font: 400 11px/16px var(--font-mono);
-}
-
-.assessment-tile .tm-chip {
-  align-self: flex-start;
-  margin-top: 4px;
-}
-
 .level-save {
   display: flex;
   justify-content: flex-end;
   margin-top: var(--space-4);
 }
 
+.level-form,
 .level-result {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+.level-form p {
+  margin: 0;
+}
+
+/* The flex gap spaces the result card; its heading and subtitles add none. */
+.level-result .data-block__heading,
+.level-result .section-title {
+  margin: 0;
+}
+
+.level-result .card-block__subtitle {
+  margin: var(--space-2) 0 0;
+}
+
+/* Labels wrap to one or two lines; the numbers still line up across a row. */
+.level-result .tm-kpi__value {
+  margin-top: auto;
 }
 
 .level-form .tm-segment {

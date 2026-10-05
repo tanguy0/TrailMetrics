@@ -78,14 +78,15 @@ def _estimate(method: str, vdot_value: float, confidence: str,
 
 def from_half_cooper(distance_m: float) -> LevelEstimate:
     """Six minutes all out. The VDOT route is the result; the field rule
-    (VMA = distance / 100 km/h) is given as a note — they differ by a few %."""
+    (VMA = distance / 100 km/h) is kept in ``extras`` only — a formula is not
+    something to show the runner."""
     low, high = _HALF_COOPER_M
     if not low <= distance_m <= high:
         raise LevelInputError("level.error.half_cooper_range", low=int(low), high=int(high))
     field_vma = distance_m / 100.0
     estimate = _estimate(
         HALF_COOPER, model.vdot(distance_m, 6.0), "medium",
-        [Note("level.note.field_vma", {"vma": round(field_vma, 1)})],
+        [],
         {"field_vma_kmh": round(field_vma, 2)},
     )
     return estimate

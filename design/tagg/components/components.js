@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"TAGG","components":[{"name":"Button"},{"name":"Chip"},{"name":"KpiTile"},{"name":"Field"},{"name":"Toggle"},{"name":"NavRail"},{"name":"PageHeader"},{"name":"Panel"},{"name":"PlotCard"},{"name":"DataTable"},{"name":"SessionCard"},{"name":"Teaser"},{"name":"AccessGrid"},{"name":"Hero"},{"name":"Highlights"}]} */
+/* @ds-bundle: {"format":4,"namespace":"TAGG","components":[{"name":"Button"},{"name":"Chip"},{"name":"KpiTile"},{"name":"Field"},{"name":"Toggle"},{"name":"NavRail"},{"name":"PageHeader"},{"name":"Panel"},{"name":"PlotCard"},{"name":"DataTable"},{"name":"SessionCard"},{"name":"Teaser"},{"name":"AccessGrid"},{"name":"Hero"},{"name":"Highlights"},{"name":"LevelTile"}]} */
 (function(){
   var R = window.React, h = R.createElement;
   function cx(){ return Array.prototype.slice.call(arguments).filter(Boolean).join(" "); }
@@ -61,6 +61,11 @@
     h("div",{className:"tm-hero__body"}, p.kicker&&h("div",{className:"tm-hero__kicker"},p.kicker), h("h1",{className:"tm-hero__title"},p.title), p.meta&&h("div",{className:"tm-hero__meta"},p.meta)),
     p.stats&&h("div",{className:"tm-hero__stats"}, p.stats.map(function(s,i){ return h("div",{key:i,className:cx("tm-hero__stat",s.key&&"is-key")}, h("span",{className:"l"},s.label), h("span",{className:"v"},s.value, s.unit&&h("small",null,s.unit))); })),
     p.action&&h("div",{style:{position:"relative"}},p.action)); }
+  var LEVEL_BARS={poor:1,limited:2,average:3,good:4,excellent:5,insufficient:0};
+  function LevelTile(p){ var n=LEVEL_BARS[p.level]||0; return h("div",{className:cx("tm-level","tm-level--"+p.level)},
+    h("div",{className:"tm-level__head"}, p.icon, h("span",{className:"tm-level__label"},p.label)),
+    h("div",{className:"tm-level__word"},p.word),
+    h("div",{className:"tm-level__meter","aria-hidden":true},[1,2,3,4,5].map(function(i){ return h("i",{key:i,className:i<=n?"is-on":undefined}); }))); }
   window.TAGG = window.TAGG || {};
-  Object.assign(window.TAGG, {Button:Button,Chip:Chip,KpiTile:KpiTile,Field:Field,Toggle:Toggle,NavRail:NavRail,PageHeader:PageHeader,Panel:Panel,PlotCard:PlotCard,DataTable:DataTable,SessionCard:SessionCard,Teaser:Teaser,AccessGrid:AccessGrid,Hero:Hero});
+  Object.assign(window.TAGG, {Button:Button,Chip:Chip,KpiTile:KpiTile,Field:Field,Toggle:Toggle,NavRail:NavRail,PageHeader:PageHeader,Panel:Panel,PlotCard:PlotCard,DataTable:DataTable,SessionCard:SessionCard,Teaser:Teaser,AccessGrid:AccessGrid,Hero:Hero,LevelTile:LevelTile});
 })();

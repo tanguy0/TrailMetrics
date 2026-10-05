@@ -45,7 +45,7 @@ class HalfCooperTest(unittest.TestCase):
         self.assertEqual(result.method, "half_cooper")
         self.assertLess(abs(result.vma_kmh - 16.2) / 16.2, 0.06)
         self.assertEqual(result.extras["field_vma_kmh"], 16.2)
-        self.assertEqual(result.notes[0].key, "level.note.field_vma")
+        self.assertEqual(result.notes, [])
 
     def test_out_of_range(self):
         with self.assertRaises(LevelInputError):

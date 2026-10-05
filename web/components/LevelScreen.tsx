@@ -310,7 +310,7 @@ function LevelResultCard({
       </p>
 
       <div className="kpi-grid">
-        <Kpi label={t("level.result.vma")} value={formatNumber(result.vma_kmh, 1)} unit="km/h" tone="forest" large />
+        <Kpi label={t("level.result.vma")} value={formatNumber(result.vma_kmh, 1)} unit="km/h" tone="forest" />
         <Kpi label={t("level.result.vma_pace")} value={formatPaceInput(result.vma_pace_s_per_km)} unit="/km" />
         <Kpi label={t("level.result.vdot")} value={formatNumber(result.vdot, 1)} />
         {result.extras.critical_pace_s_per_km != null && (
@@ -325,12 +325,15 @@ function LevelResultCard({
         )}
       </div>
 
-      <h3 className="card-block__subtitle">{t("level.result.zones")}</h3>
+      {/* The unit once, in the subtitle: a range plus "/km" in every tile crowds it. */}
+      <h3 className="card-block__subtitle">
+        {t("level.result.zones")} <span className="tm-kpi__unit">{t("common.per_km")}</span>
+      </h3>
       <div className="kpi-grid">
         {result.zones.map((zone) => (
           <Kpi
             key={zone.key}
-            label={`${t(`home.zones.pace_${zone.key}`)} (${t("common.per_km")})`}
+            label={t(`home.zones.pace_${zone.key}`)}
             value={formatPaceRange(zone.fast_s_per_km, zone.slow_s_per_km)}
             note={`${zone.low_pct}–${zone.high_pct} % VMA`}
           />

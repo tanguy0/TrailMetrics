@@ -2,7 +2,7 @@
 
 Public, like the blog: a visitor can upload a GPX and get a plan built on the
 reference GAP curve, with no account and no database. A signed-in athlete gets the
-same endpoint with their own curves on top — which is why auth here is *optional*
+same endpoint paced on their own curve, never asked which one — which is why auth here is *optional*
 (:func:`_optional_identity`) rather than a dependency that 401s.
 
 A visitor's GPX is re-sent with every request rather than stored: it is a few
@@ -43,7 +43,7 @@ from src.domain.race_plan.gpx import GpxError, parse_gpx
 from src.domain.race_plan.planner import PlanError, build_course
 from src.domain.race_plan.preview import course_preview
 from src.translations import translate
-from src.usecases.plan_race import PlanRace, PlanRaceInput, curve_options
+from src.usecases.plan_race import PlanRace, PlanRaceInput
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,6 @@ class PlanParams(BaseModel):
     aid_stations: List[AidStation] = Field(default_factory=list, max_length=MAX_AID_STATIONS)
     # Seconds after midnight; only adds a wall-clock column.
     start_time_s: Optional[float] = Field(default=None, ge=0, lt=86400)
-    curve: Optional[str] = None
     # Durability (cost drift over a long effort). Optional so plans saved before it
     # existed still load; weather left empty means neutral conditions.
     durability: bool = True
@@ -91,10 +90,9 @@ class SavedPlanMeta(BaseModel):
 
 
 @router.get("/options")
-def options(request: Request, lang: str = Depends(language)) -> dict:
-    """Whether the caller is signed in, and which curves they can plan on."""
-    signed_in = _optional_identity(request)[1] is not None
-    return {"signed_in": signed_in, "curves": curve_options(signed_in, lang)}
+def options(request: Request) -> dict:
+    """Whether the caller has a personal curve to plan on (an athlete with Strava)."""
+    return {"signed_in": _optional_identity(request)[1] is not None}
 
 
 @router.post("")
@@ -126,7 +124,7 @@ def plan(
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             detail=translate("race_plan.error.no_gpx", lang))
 
-    return _with_options(_compute(parsed, payload, athlete, lang, refit), athlete, lang)
+    return _with_options(_compute(parsed, payload, athlete, lang, refit), athlete)
 
 
 # --- Saved plans -------------------------------------------------------------
@@ -181,7 +179,7 @@ def get_saved(
     stored = repository.result(plan_id)
     if stored is not None and stored["lang"] == lang:
         athlete = _optional_identity(request)[1]
-        return {**saved, "result": _with_options(stored["result"], athlete, lang)}
+        return {**saved, "result": _with_options(stored["result"], athlete)}
     payload = repository.gpx(plan_id)
     params = PlanParams.model_validate(saved["params"])
     return _store_result(request, repository, saved, params, payload, lang, refit=False)
@@ -256,7 +254,6 @@ def _compute(parsed: PlanParams, payload: bytes, athlete: Optional[Athlete], lan
             aid_stations_km=[s.km for s in parsed.aid_stations],
             aid_station_names=[s.name for s in parsed.aid_stations],
             start_clock_s=parsed.start_time_s,
-            curve=parsed.curve,
             lang=lang,
             durability=parsed.durability,
             weather=parsed.weather(),
@@ -268,13 +265,9 @@ def _compute(parsed: PlanParams, payload: bytes, athlete: Optional[Athlete], lan
     return result.to_dict()
 
 
-def _with_options(result: dict, athlete: Optional[Athlete], lang: str) -> dict:
-    """A plan as the screen takes it: plus who is asking and the curves they have."""
-    return {
-        **result,
-        "signed_in": athlete is not None,
-        "curves": curve_options(athlete is not None, lang),
-    }
+def _with_options(result: dict, athlete: Optional[Athlete]) -> dict:
+    """A plan as the screen takes it: plus whether the caller has a curve of their own."""
+    return {**result, "signed_in": athlete is not None}
 
 
 def _store_result(request: Request, repository, saved: dict, params: PlanParams,
@@ -294,7 +287,7 @@ def _store_result(request: Request, repository, saved: dict, params: PlanParams,
     return {
         **saved,
         "computed_at": computed_at,
-        "result": _with_options(result, athlete, lang) if result else None,
+        "result": _with_options(result, athlete) if result else None,
     }
 
 

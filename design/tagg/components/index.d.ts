@@ -17,3 +17,4 @@ export interface AccessItem { href: string; title: string; desc: string; icon?: 
 export interface AccessGridProps { open: { title: string; chip?: ReactNode; items: AccessItem[] }; locked: { title: string; chip?: ReactNode; items: AccessItem[] }; }
 export interface HeroStat { label: string; value: string; unit?: string; key?: boolean; }
 export interface HeroProps { avatar?: string; kicker?: string; title: string; meta?: string; stats?: HeroStat[]; action?: ReactNode; }
+export interface LevelTileProps { level: "excellent" | "good" | "average" | "limited" | "poor" | "insufficient"; label: string; word: string; icon?: ReactNode; }

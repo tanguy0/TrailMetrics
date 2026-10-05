@@ -1230,10 +1230,6 @@ TRANSLATIONS = {
     "ui.gap_tool.terrain.downhill": {"en": "Downhill", "fr": "Descente"},
     "ui.gap_tool.terrain.uphill": {"en": "Uphill", "fr": "Montée"},
     "ui.gap_tool.terrain.steep_uphill": {"en": "Steep uphill", "fr": "Montée raide"},
-    "ui.gap_tool.range.steep_downhill": {"en": "below −12 %", "fr": "sous −12 %"},
-    "ui.gap_tool.range.downhill": {"en": "−12 % to −3 %", "fr": "de −12 % à −3 %"},
-    "ui.gap_tool.range.uphill": {"en": "+3 % to +12 %", "fr": "de +3 % à +12 %"},
-    "ui.gap_tool.range.steep_uphill": {"en": "above +12 %", "fr": "au-delà de +12 %"},
     # The five-level scale shared by the GAP and durability profiles.
     "ui.assessment.level.poor": {"en": "Poor", "fr": "Faible"},
     "ui.assessment.level.limited": {"en": "Limited", "fr": "Limité"},
@@ -1262,15 +1258,6 @@ TRANSLATIONS = {
     "ui.durability_tool.quality.long_efforts": {"en": "Long efforts", "fr": "Efforts longs"},
     "ui.durability_tool.quality.hard_efforts": {"en": "Hard efforts", "fr": "Efforts intenses"},
     "ui.durability_tool.quality.descents": {"en": "Descents", "fr": "Descentes"},
-    "ui.durability_tool.scope.long_efforts": {
-        "en": "time on your feet", "fr": "le temps passé à courir",
-    },
-    "ui.durability_tool.scope.hard_efforts": {
-        "en": "time above threshold", "fr": "le temps au-dessus du seuil",
-    },
-    "ui.durability_tool.scope.descents": {
-        "en": "metres of descent", "fr": "les mètres de descente",
-    },
     "ui.durability_tool.no_data": {
         "en": "Run a few times for 45 minutes or more and your durability profile appears here.",
         "fr": "Quelques sorties de 45 minutes ou plus, et votre profil de durabilité apparaît ici.",
@@ -1416,10 +1403,6 @@ TRANSLATIONS = {
         "fr": "Des valeurs manquent ou ne sont pas des nombres.",
     },
     "ui.level.error.method": {"en": "Unknown test.", "fr": "Test inconnu."},
-    "ui.level.note.field_vma": {
-        "en": "Field test rule (distance ÷ 100): {vma} km/h.",
-        "fr": "Test de terrain (distance ÷ 100) : {vma} km/h.",
-    },
     "ui.level.note.cs_ratio": {
         "en": "Your critical speed is {ratio} % of your VMA (around 90 % is typical).",
         "fr": "Votre vitesse critique vaut {ratio} % de votre VMA (autour de 90 % en général).",
@@ -1886,9 +1869,6 @@ TRANSLATIONS = {
     "race_plan.curve.personal_efficiency": {
         "en": "My GAP curve", "fr": "Ma courbe GAP",
     },
-    "race_plan.curve.personal_auto": {
-        "en": "My curve (auto-learning model)", "fr": "Ma courbe (modèle auto-apprenant)",
-    },
     "race_plan.note.ignored_stations": {
         "en": "Ignored aid stations outside the course (0–{total} km): {km}.",
         "fr": "Ravitaillements ignorés, hors du parcours (0–{total} km) : {km}.",
@@ -2227,8 +2207,6 @@ TRANSLATIONS = {
     "ui.race_plan.aid_station_name": {"en": "Name (optional)", "fr": "Nom (optionnel)"},
     "ui.race_plan.add_aid_station": {"en": "+ Add an aid station", "fr": "+ Ajouter un ravito"},
     "ui.race_plan.remove": {"en": "Remove", "fr": "Retirer"},
-    "ui.race_plan.curve": {"en": "GAP curve", "fr": "Courbe GAP"},
-    "ui.race_plan.curve_sign_in": {"en": "sign in", "fr": "connexion requise"},
     "ui.race_plan.submit": {"en": "Compute the plan", "fr": "Calculer le plan"},
     "ui.race_plan.computing": {"en": "Computing…", "fr": "Calcul en cours…"},
     "ui.race_plan.computing_personal": {
@@ -2286,7 +2264,6 @@ TRANSLATIONS = {
     "ui.race_plan.updated_on": {"en": "Updated {date}", "fr": "Modifié le {date}"},
     # The plan's hero (design/tagg/components/Hero.md § Plan de course).
     "ui.race_plan.hero.kicker": {"en": "Race plan · {curve}", "fr": "Plan de course · {curve}"},
-    "ui.race_plan.hero.personalized": {"en": "personalised", "fr": "personnalisée"},
     "ui.race_plan.hero.gap": {"en": "GAP {pace} /km", "fr": "GAP {pace} /km"},
     "ui.race_plan.hero.real": {"en": "actual {pace} /km", "fr": "réel {pace} /km"},
     "ui.race_plan.hero.sections.one": {"en": "{count} section", "fr": "{count} section"},
@@ -2304,7 +2281,6 @@ TRANSLATIONS = {
     "ui.race_plan.summary.target": {"en": "Target time", "fr": "Temps visé"},
     "ui.race_plan.summary.gap_pace": {"en": "Constant GAP pace", "fr": "Allure GAP constante"},
     "ui.race_plan.summary.avg_pace": {"en": "Average pace", "fr": "Allure moyenne"},
-    "ui.race_plan.summary.curve": {"en": "Curve used", "fr": "Courbe utilisée"},
     "ui.race_plan.section.profile": {"en": "Pace profile", "fr": "Profil d'allure"},
     "ui.race_plan.section.sections": {
         "en": "By climb, descent and flat", "fr": "Par montée, descente et plat",
