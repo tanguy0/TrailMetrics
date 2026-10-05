@@ -36,6 +36,7 @@ import type {
   RacePlanOptions,
   RacePlanParams,
   RacePlanResult,
+  PaceOverrides,
   SavedRacePlan,
   Registry,
   RouteResult,
@@ -134,7 +135,7 @@ export const updateProfile = (
     | "weight_kg" | "birthdate" | "height_cm"
     | "hr_zone1_end" | "hr_zone2_end" | "hr_zone3_end" | "hr_zone4_end"
     | "hr_max" | "vma_pace_s_per_km" | "lang"
-  >>,
+  >> & { pace_overrides?: PaceOverrides | null },
 ) =>
   request<Athlete>("/auth/me", {
     method: "PATCH",

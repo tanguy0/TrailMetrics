@@ -32,6 +32,7 @@ import { useRouter } from "next/navigation";
 import { Callout } from "@/components/Callout";
 import { ChartView } from "@/components/ChartView";
 import { Icon, type IconName } from "@/components/Icon";
+import { Modal } from "@/components/Modal";
 import { ProgressBar } from "@/components/ProgressBar";
 import { SessionDetail } from "@/components/SessionDetail";
 import { Sparkline } from "@/components/Sparkline";
@@ -62,6 +63,7 @@ import type {
   ChartData,
   HomeRecord,
   HomeSummary,
+  PaceOverrides,
   PanelSpec,
   Trace,
   ZoneDefinitions,
@@ -776,8 +778,10 @@ function ZonesCard({
 }) {
   const vma = athlete.vma_pace_s_per_km;
   const hrMax = athlete.hr_max;
+  const overrides = athlete.pace_overrides ?? {};
   const offline = useContext(NoStrava);
   const [zones, setZones] = useState<ZoneDefinitions | null>(null);
+  const [editing, setEditing] = useState(false);
   useEffect(() => {
     getZoneDefinitions().then(setZones).catch(() => undefined);
   }, []);
@@ -798,38 +802,53 @@ function ZonesCard({
           {t("home.zones.estimated", {
             date: formatDate(estimate.created_at, "short", t("locale")),
             method: t(`level.method.${estimate.method}`),
-          })}{" "}
-          <a href="/tools/level">{t("home.zones.reestimate")}</a>
+          })}
         </p>
       )}
 
       <div className="kpi-grid">
-        <EditableTile
+        {/* Computed (level assessment), not typed here: "Update paces" is the
+            place to change it by hand. */}
+        <Tile
           label={t("home.zones.vma")}
-          value={vma != null ? formatPaceInput(vma) : null}
+          value={vma != null ? formatPaceInput(vma) : "—"}
           unit={vma != null ? "/km" : undefined}
-          input={{ type: "text", value: formatPaceInput(vma), placeholder: "4:00" }}
-          onCommit={async (raw) => {
-            if (raw.trim() === "") {
-              onSaved(await updateProfile({ vma_pace_s_per_km: null }));
-              return;
-            }
-            const parsed = parsePaceInput(raw);
-            if (parsed == null) throw new Error("invalid pace");
-            onSaved(await updateProfile({ vma_pace_s_per_km: parsed }));
-          }}
-          t={t}
         />
 
-        {(zones?.vma_pace ?? []).map((zone) => (
-          <Tile
-            key={zone.key}
-            // An interval: the unit moves up into the label, out of the value.
-            label={`${t(`home.zones.pace_${zone.key}`)} (${t("common.per_km")})`}
-            value={vma != null ? vmaPaceRange(vma, zone.low_pct, zone.high_pct) : "—"}
-            footnote={t("home.zones.unlocked_by_vma")}
-          />
-        ))}
+        {(zones?.vma_pace ?? []).map((zone) => {
+          const own = overrides[zone.key];
+          return (
+            <Tile
+              key={zone.key}
+              // An interval: the unit moves up into the label, out of the value.
+              label={`${t(`home.zones.pace_${zone.key}`)} (${t("common.per_km")})`}
+              value={
+                own
+                  ? formatPaceRange(own.fast_s_per_km, own.slow_s_per_km)
+                  : vma != null
+                    ? vmaPaceRange(vma, zone.low_pct, zone.high_pct)
+                    : "—"
+              }
+              footnote={own ? t("home.zones.set_by_hand") : t("home.zones.from_vma")}
+            />
+          );
+        })}
+      </div>
+
+      <div className="zones-actions">
+        <a className="tm-btn tm-btn--secondary tm-btn--sm" href="/tools/level">
+          {t("home.zones.estimate_paces")}
+        </a>
+        {/* Paces live on the Strava athlete; without Strava there is nowhere to keep them. */}
+        {!offline && (
+          <button
+            type="button"
+            className="tm-btn tm-btn--secondary tm-btn--sm"
+            onClick={() => setEditing(true)}
+          >
+            {t("home.zones.update_paces")}
+          </button>
+        )}
       </div>
 
       <div className="kpi-grid kpi-grid--two">
@@ -854,16 +873,167 @@ function ZonesCard({
         />
       </div>
 
-      {/* Without Strava this is the one card that can be full: from a level
-          estimate, or an invitation to make one (access.md § Accueil dégradé). */}
-      {offline && !estimate ? (
-        <p className="body-sm">
-          <a href="/tools/level">{t("home.zones.estimate_link")}</a>
-        </p>
-      ) : (
-        zones && <HrZoneMap hrMax={hrMax} zones={zones} t={t} />
+      {zones && <HrZoneMap hrMax={hrMax} zones={zones} t={t} />}
+
+      {editing && zones && (
+        <PaceEditor
+          athlete={athlete}
+          zones={zones}
+          onClose={() => setEditing(false)}
+          onSaved={(updated) => {
+            onSaved(updated);
+            setEditing(false);
+          }}
+          t={t}
+        />
       )}
     </section>
+  );
+}
+
+/**
+ * "Update paces": the VMA pace and every pace zone, each editable by hand.
+ *
+ * A zone is stored as an override only when it differs from what the VMA gives,
+ * so a zone left alone keeps following the VMA. The next saved level estimate
+ * clears the overrides (Tools → Level assessment); "Back to computed paces" does
+ * the same now.
+ */
+function PaceEditor({
+  athlete,
+  zones,
+  onClose,
+  onSaved,
+  t,
+}: {
+  athlete: Athlete;
+  zones: ZoneDefinitions;
+  onClose: () => void;
+  onSaved: (athlete: Athlete) => void;
+  t: T;
+}) {
+  const overrides = athlete.pace_overrides ?? {};
+  const [vmaText, setVmaText] = useState(formatPaceInput(athlete.vma_pace_s_per_km));
+  const vmaDraft = parsePaceInput(vmaText) ?? athlete.vma_pace_s_per_km;
+  // What a zone shows when not set by hand, for the VMA currently typed.
+  const computed = (zone: ZoneDefinitions["vma_pace"][number]) =>
+    vmaDraft != null
+      ? [vmaDraft / (zone.high_pct / 100), vmaDraft / (zone.low_pct / 100)]
+      : [null, null];
+  const [rows, setRows] = useState<Record<string, { fast: string; slow: string }>>(() =>
+    Object.fromEntries(
+      zones.vma_pace.map((zone) => {
+        const own = overrides[zone.key];
+        return [
+          zone.key,
+          own
+            ? { fast: formatPaceInput(own.fast_s_per_km), slow: formatPaceInput(own.slow_s_per_km) }
+            : { fast: "", slow: "" },
+        ];
+      }),
+    ),
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function save(reset: boolean) {
+    setError(null);
+    const vmaValue = vmaText.trim() === "" ? null : parsePaceInput(vmaText);
+    if (vmaText.trim() !== "" && vmaValue == null) return setError(t("home.zones.invalid_pace"));
+    const next: PaceOverrides = {};
+    if (!reset) {
+      for (const zone of zones.vma_pace) {
+        const row = rows[zone.key];
+        if (!row.fast.trim() && !row.slow.trim()) continue;
+        const [fallbackFast, fallbackSlow] = computed(zone);
+        const fast = row.fast.trim() ? parsePaceInput(row.fast) : fallbackFast;
+        const slow = row.slow.trim() ? parsePaceInput(row.slow) : fallbackSlow;
+        if (fast == null || slow == null || fast > slow) {
+          return setError(t("home.zones.invalid_pace"));
+        }
+        next[zone.key] = { fast_s_per_km: fast, slow_s_per_km: slow };
+      }
+    }
+    setSaving(true);
+    // The VMA only when it was edited: re-sending the shown text would round a
+    // computed VMA to the second and shift every zone derived from it.
+    const vmaChanged = vmaText !== formatPaceInput(athlete.vma_pace_s_per_km);
+    try {
+      onSaved(await updateProfile({
+        ...(vmaChanged ? { vma_pace_s_per_km: vmaValue } : {}),
+        pace_overrides: next,
+      }));
+    } catch (e) {
+      setError((e as Error).message);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title={t("home.zones.update_paces")} onClose={onClose}>
+      <p className="body-sm muted">{t("home.zones.editor_help")}</p>
+      {error && <Callout tone="terra">{error}</Callout>}
+      <div className="pace-editor">
+        <label className="pace-editor__row">
+          <span className="pace-editor__label">{t("home.zones.vma")} ({t("common.per_km")})</span>
+          <input
+            className="tm-input pace-editor__input"
+            type="text"
+            inputMode="numeric"
+            placeholder="4:00"
+            value={vmaText}
+            onChange={(e) => setVmaText(e.target.value)}
+          />
+        </label>
+        {zones.vma_pace.map((zone) => {
+          const [fast, slow] = computed(zone);
+          const row = rows[zone.key];
+          const set = (patch: Partial<{ fast: string; slow: string }>) =>
+            setRows((all) => ({ ...all, [zone.key]: { ...all[zone.key], ...patch } }));
+          return (
+            <div className="pace-editor__row" key={zone.key}>
+              <span className="pace-editor__label">
+                {t(`home.zones.pace_${zone.key}`)} ({t("common.per_km")})
+              </span>
+              <span className="pace-editor__range">
+                <input
+                  className="tm-input pace-editor__input"
+                  type="text"
+                  inputMode="numeric"
+                  aria-label={t("home.zones.fast")}
+                  placeholder={formatPaceInput(fast)}
+                  value={row.fast}
+                  onChange={(e) => set({ fast: e.target.value })}
+                />
+                <span aria-hidden="true">–</span>
+                <input
+                  className="tm-input pace-editor__input"
+                  type="text"
+                  inputMode="numeric"
+                  aria-label={t("home.zones.slow")}
+                  placeholder={formatPaceInput(slow)}
+                  value={row.slow}
+                  onChange={(e) => set({ slow: e.target.value })}
+                />
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="pace-editor__actions">
+        <button
+          type="button"
+          className="tm-btn tm-btn--ghost tm-btn--sm"
+          onClick={() => void save(true)}
+          disabled={saving}
+        >
+          {t("home.zones.reset_paces")}
+        </button>
+        <button type="button" className="tm-btn tm-btn--sm" onClick={() => void save(false)} disabled={saving}>
+          {t("home.zones.save_paces")}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

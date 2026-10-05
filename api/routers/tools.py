@@ -175,7 +175,8 @@ def _estimate_payload(result: LevelEstimate, hr_max: Optional[int], lang: str) -
 
 def _apply_to_athlete(account: Account, result: LevelEstimate, hr_max: Optional[int]) -> None:
     """The latest estimate becomes the athlete's VMA (and HRmax when given) —
-    the account's own athlete only, never one a coach is viewing."""
+    the account's own athlete only, never one a coach is viewing. Paces set by
+    hand on Home give way to it: the new estimate is the new reference."""
     athlete_id = get_account_repository().athlete_id_for(account.id)
     if athlete_id is None:
         return
@@ -192,6 +193,7 @@ def _apply_to_athlete(account: Account, result: LevelEstimate, hr_max: Optional[
         hr_max=hr_max if hr_max is not None else athlete.hr_max,
         vma_pace_s_per_km=result.vma_pace_s_per_km,
     )
+    athletes.set_pace_overrides(athlete.id, None)
 
 
 def _flat_pace(athlete: Athlete) -> Optional[float]:

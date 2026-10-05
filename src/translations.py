@@ -1188,11 +1188,24 @@ TRANSLATIONS = {
         "en": "Estimated {date} · method: {method}",
         "fr": "Estimée le {date} · méthode : {method}",
     },
-    "ui.home.zones.estimate_link": {
-        "en": "Estimate your zones without Strava →",
-        "fr": "Estimez vos zones sans Strava →",
+    "ui.home.zones.estimate_paces": {"en": "Estimate paces", "fr": "Estimer les allures"},
+    "ui.home.zones.update_paces": {"en": "Update paces", "fr": "Modifier les allures"},
+    "ui.home.zones.save_paces": {"en": "Save paces", "fr": "Enregistrer les allures"},
+    "ui.home.zones.reset_paces": {
+        "en": "Back to computed paces", "fr": "Revenir aux allures calculées",
     },
-    "ui.home.zones.reestimate": {"en": "New estimate →", "fr": "Nouvelle estimation →"},
+    "ui.home.zones.editor_help": {
+        "en": "Leave a zone empty to keep the pace computed from your VMA.",
+        "fr": "Laissez une zone vide pour garder l'allure calculée depuis votre VMA.",
+    },
+    "ui.home.zones.invalid_pace": {
+        "en": "Write paces as m:ss, the faster one first.",
+        "fr": "Écrivez les allures en m:ss, la plus rapide en premier.",
+    },
+    "ui.home.zones.fast": {"en": "Fastest pace", "fr": "Allure la plus rapide"},
+    "ui.home.zones.slow": {"en": "Slowest pace", "fr": "Allure la plus lente"},
+    "ui.home.zones.set_by_hand": {"en": "Set by hand", "fr": "Saisie à la main"},
+    "ui.home.zones.from_vma": {"en": "Computed from VMA", "fr": "Calculée depuis la VMA"},
 
     # Slope profile tool page
     "ui.gap_tool.kicker": {"en": "Slope Profile", "fr": "Profil de pente"},
@@ -1499,9 +1512,6 @@ TRANSLATIONS = {
     "ui.home.zones.pace_threshold": {"en": "Threshold", "fr": "Seuil"},
     "ui.home.zones.pace_intervals": {"en": "Intervals", "fr": "Intervalles"},
     "ui.home.zones.pace_reps": {"en": "Reps", "fr": "Répétitions"},
-    "ui.home.zones.unlocked_by_vma": {
-        "en": "Unlocked by giving VMA", "fr": "Débloqué en renseignant la VMA",
-    },
     "ui.home.zones.unlocked_by_hrmax": {
         "en": "Derived from HRmax", "fr": "Déduit de la FCmax",
     },

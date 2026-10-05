@@ -73,6 +73,23 @@ class ToolsApiTest(ApiTestCase):
         latest = self.client.get("/tools/level/latest", headers=self.bearer(token)).json()
         self.assertEqual(latest["estimate"]["result"]["vdot"], body["vdot"])
 
+    def test_paces_set_by_hand_until_the_next_saved_estimate(self):
+        token = self.token_for("ana")
+        self.exchange(token, ATHLETE_BASE + 26)
+        z2 = {"fast_s_per_km": 330, "slow_s_per_km": 360}
+        me = self.client.patch(
+            "/auth/me", json={"pace_overrides": {"z2": z2}}, headers=self.bearer(token)
+        ).json()
+        self.assertEqual(me["pace_overrides"], {"z2": z2})
+        self.assertEqual(self.me(token).json()["pace_overrides"], {"z2": z2})
+        for bad in ({"z9": z2}, {"z2": {"fast_s_per_km": 400, "slow_s_per_km": 300}}):
+            response = self.client.patch(
+                "/auth/me", json={"pace_overrides": bad}, headers=self.bearer(token)
+            )
+            self.assertEqual(response.status_code, 422)
+        self.client.post("/tools/level/save", json=RECORDS, headers=self.bearer(token))
+        self.assertEqual(self.me(token).json()["pace_overrides"], {})
+
     def test_zone_definitions_are_served(self):
         body = self.client.get("/tools/zones").json()
         self.assertEqual([z["key"] for z in body["vma_pace"]][:2], ["z2", "endurance"])

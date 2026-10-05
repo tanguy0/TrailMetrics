@@ -422,6 +422,9 @@ export interface Athlete {
   hr_zone4_end: number | null;
   hr_max: number | null;
   vma_pace_s_per_km: number | null;
+  /** Pace zones set by hand on Home, by zone key; absent without Strava. A zone
+   * not in it is computed from the VMA. */
+  pace_overrides?: PaceOverrides;
   /** The athlete's chosen UI language — "en" or "fr". Always set. */
   lang: string;
   age: number | null;
@@ -810,3 +813,5 @@ export interface RacePlanPreview {
   /** `[km, elevation m]`, downsampled. */
   profile: [number, number][];
 }
+
+export type PaceOverrides = Record<string, { fast_s_per_km: number; slow_s_per_km: number }>;

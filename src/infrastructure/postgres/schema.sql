@@ -58,6 +58,10 @@ alter table athletes add column if not exists hr_zone3_end integer;
 alter table athletes add column if not exists hr_zone4_end integer;
 alter table athletes add column if not exists hr_max integer;
 alter table athletes add column if not exists vma_pace_s_per_km double precision;
+-- Pace zones the athlete set by hand on Home ("Update paces"), by zone key:
+-- {"z2": {"fast_s_per_km": 330, "slow_s_per_km": 360}, …}. A zone not in it is
+-- computed from the VMA. Saving a new level estimate clears it.
+alter table athletes add column if not exists pace_overrides jsonb;
 
 -- The UI language the athlete has chosen, read by every endpoint that returns
 -- translated text (see api/deps.py's `language` dependency). Defaults to

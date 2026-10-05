@@ -36,7 +36,7 @@ from datetime import date
 from typing import Dict, Optional, Tuple
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from api import passwords
 from api.config import get_settings
@@ -69,6 +69,7 @@ from api.rate_limit import (
 )
 from api.security import hash_token, new_token
 from api.serialization import account_without_strava_payload, athlete_payload
+from src.domain.level.zones import VMA_PACE_ZONES
 from src.domain.ports.accounts import Account
 from src.domain.ports.storage import Athlete
 from src.infrastructure.postgres.account_repository import AccountExists
@@ -169,6 +170,19 @@ class ResetConfirm(BaseModel):
     password: str = Field(min_length=1, max_length=1024)
 
 
+class PaceRange(BaseModel):
+    """One hand-set pace zone, fastest first like every interval in the app."""
+
+    fast_s_per_km: float = Field(ge=90, le=1200)
+    slow_s_per_km: float = Field(ge=90, le=1200)
+
+    @model_validator(mode="after")
+    def _ordered(self) -> "PaceRange":
+        if self.fast_s_per_km > self.slow_s_per_km:
+            raise ValueError("fast_s_per_km must not be slower than slow_s_per_km")
+        return self
+
+
 class ProfileUpdate(BaseModel):
     """A partial update of the athlete's own self-reported fields.
 
@@ -193,6 +207,9 @@ class ProfileUpdate(BaseModel):
     hr_zone4_end: Optional[int] = Field(default=None, ge=30, le=250)
     hr_max: Optional[int] = Field(default=None, ge=30, le=250)
     vma_pace_s_per_km: Optional[float] = Field(default=None, ge=90, le=900)
+    # The pace zones set by hand on Home, by zone key; replaces the whole set
+    # (``{}`` or ``null`` = back to the zones computed from the VMA).
+    pace_overrides: Optional[Dict[str, PaceRange]] = None
 
     # Unlike the fields above, there is no "unset" state to clear it back to —
     # see the `Athlete.lang` docstring — so this is validated against the
@@ -524,6 +541,18 @@ def update_me(
         "hr_zone1_end", "hr_zone2_end", "hr_zone3_end", "hr_zone4_end",
         "hr_max", "vma_pace_s_per_km",
     )
+    if "pace_overrides" in touched:
+        overrides = {
+            key: value.model_dump() for key, value in (payload.pace_overrides or {}).items()
+        }
+        unknown = overrides.keys() - {zone.key for zone in VMA_PACE_ZONES}
+        if unknown:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Unknown zones: {sorted(unknown)}"
+            )
+        athletes.set_pace_overrides(athlete.id, overrides)
+        athlete.pace_overrides = overrides or None
+
     if touched.keys() & set(zone_fields):
         # A partial update must not blank a zone the client didn't mention.
         values = {

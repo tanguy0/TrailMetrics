@@ -712,6 +712,53 @@ input[type="radio"] {
   margin-bottom: var(--space-4);
 }
 
+.zones-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+/* "Update paces": one row per zone, label left, the fast–slow pair right. */
+.pace-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+
+.pace-editor__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.pace-editor__label {
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.pace-editor__range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-muted);
+}
+
+.pace-editor__input {
+  width: 5.5rem;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.pace-editor__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+
 .card-block--sync {
   margin-bottom: var(--space-4);
 }
