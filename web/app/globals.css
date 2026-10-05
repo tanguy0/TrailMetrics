@@ -136,6 +136,22 @@ h4 {
   margin-top: auto;
 }
 
+/* A coach's pending requests, a rail link under the switcher. */
+.shell__coach {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.shell__requests {
+  width: 100%;
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
 /* The coach's roster opens under the switcher, still on the rail. */
 .shell__switcher-list {
   list-style: none;

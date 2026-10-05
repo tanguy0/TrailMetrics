@@ -1356,16 +1356,11 @@ TRANSLATIONS = {
         "fr": "Nouvelle demande de coaching.\n\nDe : {email}\nContact : {contact}\n\n{message}\n\n"
               "Répondez-y depuis la page Coaching.",
     },
-    "ui.coaching.board.title": {"en": "Athletes", "fr": "Athlètes"},
-    "ui.coaching.board.pending": {"en": "Pending", "fr": "En attente"},
-    "ui.coaching.board.coached": {"en": "Coached", "fr": "Coachés"},
+    "ui.coaching.requests.nav": {"en": "Requests", "fr": "Demandes"},
+    "ui.coaching.requests.title": {"en": "Coaching requests", "fr": "Demandes de coaching"},
     "ui.coaching.board.accept": {"en": "Accept", "fr": "Accepter"},
     "ui.coaching.board.decline": {"en": "Decline", "fr": "Décliner"},
-    "ui.coaching.board.view_as": {"en": "View as", "fr": "Voir comme"},
-    "ui.coaching.board.last_activity": {"en": "Last activity", "fr": "Dernière activité"},
     "ui.coaching.board.none_pending": {"en": "No pending request.", "fr": "Aucune demande en attente."},
-    "ui.coaching.board.none_coached": {"en": "No athlete yet.", "fr": "Aucun athlète pour l’instant."},
-    "ui.coaching.board.no_strava": {"en": "Strava not connected", "fr": "Strava non connecté"},
     "ui.coaching.my_athletes": {"en": "My athletes", "fr": "Mes athlètes"},
 
     # --- Level assessment (v2): design/specs/level.md ------------------------
